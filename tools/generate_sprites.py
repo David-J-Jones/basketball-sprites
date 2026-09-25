@@ -1,60 +1,101 @@
 #!/usr/bin/env python3
 """
-Procedural pixel-art sprite generator for the basketball player + ball.
+Procedural pixel-art generator for the basketball player sprites.
 
-Everything is drawn at 1x resolution with hard pixels (no anti-aliasing),
-then each body part gets a dark 1px outline, which gives the chunky
-16-bit sports-game look.
+The player is drawn at 1x with hard pixels and a dark outline, then split
+into layers that the game colors at runtime with React Native's
+<Image tintColor> (which paints every visible pixel one flat color):
+
+    skin    white mask   -> tinted with the player's skin tone
+    jersey  white mask   -> tinted with the team's jersey color
+    trim    white mask   -> tinted with the team's trim color
+    detail  full color   -> outlines, black shorts, grey shoes, socks, eyes,
+                            plus see-through shading over the tinted parts
+    hair    per style: a white mask (tinted hair color) + its own detail
+
+Draw order: skin, jersey, trim, detail, hair mask, hair detail.
+
+There are three body builds (guard / wing / big) with different
+proportions. Every piece is trimmed, de-duplicated, scaled up SCALE times
+(nearest neighbour, so it stays crisp) and packed into shared atlas pages.
 
 Run:  python3 tools/generate_sprites.py
-Outputs go to  sprites/  and  previews/.
 """
+import hashlib
 import json
 import math
 import os
+import random
+import shutil
 
 from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_DIR = os.path.join(ROOT, "sprites")
+SPRITE_DIR = os.path.join(ROOT, "sprites")
+RN_DIR = os.path.join(ROOT, "integration", "react-native", "playerSprites")
 PREVIEW_DIR = os.path.join(ROOT, "previews")
 
-FRAME_W, FRAME_H = 48, 64
-GROUND = 61          # last row of shoe-sole pixels (outline sits on row 62)
-HIP_X = 22           # player faces right, so sit a little left of centre
+# virtual frame (the same canvas for every frame, build and layer), at 1x
+FRAME_W, FRAME_H = 64, 80
+ANCHOR_X, ANCHOR_Y = FRAME_W // 2, FRAME_H   # bottom centre, at the feet
+GROUND = FRAME_H - 2      # last row of sole pixels; the outline sits on the bottom row
+HIP_X = ANCHOR_X
+SCALE = 6                 # atlas pixels per art pixel
+PAGE_1X = 340             # atlas page width/height at 1x (2040 px after scaling)
+PAD = 1                   # gap between atlas pieces at 1x
 
-# ---------------------------------------------------------------- palette
-OUTLINE = (28, 22, 32, 255)
-PAL = {
-    "skin":        (232, 178, 128, 255),
-    "skin_shade":  (190, 128, 86, 255),
-    "skin_dark":   (150, 96, 62, 255),
-    "hair":        (104, 64, 34, 255),
-    "hair_shade":  (68, 40, 22, 255),
-    "eye":         (28, 22, 32, 255),
-    "mouth":       (160, 92, 70, 255),
-    "white":       (250, 250, 250, 255),
-    "white_shade": (200, 204, 218, 255),
-    "white_dark":  (156, 162, 182, 255),
-    "trim":        (170, 176, 196, 255),
-    "sole":        (72, 70, 82, 255),
-    "ball":        (234, 116, 38, 255),
-    "ball_light":  (252, 166, 92, 255),
-    "ball_shade":  (178, 72, 24, 255),
-    "ball_seam":   (58, 26, 14, 255),
-}
-
-SMEAR = (255, 255, 255, 150)   # swipe motion streak
-
-LIGHT = (-0.6, -0.8)  # light from the upper-left
-
-# ---------------------------------------------------------------- lengths
-THIGH, SHIN = 8.0, 8.0
-UPPER_ARM, FOREARM = 6.0, 6.0
-SHOULDER_UP = 10.0    # hip -> shoulder along the torso
-NECK_UP = 12.0        # hip -> base of head along the torso
+LIGHT = (-0.6, -0.8)      # light from the upper-left
 BALL_R = 4.8
 BALL_CELL = 11
+
+# ---------------------------------------------------------------- colors
+# Pixels are drawn as tags. Fixed tags always have the same color; tinted
+# tags become a white mask pixel plus (optionally) a shading overlay.
+FIXED = {
+    "outline": (28, 22, 32, 255),
+    "eye": (22, 16, 24, 255),
+    "shorts0": (62, 62, 70, 255),
+    "shorts1": (44, 44, 50, 255),
+    "shorts2": (36, 36, 42, 255),
+    "sock0": (242, 242, 246, 255),
+    "sock1": (196, 198, 208, 255),
+    "shoe0": (170, 172, 180, 255),
+    "shoe1": (128, 130, 140, 255),
+    "sole": (72, 72, 82, 255),
+    "band0": (246, 246, 246, 255),
+    "band1": (196, 198, 206, 255),
+    "smear": (255, 255, 255, 150),
+}
+TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, or None)
+    "skin0": ("skin", None),
+    "skin1": ("skin", (72, 26, 12, 70)),
+    "skin2": ("skin", (72, 26, 12, 118)),
+    "skin3": ("skin", (48, 14, 8, 150)),
+    "jersey0": ("jersey", None),
+    "jersey1": ("jersey", (16, 18, 44, 58)),
+    "trim0": ("trim", None),
+    "trim1": ("trim", (16, 18, 44, 70)),
+    "hair0": ("hair", None),
+    "hair1": ("hair", (0, 0, 0, 95)),
+}
+BODY_SLOTS = ["skin", "jersey", "trim"]
+WHITE = (255, 255, 255, 255)
+
+# ---------------------------------------------------------------- builds
+BUILDS = {
+    "guard": dict(thigh=7.3, shin=7.3, upper=5.6, fore=5.6, shoulder=9.4, neck=11.4,
+                  torso_r=4.4, hip_r=4.3, thigh_r=2.0, shin_r=1.5, arm_r=1.4),
+    "wing": dict(thigh=8.0, shin=8.0, upper=6.0, fore=6.0, shoulder=10.0, neck=12.0,
+                 torso_r=4.7, hip_r=4.5, thigh_r=2.1, shin_r=1.6, arm_r=1.5),
+    "big": dict(thigh=9.2, shin=9.2, upper=6.8, fore=6.8, shoulder=11.2, neck=13.2,
+                torso_r=5.2, hip_r=4.9, thigh_r=2.3, shin_r=1.7, arm_r=1.6),
+}
+B = BUILDS["wing"]
+
+
+def use_build(name):
+    global B
+    B = BUILDS[name]
 
 
 def vec(deg, length=1.0):
@@ -65,6 +106,10 @@ def vec(deg, length=1.0):
 
 def add(a, b):
     return (a[0] + b[0], a[1] + b[1])
+
+
+def lit(ox, oy):
+    return ox * LIGHT[0] + oy * LIGHT[1]
 
 
 # ---------------------------------------------------------------- layers
@@ -85,65 +130,145 @@ class Layer:
                 t = 0.0 if seg2 == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / seg2))
                 cx, cy = ax + dx * t, ay + dy * t
                 ox, oy = px - cx, py - cy
-                d = math.hypot(ox, oy)
-                if d <= r:
+                if math.hypot(ox, oy) <= r:
+                    self.pos = (px, py)   # for color functions that need it
                     c = color_fn(t, ox / r, oy / r)
                     if c is not None:
                         self.px[(x, y)] = c
-
-    def blit(self, template, origin, colors):
-        ox, oy = origin
-        for j, row in enumerate(template):
-            for i, ch in enumerate(row):
-                if ch != ".":
-                    self.px[(ox + i, oy + j)] = colors[ch]
 
     def outline(self):
         out = {}
         for (x, y) in self.px:
             for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                 if (nx, ny) not in self.px:
-                    out[(nx, ny)] = OUTLINE
+                    out[(nx, ny)] = "outline"
         return out
 
 
-def shaded(base, shade, thr=0.3, light=LIGHT):
+def shaded(base, shade, thr=0.3):
     def fn(t, ox, oy):
-        return shade if (ox * light[0] + oy * light[1]) < -thr else base
+        return shade if lit(ox, oy) < -thr else base
     return fn
 
 
-# ---------------------------------------------------------------- head
-HEAD = [
-    "...hhhhh...",
-    ".hhHHHHHhh.",
-    "hhHHHHHHHHh",
-    "hHHHHHHHHHH",
-    "hhHHHHSSSSh",
-    "hhhHSSSeeS.",
-    "hhsSSSSESSS",
-    "hhSsSSSESSS",
-    ".hsSSSSSSS.",
+# ---------------------------------------------------------------- heads & hair
+# Head templates sit on a 15 x 19 grid; the bald skull is at offset (2, 4).
+HEAD_GRID_W, HEAD_GRID_H = 15, 19
+HEAD_ANCHOR = (7, 15)     # grid pixel that sits on the neck point
+SKULL_OFF = (2, 4)
+SKULL = [
+    "...SSSSS...",
+    ".SSSSSSSSs.",
+    "SSSSSSSSSSs",
+    "SSSSSSSSSSS",
+    "sSSSSSSSSSS",
+    "sSSSSSSeeS.",
+    "ssSSSSSESSS",
+    "sSsSSSSESSS",
+    ".sSSSSSSSS.",
     "..sSSSSSMS.",
     "..ssSSSSS..",
     "....sss....",
 ]
-HEAD_ANCHOR = (5, 11)   # pixel of the template that sits on the neck point
+SKULL_TAGS = {"S": "skin0", "s": "skin1", "E": "eye", "e": "skin3", "M": "skin3"}
+
+# Hair is painted over the skull; '.' lets the skull show through.
+SHORT_SRC = [
+    "...hhhhh...",
+    ".hhHHHHHhh.",
+    "hhHHHHHHHHh",
+    "hHHHHHHHHHH",
+    "hhHHHH....h",
+    "hhhH.......",
+    "hh.........",
+    "hh.........",
+    ".h.........",
+]
+BUZZ_SRC = [
+    "...hhhhh...",
+    ".hhhHHhhh..",
+    "hhHHHHHHh..",
+    "hhhhhhhh...",
+    "hhh........",
+    "hh.........",
+    "h..........",
+]
 
 
-def head_colors():
-    return {
-        "H": PAL["hair"], "h": PAL["hair_shade"], "S": PAL["skin"],
-        "s": PAL["skin_shade"], "E": PAL["eye"], "e": PAL["hair_shade"],
-        "M": PAL["mouth"],
-    }
+def _from_src(src):
+    m = {}
+    for r, row in enumerate(src):
+        for c, ch in enumerate(row):
+            if ch in "Hh":
+                m[(c + SKULL_OFF[0], r + SKULL_OFF[1])] = "hair0" if ch == "H" else "hair1"
+    return m
 
 
-# ---------------------------------------------------------------- ball
+def _skull_pixels():
+    return {(c + SKULL_OFF[0], r + SKULL_OFF[1])
+            for r, row in enumerate(SKULL) for c, ch in enumerate(row) if ch != "."}
+
+
+def _afro():
+    m = {}
+    cx, cy, rx, ry = 6.3, 7.2, 6.8, 7.0
+    for r in range(HEAD_GRID_H):
+        for c in range(HEAD_GRID_W):
+            dx, dy = (c + 0.5 - cx) / rx, (r + 0.5 - cy) / ry
+            if dx * dx + dy * dy > 1:
+                continue
+            if c >= 7 and r >= 8:        # keep the face clear
+                continue
+            if r >= 13 and c >= 4:       # and the jaw
+                continue
+            shade = lit(dx, dy) < -0.3 or (c * 3 + r * 5) % 7 == 0
+            m[(c, r)] = "hair1" if shade else "hair0"
+    return m
+
+
+def _long_headband():
+    m = _from_src(SHORT_SRC)
+    # hair falling down the back of the neck
+    for r, c0, c1 in [(8, 1, 1), (9, 1, 1), (10, 1, 2), (11, 1, 2), (12, 1, 3), (13, 2, 4),
+                      (14, 2, 4), (15, 2, 5), (16, 3, 5), (17, 3, 4)]:
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "hair1" if (c == c1 or r >= 16) else "hair0"
+    # headband across the top of the forehead
+    sil = set(m) | _skull_pixels()
+    for c in range(HEAD_GRID_W):
+        if (c, 7) in sil:
+            m[(c, 7)] = "band1" if c <= 3 else "band0"
+    return m
+
+
+HAIR_STYLES = {
+    "short": _from_src(SHORT_SRC),
+    "buzz": _from_src(BUZZ_SRC),
+    "afro": _afro(),
+    "long_headband": _long_headband(),
+}
+
+
+def blit_head(layer, origin, style):
+    ox, oy = origin
+    for r, row in enumerate(SKULL):
+        for c, ch in enumerate(row):
+            if ch != ".":
+                layer.px[(ox + c + SKULL_OFF[0], oy + r + SKULL_OFF[1])] = SKULL_TAGS[ch]
+    if style:
+        for (c, r), tag in HAIR_STYLES[style].items():
+            layer.px[(ox + c, oy + r)] = tag
+
+
+# ---------------------------------------------------------------- ball (separate sheet)
+BALL_COLORS = {
+    "ball": (234, 116, 38, 255), "ball_light": (252, 166, 92, 255),
+    "ball_shade": (178, 72, 24, 255), "ball_seam": (58, 26, 14, 255),
+}
+
+
 def ball_layer(center, rot_deg=0.0, squash=0.0):
-    """Shaded basketball with seams. rot_deg spins the seams around the ball
-    (the pattern repeats every 180 degrees).
-    squash > 0 flattens it (ground contact)."""
+    """Shaded basketball with seams; rot_deg spins the seams (180 deg period)."""
     cx, cy = center
     rx = BALL_R * (1 + 0.18 * squash)
     ry = BALL_R * (1 - 0.22 * squash)
@@ -160,51 +285,44 @@ def ball_layer(center, rot_deg=0.0, squash=0.0):
                 continue
             nz = math.sqrt(max(0.0, 1 - d2))
             light = nx * L[0] + ny * L[1] + nz * L[2]
-            # spin the seam pattern about the vertical axis, then tip it
-            # toward the camera a little so the top seam is visible
             u = nx * math.cos(th) + nz * math.sin(th)
             w = -nx * math.sin(th) + nz * math.cos(th)
             v = ny
             v, w = v * math.cos(tilt_x) - w * math.sin(tilt_x), v * math.sin(tilt_x) + w * math.cos(tilt_x)
-            # two great-circle seams + the two curved side seams
             seam = abs(u) < 0.12 or abs(v) < 0.12 or abs(abs(u) - 0.66 - 0.3 * v * v) < 0.07
             if seam and d2 < 0.9:
-                c = PAL["ball_seam"]
+                c = BALL_COLORS["ball_seam"]
             elif light > 0.72:
-                c = PAL["ball_light"]
+                c = BALL_COLORS["ball_light"]
             elif light > 0.12:
-                c = PAL["ball"]
+                c = BALL_COLORS["ball"]
             else:
-                c = PAL["ball_shade"]
+                c = BALL_COLORS["ball_shade"]
             layer.px[(x, y)] = c
     return layer
 
 
 # ---------------------------------------------------------------- body
-def limb_colors(far):
-    if far:
-        return PAL["skin_shade"], PAL["skin_dark"], PAL["white_shade"], PAL["white_dark"]
-    return PAL["skin"], PAL["skin_shade"], PAL["white"], PAL["white_shade"]
-
-
 def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
-    skin, skin_s, cloth, cloth_s = limb_colors(far)
-    knee = add(hip, vec(thigh_deg, THIGH))
-    ankle = add(knee, vec(shin_deg, SHIN))
-    # shin + sock
+    skin, skin_s = ("skin1", "skin2") if far else ("skin0", "skin1")
+    cloth, cloth_s = ("shorts1", "shorts2") if far else ("shorts0", "shorts1")
+    sock, sock_s = ("sock1", "sock1") if far else ("sock0", "sock1")
+    knee = add(hip, vec(thigh_deg, B["thigh"]))
+    ankle = add(knee, vec(shin_deg, B["shin"]))
+
     def shin_fn(t, ox, oy):
         if t > 0.62:
-            return cloth_s if (ox * LIGHT[0] + oy * LIGHT[1]) < -0.4 else cloth
-        return skin_s if (ox * LIGHT[0] + oy * LIGHT[1]) < -0.3 else skin
-    layer.capsule(knee, ankle, 1.6, shin_fn)
-    # thigh; top part covered by shorts
+            return sock_s if lit(ox, oy) < -0.4 else sock
+        return skin_s if lit(ox, oy) < -0.3 else skin
+    layer.capsule(knee, ankle, B["shin_r"], shin_fn)
+
     def thigh_fn(t, ox, oy):
         if t < 0.55:
-            return cloth_s if (ox * LIGHT[0] + oy * LIGHT[1]) < -0.2 else cloth
-        return skin_s if (ox * LIGHT[0] + oy * LIGHT[1]) < -0.3 else skin
-    layer.capsule(hip, knee, 2.1, thigh_fn)
+            return cloth_s if lit(ox, oy) < -0.2 else cloth
+        return skin_s if lit(ox, oy) < -0.3 else skin
+    layer.capsule(hip, knee, B["thigh_r"], thigh_fn)
     # shorts leg opening is a touch wider than the thigh
-    layer.capsule(hip, add(hip, vec(thigh_deg, THIGH * 0.5)), 2.7,
+    layer.capsule(hip, add(hip, vec(thigh_deg, B["thigh"] * 0.5)), B["thigh_r"] + 0.6,
                   shaded(cloth, cloth_s, 0.2))
     # shoe
     fr = math.radians(foot_rot)
@@ -213,80 +331,82 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
     base = add(ankle, (down[0] * 1.2, down[1] * 1.2))
     heel = add(base, (-fwd[0] * 1.5, -fwd[1] * 1.5))
     toe = add(base, (fwd[0] * 3.2, fwd[1] * 3.2))
-    upper = PAL["white_shade"] if far else PAL["white"]
+    upper = "shoe1" if far else "shoe0"
+
     def shoe_fn(t, ox, oy):
         side = ox * down[0] + oy * down[1]
         if side > 0.35:
-            return PAL["sole"]
+            return "sole"
         if side < -0.5 and t < 0.5:
-            return PAL["white_dark"] if far else PAL["trim"]
+            return "shoe1"
         return upper
     layer.capsule(heel, toe, 1.55, shoe_fn)
     return ankle
 
 
 def arm_points(shoulder, upper_deg, fore_deg, reach=1.0):
-    elbow = add(shoulder, vec(upper_deg, UPPER_ARM * reach))
-    return elbow, add(elbow, vec(fore_deg, FOREARM * reach))
+    elbow = add(shoulder, vec(upper_deg, B["upper"] * reach))
+    return elbow, add(elbow, vec(fore_deg, B["fore"] * reach))
 
 
 def draw_arm(layer, shoulder, upper_deg, fore_deg, far, reach=1.0):
-    skin, skin_s, _, _ = limb_colors(far)
+    skin, skin_s = ("skin1", "skin2") if far else ("skin0", "skin1")
     elbow, hand = arm_points(shoulder, upper_deg, fore_deg, reach)
-    layer.capsule(shoulder, elbow, 1.5, shaded(skin, skin_s, 0.3))
-    layer.capsule(elbow, hand, 1.35, shaded(skin, skin_s, 0.3))
+    layer.capsule(shoulder, elbow, B["arm_r"], shaded(skin, skin_s, 0.3))
+    layer.capsule(elbow, hand, B["arm_r"] - 0.15, shaded(skin, skin_s, 0.3))
     layer.capsule(hand, hand, 1.7, shaded(skin, skin_s, 0.5))
     return hand
 
 
-def render(pose, with_ball=True, stand_hip_y=None):
-    """Render one pose to a FRAME_W x FRAME_H RGBA image.
-    Returns (image, info) where info has the hip / ball / hand positions."""
+def render(pose, style=None, stand_hip_y=None):
+    """Render one pose. Returns (pixels, info): pixels maps (x, y) in the
+    virtual frame to a color tag."""
     lean = pose.get("lean", 8)
     hip = (HIP_X + pose.get("dx", 0), 100.0)
     tdir = vec(180 - lean)  # up the torso; positive lean tips it forward
-    # 'shrug' raises the shoulders, e.g. when both arms reach overhead
-    shoulder_up = SHOULDER_UP + pose.get("shrug", 0)
+    shoulder_up = B["shoulder"] + pose.get("shrug", 0)
     shoulder = add(hip, (tdir[0] * shoulder_up, tdir[1] * shoulder_up))
-    neck = add(hip, (tdir[0] * NECK_UP, tdir[1] * NECK_UP))
+    neck = add(hip, (tdir[0] * B["neck"], tdir[1] * B["neck"]))
 
     far_leg, near_leg, body = Layer(), Layer(), Layer()
     far_arm, near_arm, head = Layer(), Layer(), Layer()
 
-    fl = pose["far_leg"]
-    nl = pose["near_leg"]
+    fl, nl = pose["far_leg"], pose["near_leg"]
     draw_leg(far_leg, add(hip, (-0.5, 0)), fl[0], fl[1], fl[2] if len(fl) > 2 else 0, True)
     draw_leg(near_leg, add(hip, (0.5, 0)), nl[0], nl[1], nl[2] if len(nl) > 2 else 0, False)
 
-    # torso: jersey + shorts waist
-    chest_lo = add(hip, (tdir[0] * 3.0, tdir[1] * 3.0))
-    chest_hi = add(hip, (tdir[0] * 9.0, tdir[1] * 9.0))
+    # torso: jersey, then the shorts waist over its bottom
+    chest_lo = add(hip, (tdir[0] * 2.0, tdir[1] * 2.0))
+    chest_hi = add(hip, (tdir[0] * (B["shoulder"] - 1), tdir[1] * (B["shoulder"] - 1)))
 
     def jersey_fn(t, ox, oy):
-        side = ox * LIGHT[0] + oy * LIGHT[1]
-        # arm-hole / collar trim near the top of the jersey
         if t > 0.93 and abs(ox) < 0.45:
-            return PAL["trim"]
-        if side < -0.35:
-            return PAL["white_shade"]
-        return PAL["white"]
-    body.capsule(chest_lo, chest_hi, 3.7, jersey_fn)
-    body.capsule(add(hip, (0, -0.5)), add(hip, (tdir[0] * 2.5, tdir[1] * 2.5)), 3.9,
-                 lambda t, ox, oy: PAL["trim"] if 0.72 < t <= 1.0 and abs(ox) < 0.95 and oy < -0.1
-                 else (PAL["white_shade"] if (ox * LIGHT[0] + oy * LIGHT[1]) < -0.35 else PAL["white"]))
-    # shoulder strap bump
+            return "trim0"          # collar / arm-hole trim
+        return "jersey1" if lit(ox, oy) < -0.35 else "jersey0"
+    body.capsule(chest_lo, chest_hi, B["torso_r"], jersey_fn)
+
+    waist = 2.6   # distance up the torso from the hip to the top of the shorts
+
+    def shorts_fn(t, ox, oy):
+        px, py = body.pos
+        along = (px - hip[0]) * tdir[0] + (py - hip[1]) * tdir[1]
+        if along > waist:
+            return None             # above the waist: leave the jersey
+        if along > waist - 1:
+            return "trim0"          # waistband
+        return "shorts1" if lit(ox, oy) < -0.35 else "shorts0"
+    body.capsule(add(hip, (tdir[0] * -1.0, tdir[1] * -1.0)), add(hip, (tdir[0] * 1.5, tdir[1] * 1.5)),
+                 B["hip_r"], shorts_fn)
     body.capsule(shoulder, add(shoulder, (tdir[0] * 1.2, tdir[1] * 1.2)), 2.0,
-                 lambda t, ox, oy: PAL["white"])
+                 lambda t, ox, oy: "jersey0")
     # neck + head
-    head.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, 1.6,
-                 shaded(PAL["skin"], PAL["skin_shade"], 0.1))
+    head.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, 1.6, shaded("skin0", "skin1", 0.1))
     hx = int(round(neck[0])) - HEAD_ANCHOR[0] + pose.get("head_dx", 0)
     hy = int(round(neck[1])) - HEAD_ANCHOR[1] + pose.get("head_dy", 0)
-    head.blit(HEAD, (hx, hy), head_colors())
+    blit_head(head, (hx, hy), style)
 
-    fa = pose["far_arm"]
-    na = pose["near_arm"]
     reach = pose.get("reach", 1.0)
+    fa, na = pose["far_arm"], pose["near_arm"]
     far_hand = draw_arm(far_arm, add(shoulder, (-0.3, 0.3)), fa[0], fa[1], True, reach)
     near_hand = draw_arm(near_arm, shoulder, na[0], na[1], False, reach)
 
@@ -300,78 +420,76 @@ def render(pose, with_ball=True, stand_hip_y=None):
                 t = k / steps
                 x, y = ax + (bx - ax) * t, ay + (by - ay) * t
                 for ox, oy in ((0, 0), (1, 0), (0, 1), (1, 1), (-1, 0), (0, -1)):
-                    smear[(int(x + ox - 0.5), int(y + oy - 0.5))] = SMEAR
+                    smear[(int(x + ox - 0.5), int(y + oy - 0.5))] = "smear"
 
-    ball = None
-    ball_center = None
-    if pose.get("ball"):
-        b = pose["ball"]
-        kind = b[0]
-        if kind == "near":
-            ball_center = add(near_hand, (b[1], b[2]))
-        elif kind == "far":
-            ball_center = add(far_hand, (b[1], b[2]))
-        elif kind == "hip":
-            ball_center = add(hip, (b[1], b[2]))
-        elif kind == "ground":   # x relative to hip, sits on the floor
-            ball_center = (hip[0] + b[1], None)
-        ball = (ball_center, b[3] if len(b) > 3 else 0, b[4] if len(b) > 4 else 0)
-
-    # --- vertical placement
+    # vertical placement: grounded poses stand on the floor, 'lift' poses
+    # are raised relative to the standing hip height
     legs_bottom = max(y for (_, y) in list(far_leg.px) + list(near_leg.px))
     if "lift" in pose and stand_hip_y is not None:
         dy = (stand_hip_y - pose["lift"]) - hip[1]
     else:
         dy = GROUND - legs_bottom
-    dy = int(round(dy)) + pose.get("bob", 0)
-
-    if ball is not None:
-        (bx, by), rot, squash = ball
-        if by is None:
-            by = GROUND - dy + 0.5 - BALL_R * (1 - 0.22 * squash)
-        bx, by = math.floor(bx) + 0.5, math.floor(by) + 0.5
-        ball = ball_layer((bx, by), rot, squash)
-        ball_center = (bx, by)
+    dy = int(round(dy))
+    # bob > 0 sinks the upper body (legs stay planted); bob < 0 lifts it all
+    bob = pose.get("bob", 0)
+    dy_legs = dy + min(bob, 0)
+    dy += bob
 
     if pose.get("arms_behind_head"):
         # arms straight up would hide the face, so tuck them behind the head
         order = [far_arm, far_leg, near_leg, body, near_arm, head]
     else:
-        order = [far_arm, far_leg, near_leg, body, head]
-    if pose.get("arms_behind_head"):
-        pass
-    elif ball is not None and with_ball:
-        if pose.get("ball_behind_arm", True):
-            order += [ball, near_arm]
-        else:
-            order += [near_arm, ball]
-    else:
-        order += [near_arm]
+        order = [far_arm, far_leg, near_leg, body, head, near_arm]
 
-    img = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
-    pix = img.load()
+    grid = {}
     clipped = False
-    for (x, y), c in smear.items():
-        if 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
-            pix[x, y + dy] = c
+
+    def put(x, y, tag, shift):
+        nonlocal clipped
+        y2 = y + shift
+        if 0 <= x < FRAME_W and 0 <= y2 < FRAME_H:
+            grid[(x, y2)] = tag
+        else:
+            clipped = True
+
+    for (x, y), tag in smear.items():
+        put(x, y, tag, dy)
     for layer in order:
+        shift = dy_legs if layer in (far_leg, near_leg) else dy
         for src in (layer.outline(), layer.px):
-            for (x, y), c in src.items():
-                y2 = y + dy
-                if 0 <= x < FRAME_W and 0 <= y2 < FRAME_H:
-                    pix[x, y2] = c
-                else:
-                    clipped = True
+            for (x, y), tag in src.items():
+                put(x, y, tag, shift)
+    if pose.get("arms_behind_head"):
+        # hands raised above the skull stay in front of big hair (afro etc.)
+        skull_top = hy + SKULL_OFF[1] + 1
+        for layer in (far_arm, near_arm):
+            for src in (layer.outline(), layer.px):
+                for (x, y), tag in src.items():
+                    if y < skull_top:
+                        put(x, y, tag, dy)
+
+    ball = None
+    if pose.get("ball"):
+        kind, a, b = pose["ball"][:3]
+        if kind == "near":
+            ball = add(near_hand, (a, b))
+        elif kind == "between":
+            ball = add(((near_hand[0] + far_hand[0]) / 2, (near_hand[1] + far_hand[1]) / 2), (a, b))
+        elif kind == "hip":
+            ball = add(hip, (a, b))
+        elif kind == "ground":   # resting on the floor, x relative to the hip
+            ball = (hip[0] + a, GROUND + 1 - BALL_R - dy)
+        ball = [ball[0], ball[1] + dy]
 
     info = {
-        "hip": [round(hip[0], 1), round(hip[1] + dy, 1)],
-        "near_hand": [round(near_hand[0], 1), round(near_hand[1] + dy, 1)],
-        "far_hand": [round(far_hand[0], 1), round(far_hand[1] + dy, 1)],
+        "hip": [hip[0], hip[1] + dy],
+        "near_hand": [near_hand[0], near_hand[1] + dy],
+        "far_hand": [far_hand[0], far_hand[1] + dy],
+        "ball": ball,
+        "lift": max(0, GROUND - (legs_bottom + dy_legs)),
         "clipped": clipped,
     }
-    if ball_center is not None:
-        info["ball"] = [round(ball_center[0], 1), round(ball_center[1] + dy, 1)]
-    return img, info
+    return grid, info
 
 
 # ---------------------------------------------------------------- animations
@@ -400,99 +518,50 @@ RUN_ARM = [  # (upper, forearm) for the near arm
 RUN_BOB = [0, 1, 0, -1, -1, 0, 0, -1]
 
 
-def run_frames():
-    frames = []
-    for i in range(8):
-        j = (i + 4) % 8
-        frames.append(P(RUN_LEG[i], RUN_LEG[j], RUN_ARM[j], RUN_ARM[i],
-                        lean=14, bob=RUN_BOB[i]))
-    return frames
-
-
 def idle_frames():
-    frames = []
-    for i, b in enumerate([0, 0, 1, 1]):
-        frames.append(P((8, -4, 0), (-6, -2, 0), (10 - b * 2, 40 - b * 4), (-6, 30),
-                        lean=4, bob=b))
-    return frames
+    return [P((8, -4, 0), (-6, -2, 0), (22 - b * 2, 50 - b * 4), (-14, 20), lean=4, bob=b)
+            for b in [0, 0, 1, 1]]
 
 
-# ball height above the ground for the dribble bounce, one bounce per cycle
+def run_frames():
+    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], RUN_ARM[i],
+              lean=14, bob=RUN_BOB[i]) for i in range(8)]
+
+
 def dribble_frames():
-    # near hand pushes the ball down, ball hits floor at frame 3, back at 6
+    # one bounce per cycle: hand pushes down, ball hits the floor on frame 3
     arm = [(30, 70), (28, 45), (30, 40), (32, 50), (32, 60), (30, 70)]
-    ball = [
-        ("near", 1.5, 4.5, 0), ("near", 1.5, 5.0, 40), ("ground_hi", 12, 7, 80),
-        ("ground", 11, 0, 120, 1), ("ground_hi", 12, 7, 160), ("near", 1.5, 4.8, 200),
-    ]
-    frames = []
-    for i in range(6):
-        bob = [0, 1, 1, 1, 0, 0][i]
-        b = ball[i]
-        if b[0] == "ground_hi":
-            b = ("hip", b[1], b[2], b[3])
-        frames.append(P((22, -14, 0), (-14, -34, 12), arm[i], (40, 90),
-                        lean=16, bob=bob, ball=b))
-    return frames
+    ball = [("near", 1.5, 4.5), ("near", 1.5, 5.0), ("hip", 12, 7),
+            ("ground", 11, 0), ("hip", 12, 7), ("near", 1.5, 4.8)]
+    bob = [0, 1, 1, 1, 0, 0]
+    return [P((22, -14, 0), (-14, -34, 12), arm[i], (40, 90), lean=16, bob=bob[i], ball=ball[i])
+            for i in range(6)]
 
 
 def dribble_run_frames():
-    frames = []
-    # near arm stays out in front to dribble, far arm swings with the run
-    dr_arm = [(32, 72), (30, 55), (28, 42), (30, 38), (32, 48), (32, 58), (32, 66), (32, 72)]
-    ball = [
-        ("near", 1.5, 4.5, 0),
-        ("near", 1.5, 5.0, 45),
-        ("hip", 13, 4, 90),
-        ("hip", 13, 10, 135),
-        ("ground", 13, 0, 180, 1),
-        ("hip", 13, 10, 225),
-        ("hip", 13, 4, 270),
-        ("near", 1.5, 4.8, 315),
-    ]
-    for i in range(8):
-        j = (i + 4) % 8
-        frames.append(P(RUN_LEG[i], RUN_LEG[j], dr_arm[i], RUN_ARM[i],
-                        lean=16, bob=RUN_BOB[i], ball=ball[i]))
-    return frames
-
-
-def jump_frames():
-    # near arm reaches forward/up, far arm goes straight up behind the head
-    return [
-        # 0 crouch / anticipation, arms swung back
-        P((62, -20, 0), (56, -24, 0), (-40, 10), (-46, 6), lean=26),
-        # 1 take-off: legs extend onto the toes, arms swing up
-        P((6, -2, 45), (-4, -8, 50), (100, 125), (95, 120), lean=8),
-        # 2 rising
-        P((20, -20, 30), (8, -30, 35), (112, 140), (165, 175), lean=4, lift=7, head_dx=-1),
-        # 3 peak, knees tucked, reaching high
-        P((50, -30, 20), (36, -40, 25), (120, 150), (172, 180), lean=2, lift=9, head_dx=-1),
-        # 4 falling, legs reach for the floor
-        P((18, -6, 15), (4, -16, 20), (105, 125), (150, 165), lean=4, lift=6),
-        # 5 landing crouch
-        P((58, -18, 0), (50, -24, 0), (40, 70), (30, 60), lean=22),
-    ]
+    # two bounces per stride; the near hand keeps dribbling out in front
+    arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
+    ball = [("near", 1.5, 4.5), ("hip", 13, 8), ("ground", 13, 0), ("hip", 13, 8)] * 2
+    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], RUN_ARM[i],
+              lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)]
 
 
 def shoot_frames():
     return [
-        # 0 set: ball at the chest, knees bent
-        P((40, -12, 0), (30, -18, 0), (20, 140), (30, 120), lean=-12,
-          ball=("near", 3.0, -1.5, 0)),
+        # 0 gather: ball at the chest, knees bent
+        P((40, -12, 0), (30, -18, 0), (20, 140), (30, 120), lean=-12, ball=("near", 3.0, -1.5)),
         # 1 dip
-        P((56, -18, 0), (48, -22, 0), (10, 130), (22, 115), lean=-18,
-          ball=("near", 3.2, -1.5, 0)),
+        P((56, -18, 0), (48, -22, 0), (10, 130), (22, 115), lean=-18, ball=("near", 3.2, -1.5)),
         # 2 rise: legs extend, ball comes up in front of the face
         P((10, -4, 35), (0, -10, 40), (75, 165), (60, 150), lean=-4, head_dx=-2,
-          ball=("near", 1.0, -4.5, 22)),
+          ball=("near", 1.0, -4.5)),
         # 3 airborne, set point above the forehead
         P((20, -12, 25), (8, -20, 30), (88, 180), (80, 170), lean=2, lift=6, head_dx=-2,
-          ball=("near", 0.5, -4.5, 45)),
-        # 4 release: arm extends up and out, ball rolls off the fingertips
+          ball=("near", 0.5, -4.5)),
+        # 4 release: arm extends up and out
         P((22, -14, 25), (10, -22, 30), (118, 148), (95, 150), lean=0, lift=8, head_dx=-1,
-          ball=("near", 2.0, -4.0, 67)),
-        # 5 follow-through (ball gone - spawn it as a projectile)
+          ball=("near", 2.0, -4.0)),
+        # 5 follow-through
         P((22, -14, 25), (10, -22, 30), (122, 140), (100, 130), lean=0, lift=8, head_dx=-2),
         # 6 hang / descend, wrist still flicked
         P((14, -8, 20), (4, -16, 25), (108, 112), (80, 100), lean=-2, lift=4, head_dx=-1),
@@ -501,8 +570,43 @@ def shoot_frames():
     ]
 
 
+def layup_frames():
+    # one-handed layup, always with the near (camera-side) hand
+    return [
+        # 0 gather the ball at the hip mid-stride
+        P((34, 12, -6), (-24, -48, 30), (20, 110), (25, 100), lean=16, ball=("near", 2.5, 0.0)),
+        # 1 second step: far foot plants, ball to the chest
+        P((-20, -60, 30), (36, 14, -6), (15, 140), (25, 125), lean=10, ball=("near", 3.0, -1.5)),
+        # 2 take-off: near knee drives up, ball rising
+        P((80, -5, 10), (-12, -18, 40), (95, 160), (80, 140), lean=4, ball=("near", 1.5, -4.0)),
+        # 3 rising, ball hand extends toward the rim
+        P((88, 5, 5), (-4, -24, 35), (122, 150), (70, 100), lean=0, lift=8, head_dx=-1,
+          ball=("near", 1.5, -4.0)),
+        # 4 release at the peak
+        P((80, 0, 5), (0, -26, 30), (135, 150), (70, 100), lean=-2, lift=11, head_dx=-2,
+          ball=("near", 2.0, -4.0)),
+        # 5 follow-through
+        P((50, -10, 10), (4, -24, 30), (138, 125), (60, 95), lean=0, lift=9, head_dx=-2),
+        # 6 dropping
+        P((20, -6, 15), (4, -14, 20), (100, 100), (50, 80), lean=2, lift=4),
+        # 7 land
+        P((48, -16, 0), (40, -22, 0), (50, 80), (30, 60), lean=16),
+    ]
+
+
+def pass_frames():
+    # two-hand chest pass
+    return [
+        P((20, -5, 0), (-10, -22, 8), (15, 140), (25, 125), lean=10, ball=("near", 3.0, -1.5)),
+        P((34, 8, -4), (-16, -36, 16), (5, 135), (15, 120), lean=14, ball=("near", 3.0, -1.5)),
+        P((36, 10, -4), (-18, -40, 18), (60, 100), (55, 95), lean=18, ball=("near", 3.0, 0.0)),
+        P((36, 10, -4), (-18, -40, 18), (85, 92), (80, 88), lean=20),
+        P((34, 8, -4), (-16, -38, 16), (80, 70), (75, 65), lean=16),
+        P((22, -4, 0), (-10, -24, 8), (30, 70), (20, 60), lean=10),
+    ]
+
+
 def steal_frames():
-    # low defensive stance, then a lunge with a big sweeping swipe of the near arm
     windup = (228, 205)
     return [
         # 0 ready: low stance, hands out
@@ -510,49 +614,204 @@ def steal_frames():
         # 1 wind-up: near hand cocked up behind the head
         P((50, -6, 0), (-18, -44, 14), windup, (20, 55), lean=22, arms_behind_head=True),
         # 2 lunge forward, swipe comes through at shoulder height
-        P((60, 10, -4), (-30, -56, 22), (100, 96), (5, 40), lean=32, dx=2,
-          smear=[windup, (150, 150)]),
+        P((60, 10, -4), (-30, -56, 22), (100, 96), (5, 40), lean=32, dx=2, smear=[windup, (150, 150)]),
         # 3 swipe through the ball, arm fully extended
-        P((62, 14, -4), (-34, -60, 24), (62, 58), (-5, 30), lean=36, dx=3,
-          smear=[(100, 96)]),
+        P((62, 14, -4), (-34, -60, 24), (62, 58), (-5, 30), lean=36, dx=3, smear=[(100, 96)]),
         # 4 follow-through low
-        P((60, 12, -4), (-32, -58, 22), (28, 30), (0, 35), lean=34, dx=3,
-          smear=[(62, 58)]),
+        P((60, 12, -4), (-32, -58, 22), (28, 30), (0, 35), lean=34, dx=3, smear=[(62, 58)]),
         # 5 recover back to the stance
         P((48, -6, 0), (-18, -42, 12), (40, 70), (30, 65), lean=28, dx=1),
     ]
 
 
 def block_frames():
-    # big vertical leap with both arms straight up in a V over the head
     up = dict(arms_behind_head=True, reach=1.3, shrug=3)
     return [
-        # 0 load: deep crouch, arms down and back
-        P((64, -18, 0), (58, -22, 0), (-30, 10), (-36, 6), lean=26),
-        # 1 explode off the floor, arms swinging up in front
-        P((6, -2, 45), (-4, -8, 50), (95, 120), (88, 112), lean=6),
-        # 2 rising, arms going up
-        P((14, -10, 35), (2, -18, 40), (158, 162), (196, 194), lean=2, lift=8, **up),
-        # 3 peak: fully stretched, hands high
-        P((22, -8, 30), (8, -16, 35), (160, 164), (198, 196), lean=0, lift=11, **up),
-        # 4 coming down, arms still up
-        P((16, -6, 20), (4, -14, 25), (155, 160), (194, 192), lean=2, lift=6, **up),
-        # 5 land
-        P((58, -18, 0), (50, -24, 0), (60, 90), (40, 70), lean=22),
+        P((64, -18, 0), (58, -22, 0), (-30, 10), (-36, 6), lean=26),                      # load
+        P((6, -2, 45), (-4, -8, 50), (95, 120), (88, 112), lean=6),                        # explode up
+        P((14, -10, 35), (2, -18, 40), (158, 162), (196, 194), lean=2, lift=8, **up),      # rising
+        P((22, -8, 30), (8, -16, 35), (160, 164), (198, 196), lean=0, lift=11, **up),      # peak
+        P((16, -6, 20), (4, -14, 25), (155, 160), (194, 192), lean=2, lift=6, **up),       # coming down
+        P((58, -18, 0), (50, -24, 0), (60, 90), (40, 70), lean=22),                        # land
+    ]
+
+
+def rebound_frames():
+    up = dict(arms_behind_head=True, reach=1.2, shrug=2)
+    return [
+        P((62, -20, 0), (56, -24, 0), (-40, 10), (-46, 6), lean=26),                       # crouch
+        P((6, -2, 45), (-4, -8, 50), (100, 125), (95, 120), lean=8),                       # take-off
+        P((20, -20, 30), (8, -30, 35), (150, 160), (170, 175), lean=4, lift=7, **up),      # reaching
+        P((50, -30, 20), (36, -40, 25), (155, 165), (165, 172), lean=2, lift=9,
+          ball=("between", 0.0, -3.0), **up),                                              # catch
+        P((30, -20, 15), (18, -26, 20), (60, 150), (50, 140), lean=6, lift=5,
+          ball=("near", 3.0, -1.5)),                                                        # pull it down
+        P((58, -18, 0), (50, -24, 0), (40, 140), (35, 130), lean=22, ball=("near", 3.0, -1.5)),  # land
     ]
 
 
 ANIMS = [
-    # name, frames-fn, fps, loop
-    ("idle", idle_frames, 6, True),
-    ("run", run_frames, 12, True),
-    ("dribble", dribble_frames, 10, True),
-    ("dribble_run", dribble_run_frames, 12, True),
-    ("jump", jump_frames, 10, False),
-    ("shoot", shoot_frames, 12, False),
-    ("steal", steal_frames, 14, False),
-    ("block", block_frames, 10, False),
+    # name, frames-fn, fps, loop, events (name -> frame index)
+    ("idle", idle_frames, 6, True, {}),
+    ("run", run_frames, 12, True, {}),
+    ("dribble", dribble_frames, round(6 / 0.35, 2), True, {"bounce": 3}),
+    ("dribble_run", dribble_run_frames, round(8 / 0.70, 2), True, {"bounce": 2, "bounce2": 6}),
+    ("shoot", shoot_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
+    ("layup", layup_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
+    ("pass", pass_frames, 14, False, {"release": 3}),
+    ("steal", steal_frames, 14, False, {"activeStart": 2, "activeEnd": 4}),
+    ("block", block_frames, 10, False, {"takeoff": 1, "activeStart": 2, "activeEnd": 4}),
+    ("rebound", rebound_frames, 10, False, {"takeoff": 1, "catch": 3}),
 ]
+
+
+# ---------------------------------------------------------------- layer split
+def _dilate_under(mask, covered):
+    """Grow a mask 1px into pixels that later layers cover, so no seams show
+    between tinted layers when the image is scaled with filtering."""
+    grow = {}
+    for (x, y) in mask:
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n in covered and n not in mask:
+                grow[n] = WHITE
+    mask.update(grow)
+
+
+def body_layers(grid):
+    masks = {s: {} for s in BODY_SLOTS}
+    detail = {}
+    for p, tag in grid.items():
+        if tag in TINTED:
+            slot, over = TINTED[tag]
+            masks[slot][p] = WHITE
+            if over:
+                detail[p] = over
+        else:
+            detail[p] = FIXED[tag]
+    opaque = {p for p, c in detail.items() if c[3] == 255}
+    for i, slot in enumerate(BODY_SLOTS):
+        covered = set(opaque)
+        for later in BODY_SLOTS[i + 1:]:
+            covered |= set(masks[later])
+        _dilate_under(masks[slot], covered)
+    return masks, detail
+
+
+def hair_layers(bald, styled, where):
+    """Hair overlay = every pixel that differs from the bald render, so it
+    already has holes wherever an arm passes in front of the head."""
+    mask, detail = {}, {}
+    for p, tag in styled.items():
+        if bald.get(p) == tag:
+            continue
+        if tag in ("hair0", "hair1"):
+            mask[p] = WHITE
+            over = TINTED[tag][1]
+            if over:
+                detail[p] = over
+        elif tag in FIXED:
+            detail[p] = FIXED[tag]
+        else:
+            raise ValueError("%s: hair overlay would contain %s" % (where, tag))
+    missing = [p for p in bald if p not in styled]
+    if missing:
+        raise ValueError("%s: hair render lost %d pixels" % (where, len(missing)))
+    _dilate_under(mask, {p for p, c in detail.items() if c[3] == 255})
+    return mask, detail
+
+
+# ---------------------------------------------------------------- atlas
+class Atlas:
+    def __init__(self):
+        self.images = []
+        self.index = {}
+
+    def add(self, pixels):
+        """pixels: {(x, y): rgba} in frame coords -> [piece, dx, dy] or None."""
+        if not pixels:
+            return None
+        xs = [x for x, _ in pixels]
+        ys = [y for _, y in pixels]
+        x0, y0 = min(xs), min(ys)
+        img = Image.new("RGBA", (max(xs) - x0 + 1, max(ys) - y0 + 1), (0, 0, 0, 0))
+        pix = img.load()
+        for (x, y), c in pixels.items():
+            pix[x - x0, y - y0] = c
+        key = hashlib.sha1(img.tobytes() + bytes(str(img.size), "ascii")).hexdigest()
+        if key not in self.index:
+            self.index[key] = len(self.images)
+            self.images.append(img)
+        return [self.index[key], x0 * SCALE, y0 * SCALE]
+
+    def pack(self):
+        """Shelf-pack every piece into pages. Returns (page images, rects)."""
+        order = sorted(range(len(self.images)), key=lambda i: -self.images[i].height)
+        rects = [None] * len(self.images)
+        pages = []           # [(used_w, used_h)]
+        x = y = shelf_h = 0
+        page = -1
+        for i in order:
+            w, h = self.images[i].size
+            if page < 0 or x + w + PAD > PAGE_1X:
+                x, y, shelf_h = PAD, y + shelf_h + PAD, 0
+            if page < 0 or y + h + PAD > PAGE_1X:
+                page += 1
+                pages.append([0, 0])
+                x, y, shelf_h = PAD, PAD, 0
+            rects[i] = (page, x, y, w, h)
+            pages[page][0] = max(pages[page][0], x + w + PAD)
+            pages[page][1] = max(pages[page][1], y + h + PAD)
+            x += w + PAD
+            shelf_h = max(shelf_h, h)
+        out = []
+        for pw, ph in pages:
+            out.append(Image.new("RGBA", (pw, ph), (0, 0, 0, 0)))
+        for i, (page, px, py, w, h) in enumerate(rects):
+            out[page].paste(self.images[i], (px, py))
+        out = [im.resize((im.width * SCALE, im.height * SCALE), Image.NEAREST) for im in out]
+        rects = [[p, px * SCALE, py * SCALE, w * SCALE, h * SCALE] for p, px, py, w, h in rects]
+        return out, rects
+
+
+# ---------------------------------------------------------------- previews (emulate the app)
+def hex_rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def tinted(img, rgb):
+    """What <Image tintColor> does: every pixel becomes the tint, alpha kept."""
+    solid = Image.new("RGBA", img.size, rgb + (255,))
+    solid.putalpha(img.getchannel("A"))
+    return solid
+
+
+class Compositor:
+    def __init__(self, data, pages):
+        self.data = data
+        self.pages = pages
+        self.cache = {}
+
+    def piece(self, idx, tint):
+        key = (idx, tint)
+        if key not in self.cache:
+            p, sx, sy, w, h = self.data["pieces"][idx]
+            img = self.pages[p].crop((sx, sy, sx + w, sy + h))
+            self.cache[key] = tinted(img, tint) if tint else img
+        return self.cache[key]
+
+    def frame(self, build, anim, i, look, colors):
+        f = self.data["frames"][build][anim][i]
+        canvas = Image.new("RGBA", (self.data["frameWidth"], self.data["frameHeight"]), (0, 0, 0, 0))
+        layers = [(f["skin"], look["skin"]), (f["jersey"], colors["jersey"]),
+                  (f["trim"], colors["trim"]), (f["detail"], None)]
+        if look.get("hair"):
+            m, d = f["hair"][look["hair"]]
+            layers += [(m, look["hairColor"]), (d, None)]
+        for ref, tint in layers:
+            if ref:
+                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None), (ref[1], ref[2]))
+        return canvas
 
 
 # ---------------------------------------------------------------- output
@@ -561,16 +820,13 @@ def build_ball_sheet():
     frames = []
     for i in range(8):
         img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        _blit_layer(img, ball_layer((5.5, 5.5), i * 22.5))
+        _blit_rgba(img, ball_layer((5.5, 5.5), i * 22.5))
         frames.append(("spin_%d" % i, img))
-    # squashed (floor contact)
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    _blit_layer(img, ball_layer((5.5, 6.5), 0, 1))
+    _blit_rgba(img, ball_layer((5.5, 6.5), 0, 1))
     frames.append(("squash", img))
-    # drop shadow for when the ball is in the air
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    d.ellipse((1, 7, 9, 10), fill=(0, 0, 0, 90))
+    ImageDraw.Draw(img).ellipse((1, 7, 9, 10), fill=(0, 0, 0, 90))
     frames.append(("shadow", img))
 
     sheet = Image.new("RGBA", (size * len(frames), size), (0, 0, 0, 0))
@@ -586,124 +842,215 @@ def build_ball_sheet():
     return sheet, meta
 
 
-def _blit_layer(img, layer):
+def _blit_rgba(img, layer):
     pix = img.load()
     for src in (layer.outline(), layer.px):
         for (x, y), c in src.items():
             if 0 <= x < img.width and 0 <= y < img.height:
-                pix[x, y] = c
+                pix[x, y] = FIXED[c] if isinstance(c, str) else c
+
+
+def _pt(p):
+    return None if p is None else [round(p[0] * SCALE, 1), round(p[1] * SCALE, 1)]
+
+
+def build_all():
+    atlas = Atlas()
+    frames = {}
+    standing = {}
+    for build in BUILDS:
+        use_build(build)
+        stand_grid, stand = render(P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0), "short")
+        standing[build] = (FRAME_H - min(y for _, y in stand_grid)) * SCALE
+        frames[build] = {}
+        for name, fn, _, _, _ in ANIMS:
+            out = []
+            for i, pose in enumerate(fn()):
+                where = "%s/%s/%d" % (build, name, i)
+                bald, info = render(pose, None, stand["hip"][1])
+                if info["clipped"]:
+                    print("WARNING: %s clipped" % where)
+                masks, detail = body_layers(bald)
+                rec = {s: atlas.add(masks[s]) for s in BODY_SLOTS}
+                rec["detail"] = atlas.add(detail)
+                rec["hair"] = {}
+                for style in HAIR_STYLES:
+                    styled, _ = render(pose, style, stand["hip"][1])
+                    hm, hd = hair_layers(bald, styled, where + "/" + style)
+                    rec["hair"][style] = [atlas.add(hm), atlas.add(hd)]
+                rec["nearHand"] = _pt(info["near_hand"])
+                rec["farHand"] = _pt(info["far_hand"])
+                rec["ball"] = _pt(info["ball"])
+                rec["lift"] = info["lift"] * SCALE
+                out.append(rec)
+            frames[build][name] = out
+    pages, rects = atlas.pack()
+    data = {
+        "_comment": "AUTO-GENERATED by tools/generate_sprites.py. All positions are atlas pixels.",
+        "scale": SCALE,
+        "frameWidth": FRAME_W * SCALE,
+        "frameHeight": FRAME_H * SCALE,
+        "anchorX": ANCHOR_X * SCALE,
+        "anchorY": ANCHOR_Y * SCALE,
+        "pages": [[p.width, p.height] for p in pages],
+        "pieces": rects,
+        "standingHeight": standing,
+        "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames["wing"][name]), "events": ev}
+                  for name, _, fps, loop, ev in ANIMS},
+        "frames": frames,
+    }
+    return data, pages
+
+
+def write_rn(data, pages):
+    os.makedirs(RN_DIR, exist_ok=True)
+    atlas_dir = os.path.join(RN_DIR, "atlas")
+    shutil.rmtree(atlas_dir, ignore_errors=True)
+    os.makedirs(atlas_dir)
+    for i, p in enumerate(pages):
+        p.save(os.path.join(atlas_dir, "page%d.png" % i), optimize=True)
+    with open(os.path.join(RN_DIR, "spriteData.json"), "w") as f:
+        json.dump(data, f, separators=(",", ":"))
+    lines = [
+        "// AUTO-GENERATED by tools/generate_sprites.py - do not edit by hand.",
+        "import type { ImageSourcePropType } from 'react-native';",
+        "import type { SpriteData } from './types';",
+        "import raw from './spriteData.json';",
+        "",
+        "export const SPRITES = raw as unknown as SpriteData;",
+        "",
+        "export const PAGES: ImageSourcePropType[] = [",
+    ]
+    lines += ["  require('./atlas/page%d.png')," % i for i in range(len(pages))]
+    lines += ["];", ""]
+    with open(os.path.join(RN_DIR, "spriteData.ts"), "w") as f:
+        f.write("\n".join(lines))
+
+
+def weighted(rng, items):
+    total = sum(it["weight"] for it in items)
+    r = rng.uniform(0, total)
+    for it in items:
+        r -= it["weight"]
+        if r <= 0:
+            return it
+    return items[-1]
+
+
+def write_previews(data, pages, palettes):
+    shutil.rmtree(PREVIEW_DIR, ignore_errors=True)
+    os.makedirs(PREVIEW_DIR)
+    comp = Compositor(data, pages)
+    bg = (40, 70, 170, 255)
+    down = 3                       # previews at 2x art pixels
+    fw, fh = data["frameWidth"] // down, data["frameHeight"] // down
+    skins = palettes["skinTones"]
+    hair_c = {h["id"]: h["color"] for h in palettes["hairColors"]}
+    base_look = {"skin": skins[1]["color"], "hair": "short", "hairColor": hair_c["black"]}
+    white = palettes["white"]
+
+    def small(img):
+        return img.resize((img.width // down, img.height // down), Image.NEAREST)
+
+    def label(d, xy, text):
+        d.text(xy, text, fill=(255, 255, 255, 255))
+
+    # every jersey
+    teams = palettes["teams"] + [white]
+    cols = 11
+    rows = (len(teams) + cols - 1) // cols
+    crop_top = fh // 3
+    sheet = Image.new("RGBA", (cols * fw, rows * (fh - crop_top + 14)), bg)
+    d = ImageDraw.Draw(sheet)
+    for i, t in enumerate(teams):
+        x, y = (i % cols) * fw, (i // cols) * (fh - crop_top + 14)
+        img = small(comp.frame("wing", "idle", 0, base_look, t)).crop((0, crop_top, fw, fh))
+        sheet.alpha_composite(img, (x, y + 12))
+        label(d, (x + 4, y + 1), t["id"])
+    sheet.save(os.path.join(PREVIEW_DIR, "jerseys.png"))
+
+    # skin tones x hair styles, then the three builds
+    styles = list(HAIR_STYLES)
+    sheet = Image.new("RGBA", (len(styles) * fw + 60, (len(skins) + 1) * (fh - crop_top) + 16), bg)
+    d = ImageDraw.Draw(sheet)
+    team = palettes["teams"][13]
+    for c, st in enumerate(styles):
+        label(d, (60 + c * fw + 4, 2), st)
+        for r, sk in enumerate(skins):
+            look = {"skin": sk["color"], "hair": st, "hairColor": hair_c["black" if c % 2 == 0 else "brown"]}
+            img = small(comp.frame("wing", "idle", 0, look, team)).crop((0, crop_top, fw, fh))
+            sheet.alpha_composite(img, (60 + c * fw, 16 + r * (fh - crop_top)))
+            if c == 0:
+                label(d, (4, 16 + r * (fh - crop_top) + 40), sk["id"])
+    y = 16 + len(skins) * (fh - crop_top)
+    for c, b in enumerate(BUILDS):
+        img = small(comp.frame(b, "idle", 0, base_look, team)).crop((0, crop_top, fw, fh))
+        sheet.alpha_composite(img, (60 + c * fw, y))
+        label(d, (60 + c * fw + 4, y + 2), b)
+    label(d, (4, y + 40), "builds")
+    sheet.save(os.path.join(PREVIEW_DIR, "looks.png"))
+
+    # a random matchup, drawn the way the game will: build by height,
+    # then scaled by real height
+    rng = random.Random(11)
+    home, away = palettes["teams"][13], palettes["teams"][1]
+    court = Image.new("RGBA", (10 * 80 + 40, 200), bg)
+    d = ImageDraw.Draw(court)
+    d.rectangle((0, 170, court.width, court.height), fill=(30, 50, 140, 255))
+    gb = palettes["builds"]
+    for i in range(10):
+        inches = rng.randint(72, 86)
+        build = "guard" if inches <= gb["guardMaxInches"] else "wing" if inches <= gb["wingMaxInches"] else "big"
+        look = {"skin": rng.choice(skins)["color"], "hair": weighted(rng, palettes["hairStyles"])["id"],
+                "hairColor": weighted(rng, palettes["hairColors"])["color"]}
+        img = comp.frame(build, "idle", 0, look, home if i < 5 else away)
+        # ~in-game size (6'6" -> ~125 px), smoothly scaled like the phone does
+        s = (inches * 1.6) / data["standingHeight"][build]
+        img = img.resize((int(img.width * s), int(img.height * s)), Image.BILINEAR)
+        cx = 50 + i * 80 + (20 if i >= 5 else 0)
+        court.alpha_composite(img, (cx - img.width // 2, 170 - img.height))
+        label(d, (cx - 14, 174), "%d'%d\"" % (inches // 12, inches % 12))
+        label(d, (cx - 14, 186), build)
+    court.save(os.path.join(PREVIEW_DIR, "matchup.png"))
+
+    # full animation sheet + gifs for one look
+    look = {"skin": skins[2]["color"], "hair": "afro", "hairColor": hair_c["black"]}
+    team = palettes["teams"][9]
+    ncols = max(a["frameCount"] for a in data["anims"].values())
+    sheet = Image.new("RGBA", (ncols * fw, len(data["anims"]) * fh), bg)
+    d = ImageDraw.Draw(sheet)
+    for r, name in enumerate(data["anims"]):
+        n = data["anims"][name]["frameCount"]
+        imgs = []
+        for c in range(n):
+            img = small(comp.frame("wing", name, c, look, team))
+            sheet.alpha_composite(img, (c * fw, r * fh))
+            f = Image.new("RGBA", img.size, bg)
+            f.alpha_composite(img)
+            imgs.append(f.convert("RGB"))
+        label(d, (4, r * fh + 4), name)
+        imgs[0].save(os.path.join(PREVIEW_DIR, name + ".gif"), save_all=True, append_images=imgs[1:],
+                     duration=int(1000 / data["anims"][name]["fps"]), loop=0)
+    for x in range(0, sheet.width, fw):
+        d.line([(x, 0), (x, sheet.height)], fill=(255, 255, 255, 50))
+    for y in range(0, sheet.height, fh):
+        d.line([(0, y), (sheet.width, y)], fill=(255, 255, 255, 50))
+    sheet.save(os.path.join(PREVIEW_DIR, "animations.png"))
 
 
 def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    os.makedirs(PREVIEW_DIR, exist_ok=True)
-
-    # standing hip height, used to place airborne frames
-    _, stand = render(P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0))
-
-    cols = max(len(fn()) for _, fn, _, _ in ANIMS)
-    rows = len(ANIMS)
-    sheet = Image.new("RGBA", (cols * FRAME_W, rows * FRAME_H), (0, 0, 0, 0))
-    sheet_nb = sheet.copy()
-
-    meta = {"frames": {}, "animations": {}, "meta": {
-        "image": "player_white.png",
-        "image_no_ball": "player_white_noball.png",
-        "frame_size": {"w": FRAME_W, "h": FRAME_H},
-        "size": {"w": sheet.width, "h": sheet.height},
-        "anchor": {"x": HIP_X, "y": GROUND + 1, "note": "feet touch the floor at this pixel when grounded"},
-        "facing": "right",
-    }}
-    previews = {}
-    for row, (name, fn, fps, loop) in enumerate(ANIMS):
-        poses = fn()
-        frames_meta = []
-        imgs = []
-        for col, pose in enumerate(poses):
-            img, info = render_placed(pose, True, stand)
-            img_nb, _ = render_placed(pose, False, stand)
-            if info["clipped"]:
-                print("WARNING: %s frame %d clipped" % (name, col))
-            sheet.paste(img, (col * FRAME_W, row * FRAME_H))
-            sheet_nb.paste(img_nb, (col * FRAME_W, row * FRAME_H))
-            key = "%s_%d" % (name, col)
-            meta["frames"][key] = {
-                "frame": {"x": col * FRAME_W, "y": row * FRAME_H, "w": FRAME_W, "h": FRAME_H},
-                "ball": info.get("ball"),
-                "near_hand": info["near_hand"],
-                "far_hand": info["far_hand"],
-            }
-            frames_meta.append(key)
-            imgs.append(img)
-        anim = {"frames": frames_meta, "fps": fps, "loop": loop, "row": row}
-        if name == "shoot":
-            anim["release_frame"] = 5
-            anim["release_ball_pos"] = meta["frames"]["shoot_4"]["ball"]
-        # frames where the move can actually knock the ball away; use each
-        # frame's near_hand / far_hand position for the hitbox
-        if name == "steal":
-            anim["active_frames"] = [2, 3, 4]
-        if name == "block":
-            anim["active_frames"] = [2, 3, 4]
-        meta["animations"][name] = anim
-        previews[name] = (imgs, fps)
-
-    sheet.save(os.path.join(OUT_DIR, "player_white.png"))
-    sheet_nb.save(os.path.join(OUT_DIR, "player_white_noball.png"))
-    with open(os.path.join(OUT_DIR, "player_white.json"), "w") as f:
-        json.dump(meta, f, indent=2)
-
-    ball_sheet, ball_meta = build_ball_sheet()
-    ball_sheet.save(os.path.join(OUT_DIR, "ball.png"))
-    with open(os.path.join(OUT_DIR, "ball.json"), "w") as f:
+    with open(os.path.join(RN_DIR, "palettes.json")) as f:
+        palettes = json.load(f)
+    data, pages = build_all()
+    write_rn(data, pages)
+    ball, ball_meta = build_ball_sheet()
+    ball.save(os.path.join(SPRITE_DIR, "ball.png"))
+    with open(os.path.join(SPRITE_DIR, "ball.json"), "w") as f:
         json.dump(ball_meta, f, indent=2)
-
-    write_previews(sheet, previews, ball_sheet)
-
-
-def render_placed(pose, with_ball, stand):
-    """Render; airborne poses ('lift') are placed relative to the standing hip."""
-    if "lift" in pose:
-        return render(pose, with_ball, stand_hip_y=stand["hip"][1])
-    return render(pose, with_ball)
-
-
-def write_previews(sheet, previews, ball_sheet, scale=4):
-    bg = (40, 70, 170, 255)
-    floor = (30, 50, 140, 255)
-    # scaled sheet on a court-ish background with grid lines
-    big = Image.new("RGBA", sheet.size, bg)
-    big.alpha_composite(sheet)
-    big = big.resize((sheet.width * scale, sheet.height * scale), Image.NEAREST)
-    d = ImageDraw.Draw(big)
-    for x in range(0, big.width + 1, FRAME_W * scale):
-        d.line([(x, 0), (x, big.height)], fill=(255, 255, 255, 60))
-    for y in range(0, big.height + 1, FRAME_H * scale):
-        d.line([(0, y), (big.width, y)], fill=(255, 255, 255, 60))
-    for row, name in enumerate(previews):
-        d.text((6, row * FRAME_H * scale + 4), name, fill=(255, 255, 255, 255))
-    big.save(os.path.join(PREVIEW_DIR, "sheet_preview.png"))
-
-    # animated GIFs
-    for name, (imgs, fps) in previews.items():
-        out = []
-        for im in imgs:
-            f = Image.new("RGBA", im.size, bg)
-            ImageDraw.Draw(f).rectangle((0, GROUND + 1, FRAME_W, FRAME_H), fill=floor)
-            f.alpha_composite(im)
-            out.append(f.resize((FRAME_W * scale, FRAME_H * scale), Image.NEAREST).convert("RGB"))
-        out[0].save(os.path.join(PREVIEW_DIR, name + ".gif"), save_all=True,
-                    append_images=out[1:], duration=int(1000 / fps), loop=0)
-
-    # ball spin
-    size = BALL_CELL
-    out = []
-    for i in range(8):
-        f = Image.new("RGBA", (size, size), bg)
-        f.alpha_composite(ball_sheet.crop((i * size, 0, (i + 1) * size, size)))
-        out.append(f.resize((size * 8, size * 8), Image.NEAREST).convert("RGB"))
-    out[0].save(os.path.join(PREVIEW_DIR, "ball_spin.gif"), save_all=True,
-                append_images=out[1:], duration=60, loop=0)
+    write_previews(data, pages, palettes)
+    mb = sum(p.width * p.height * 4 for p in pages) / 1e6
+    print("pieces: %d  pages: %s  (~%.0f MB decoded)" % (len(data["pieces"]), data["pages"], mb))
+    print("standing height (atlas px):", data["standingHeight"])
 
 
 if __name__ == "__main__":

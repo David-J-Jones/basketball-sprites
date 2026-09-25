@@ -1,73 +1,110 @@
 # Basketball Sprites
 
-Pixel-art sprites for a side-view basketball game: one player in a plain white jersey, plus the ball.
+Pixel-art player sprites for the sim league. There is one set of art. The game colors it at runtime, so every team jersey, skin tone and hair color comes from the same images.
 
-![sheet preview](previews/sheet_preview.png)
+![animations](previews/animations.png)
+
+| | |
+|---|---|
+| ![jerseys](previews/jerseys.png) | ![looks](previews/looks.png) |
+
+![matchup](previews/matchup.png)
+
+## What's included
+
+- **32 team jerseys + a generic white one.** The 30 NBA teams in their current colors, plus 2 expansion slots (Seattle, Las Vegas). Each team has a jersey color and a trim color (collar, arm-holes, waistband).
+- **4 skin tones:** light, medium, tan, dark.
+- **4 hair styles:** short, buzz, afro, long with headband. Bald works too (`hairStyle: null`). Hair color is any color; the palette has black, dark brown, brown, blonde, red and gray.
+- **3 builds:** guard (≤ 6'3"), wing (6'4"–6'8"), big (6'9"+). Bigs have longer legs and a broader chest, and guards are compact. The game still scales each player by his real height on top of that.
+- **Always the same:** black shorts, grey shoes, white socks.
+- **10 animations:** `idle`, `run`, `dribble`, `dribble_run`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`.
+- **No ball and no shadow in the art.** Each frame lists where a held ball should be drawn.
 
 ## Files
 
+Everything the app needs is in **`integration/react-native/playerSprites/`**. Copy that folder into the app, e.g. `apps/mobile/src/game/playerSprites/`.
+
 | File | What it is |
 |---|---|
-| `sprites/player_white.png` | Player sheet. The ball is drawn into the dribble and shoot frames. |
-| `sprites/player_white_noball.png` | The same sheet with no ball, for drawing the ball yourself using `ball.png`. |
-| `sprites/player_white.json` | Frame rectangles, animation lists, fps, and the ball/hand position in every frame. |
-| `sprites/ball.png` / `ball.json` | Ball: 8 spin frames, 1 squashed (floor-contact) frame, 1 drop shadow. 11×11 each. |
-| `previews/*.gif` | Animated previews at 4× scale. |
-| `tools/generate_sprites.py` | The generator. Edit poses or colors here and re-run it. |
+| `palettes.json` | **Edit this to change colors.** Team jerseys and trims, skin tones, hair colors, hair-style weights, build height cutoffs. No regeneration needed. |
+| `PlayerSprite.tsx` | The `<PlayerSprite>` component plus helpers (`frameAt`, `scaleForHeight`, `frameToScreen`). |
+| `appearance.ts` | `generateLook()` for new players, team lookups, and `jerseysForGame()` (away team wears white on a color clash). |
+| `types.ts` | Types. |
+| `spriteData.ts` / `spriteData.json` / `atlas/*.png` | Generated art and frame data. Don't edit by hand. |
 
-## Player sheet layout
+`previews/` has PNG and GIF previews, and `sprites/ball.png` is an optional ball sheet.
 
-Each frame is **48×64 px**. Each row is one animation, and frames read left to right:
+## How it works
 
-| Row | Animation | Frames | FPS | Loop | Notes |
-|---|---|---|---|---|---|
-| 0 | `idle` | 4 | 6 | yes | Small breathing bob (bonus) |
-| 1 | `run` | 8 | 12 | yes | Full stride cycle |
-| 2 | `dribble` | 6 | 10 | yes | Dribbling in place |
-| 3 | `dribble_run` | 8 | 12 | yes | Dribbling on the move; one bounce per cycle |
-| 4 | `jump` | 6 | 10 | no | Crouch, take-off, rise, peak, fall, land. Rebound/block jump |
-| 5 | `shoot` | 8 | 12 | no | Jump shot. Ball leaves the hand after frame 4 |
-| 6 | `steal` | 6 | 14 | no | Stance, wind-up, lunge and swiping arm with a motion streak, recover |
-| 7 | `block` | 6 | 10 | no | Crouch, explode up, both arms straight overhead, land. Built-in lift like `shoot` |
+React Native's `<Image tintColor>` paints every visible pixel one flat color, so each frame is split into layers:
 
-- **Facing:** right. Flip horizontally to face left.
-- **Anchor / feet:** grounded frames put the soles on pixel row 61 (the outline is row 62), with the body centered around x = 22. Anchor at `(22, 62)` (bottom-center-ish) and the feet stay planted.
-- **Jumping:** `jump` has only a small built-in hop, so your game code should move the sprite up and down for the jump arc. `shoot` has a small hop built in, so it can play in place.
-- **Shooting:** frames 0–4 show the ball in hand. From frame 5 (`release_frame`) the ball is gone, so spawn a ball projectile at `release_ball_pos` (frame-local pixel coordinates in the JSON).
-- **Steal / block hitboxes:** these two animations have `active_frames` ([2, 3, 4]) in the JSON. Those are the frames where the swipe or block can hit the ball. Each frame also has `near_hand` and `far_hand` positions, so you can put a hitbox on the hands.
-- **Separate ball:** each frame in the JSON has a `ball` field (center in frame pixels, or `null`) so you can draw `ball.png` yourself on `player_white_noball.png`.
+1. **skin**: white mask, tinted with the skin tone
+2. **jersey**: white mask, tinted with the team color
+3. **trim**: white mask, tinted with the team trim
+4. **detail**: full color: outlines, shorts, shoes, eyes, plus see-through shading over the tinted parts
+5. **hair**: white mask tinted with the hair color, plus its own detail layer
 
-## Palette
+The pieces are trimmed, de-duplicated and packed into 5 atlas pages, about 200 KB on disk and about 65 MB of image memory once decoded. The art is pre-scaled 6× (a standing wing is 264 px tall) so it stays sharp when the phone scales it down.
 
-The sprites use a small fixed palette defined at the top of `tools/generate_sprites.py`. The jersey uses `white`, `white_shade` and `trim`. To make other teams, change those colors, or palette-swap them in a shader:
+## Using it
 
-| Name | RGB |
-|---|---|
-| white | 250,250,250 |
-| white_shade | 200,204,218 |
-| white_dark | 156,162,182 |
-| trim | 170,176,196 |
+```tsx
+import { PlayerSprite, generateLook, teamById, jerseysForGame,
+         scaleForHeight, frameAt } from './playerSprites';
 
-## Engine quick-start
+// once, when a player is created. Store `look` on the player record
+const look = generateLook(hash(player.id), player.heightInches);
 
-**Godot 4:** make an `AnimatedSprite2D` and create `SpriteFrames` → "Add frames from sprite sheet", with 8 horizontal × 8 vertical cells. Pick the row for each animation. Set the texture filter to *Nearest*.
+// once per game
+const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
-**Phaser 3:**
-```js
-this.load.spritesheet('player', 'sprites/player_white.png', { frameWidth: 48, frameHeight: 64 });
-// frame index = row * 8 + column
-this.anims.create({ key: 'run', frames: this.anims.generateFrameNumbers('player', { start: 8, end: 15 }), frameRate: 12, repeat: -1 });
+// every frame
+<PlayerSprite
+  look={look}
+  colors={isHome ? jerseys.home : jerseys.away}
+  anim="dribble_run"
+  frame={frameAt('dribble_run', secondsInState)}
+  x={feetScreenX} y={feetScreenY}                      // bottom-centre anchor
+  scale={scaleForHeight(look.build, onScreenHeightPx)}  // e.g. ~105 px for 6'6" near side
+  flip={facingLeft}
+/>
 ```
 
-**Unity:** set Sprite Mode to *Multiple*, Filter Mode to *Point*, Compression to *None*, then Slice → Grid By Cell Size 48×64.
+- **Anchor:** `x`/`y` is where the feet touch the floor. Every frame uses the same canvas, so the feet stay put.
+- **Height:** `scaleForHeight(build, px)` makes the standing player exactly `px` tall. Compute `px` from his real height and camera depth, the same way the rectangles work now.
+- **Jumps:** `shoot`, `layup`, `block` and `rebound` have a small hop drawn in. If the sim already raises the player with `z`, pass `bakedLift={false}` so the hop isn't added twice.
+- **Ball:** each frame has `ball` (where a held ball goes), `nearHand` and `farHand` in frame pixels. `frameToScreen()` converts them to screen positions.
+- **Timing events** are in `SPRITES.anims[anim].events`:
 
-**GameMaker / others:** strip import with 48×64 cells. Rows with fewer than 8 frames have blank cells at the end.
+| Animation | Frames | FPS | Loop | Events |
+|---|---|---|---|---|
+| `idle` | 4 | 6 | yes | |
+| `run` | 8 | 12 | yes | |
+| `dribble` | 6 | 17.14 | yes | `bounce: 3`. One bounce per 0.35 s cycle |
+| `dribble_run` | 8 | 11.43 | yes | `bounce: 2`, `bounce2: 6`. Two bounces per stride, 0.35 s apart |
+| `shoot` | 8 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
+| `layup` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4`. Always the near (camera-side) hand |
+| `pass` | 6 | 14 | no | `release: 3`. Two-hand chest pass |
+| `steal` | 6 | 14 | no | `activeStart: 2`, `activeEnd: 4` |
+| `block` | 6 | 10 | no | `takeoff: 1`, `activeStart: 2`, `activeEnd: 4` |
+| `rebound` | 6 | 10 | no | `takeoff: 1`, `catch: 3` |
 
-## Regenerating
+To sync the dribble to the sim's ball instead of the clock, pick the frame from the ball's bounce phase: `Math.floor(phase * frameCount)`.
+
+## Tweaking
+
+- **Colors:** edit `palettes.json`. It applies on the next reload.
+- **Look odds:** `weight` on hair styles and hair colors in `palettes.json`. Skin tones are picked evenly.
+- **Build cutoffs:** `builds.guardMaxInches` / `wingMaxInches` in `palettes.json`.
+- **Art, poses, new hair styles or animations:** edit `tools/generate_sprites.py`, then run it:
 
 ```bash
 pip install pillow
 python3 tools/generate_sprites.py
 ```
 
-Poses are tables of joint angles in `run_frames()`, `dribble_frames()`, `jump_frames()`, `shoot_frames()`, `steal_frames()`, `block_frames()` and so on. For angles, 0° points straight down, 90° forward and 180° straight up.
+This rewrites the atlas, `spriteData.json/.ts` and `previews/`. Poses are joint-angle tables such as `shoot_frames()` and `layup_frames()`, where 0° points down, 90° forward and 180° up. Builds are bone lengths in `BUILDS`, and hair styles are pixel templates in `HAIR_STYLES`.
+
+## Performance note
+
+Each player is up to 6 small `View` + `Image` pairs, about 60 for 10 players, all redrawn every frame. That's in line with how the court is drawn now. If it ever gets heavy, `@shopify/react-native-skia` (works in Expo) can draw the same atlas with one canvas and a color-swap shader.
