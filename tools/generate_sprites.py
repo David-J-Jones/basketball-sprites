@@ -238,7 +238,7 @@ def render(pose, with_ball=True, stand_hip_y=None):
     Returns (image, info) where info has the hip / ball / hand positions."""
     lean = pose.get("lean", 8)
     hip = (HIP_X + pose.get("dx", 0), 100.0)
-    tdir = vec(180 + lean)  # up the torso
+    tdir = vec(180 - lean)  # up the torso; positive lean tips it forward
     shoulder = add(hip, (tdir[0] * SHOULDER_UP, tdir[1] * SHOULDER_UP))
     neck = add(hip, (tdir[0] * NECK_UP, tdir[1] * NECK_UP))
 
@@ -448,16 +448,16 @@ def jump_frames():
 def shoot_frames():
     return [
         # 0 set: ball at the chest, knees bent
-        P((40, -12, 0), (30, -18, 0), (20, 140), (30, 120), lean=12,
+        P((40, -12, 0), (30, -18, 0), (20, 140), (30, 120), lean=-12,
           ball=("near", 3.0, -1.5, 0)),
         # 1 dip
-        P((56, -18, 0), (48, -22, 0), (10, 130), (22, 115), lean=18,
+        P((56, -18, 0), (48, -22, 0), (10, 130), (22, 115), lean=-18,
           ball=("near", 3.2, -1.5, 0)),
         # 2 rise: legs extend, ball comes up in front of the face
-        P((10, -4, 35), (0, -10, 40), (75, 165), (60, 150), lean=4, head_dx=-2,
+        P((10, -4, 35), (0, -10, 40), (75, 165), (60, 150), lean=-4, head_dx=-2,
           ball=("near", 1.0, -4.5, 22)),
         # 3 airborne, set point above the forehead
-        P((20, -12, 25), (8, -20, 30), (88, 180), (80, 170), lean=-2, lift=6, head_dx=-2,
+        P((20, -12, 25), (8, -20, 30), (88, 180), (80, 170), lean=2, lift=6, head_dx=-2,
           ball=("near", 0.5, -4.5, 45)),
         # 4 release: arm extends up and out, ball rolls off the fingertips
         P((22, -14, 25), (10, -22, 30), (118, 148), (95, 150), lean=0, lift=8, head_dx=-1,
@@ -465,9 +465,9 @@ def shoot_frames():
         # 5 follow-through (ball gone - spawn it as a projectile)
         P((22, -14, 25), (10, -22, 30), (122, 140), (100, 130), lean=0, lift=8, head_dx=-2),
         # 6 hang / descend, wrist still flicked
-        P((14, -8, 20), (4, -16, 25), (108, 112), (80, 100), lean=2, lift=4, head_dx=-1),
+        P((14, -8, 20), (4, -16, 25), (108, 112), (80, 100), lean=-2, lift=4, head_dx=-1),
         # 7 land
-        P((48, -16, 0), (40, -22, 0), (60, 80), (30, 60), lean=16),
+        P((48, -16, 0), (40, -22, 0), (60, 80), (30, 60), lean=-16),
     ]
 
 
