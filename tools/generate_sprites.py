@@ -44,6 +44,8 @@ PAL = {
     "ball_seam":   (58, 26, 14, 255),
 }
 
+SMEAR = (255, 255, 255, 150)   # swipe motion streak
+
 LIGHT = (-0.6, -0.8)  # light from the upper-left
 
 # ---------------------------------------------------------------- lengths
@@ -223,10 +225,14 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
     return ankle
 
 
-def draw_arm(layer, shoulder, upper_deg, fore_deg, far):
+def arm_points(shoulder, upper_deg, fore_deg, reach=1.0):
+    elbow = add(shoulder, vec(upper_deg, UPPER_ARM * reach))
+    return elbow, add(elbow, vec(fore_deg, FOREARM * reach))
+
+
+def draw_arm(layer, shoulder, upper_deg, fore_deg, far, reach=1.0):
     skin, skin_s, _, _ = limb_colors(far)
-    elbow = add(shoulder, vec(upper_deg, UPPER_ARM))
-    hand = add(elbow, vec(fore_deg, FOREARM))
+    elbow, hand = arm_points(shoulder, upper_deg, fore_deg, reach)
     layer.capsule(shoulder, elbow, 1.5, shaded(skin, skin_s, 0.3))
     layer.capsule(elbow, hand, 1.35, shaded(skin, skin_s, 0.3))
     layer.capsule(hand, hand, 1.7, shaded(skin, skin_s, 0.5))
@@ -239,7 +245,9 @@ def render(pose, with_ball=True, stand_hip_y=None):
     lean = pose.get("lean", 8)
     hip = (HIP_X + pose.get("dx", 0), 100.0)
     tdir = vec(180 - lean)  # up the torso; positive lean tips it forward
-    shoulder = add(hip, (tdir[0] * SHOULDER_UP, tdir[1] * SHOULDER_UP))
+    # 'shrug' raises the shoulders, e.g. when both arms reach overhead
+    shoulder_up = SHOULDER_UP + pose.get("shrug", 0)
+    shoulder = add(hip, (tdir[0] * shoulder_up, tdir[1] * shoulder_up))
     neck = add(hip, (tdir[0] * NECK_UP, tdir[1] * NECK_UP))
 
     far_leg, near_leg, body = Layer(), Layer(), Layer()
@@ -278,8 +286,21 @@ def render(pose, with_ball=True, stand_hip_y=None):
 
     fa = pose["far_arm"]
     na = pose["near_arm"]
-    far_hand = draw_arm(far_arm, add(shoulder, (-0.3, 0.3)), fa[0], fa[1], True)
-    near_hand = draw_arm(near_arm, shoulder, na[0], na[1], False)
+    reach = pose.get("reach", 1.0)
+    far_hand = draw_arm(far_arm, add(shoulder, (-0.3, 0.3)), fa[0], fa[1], True, reach)
+    near_hand = draw_arm(near_arm, shoulder, na[0], na[1], False, reach)
+
+    # motion smear: the path the near hand swept through since earlier poses
+    smear = {}
+    if pose.get("smear"):
+        path = [arm_points(shoulder, u, f, reach)[1] for u, f in pose["smear"]] + [near_hand]
+        for (ax, ay), (bx, by) in zip(path, path[1:]):
+            steps = int(max(abs(bx - ax), abs(by - ay)) * 2) + 1
+            for k in range(steps + 1):
+                t = k / steps
+                x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+                for ox, oy in ((0, 0), (1, 0), (0, 1), (1, 1), (-1, 0), (0, -1)):
+                    smear[(int(x + ox - 0.5), int(y + oy - 0.5))] = SMEAR
 
     ball = None
     ball_center = None
@@ -312,8 +333,14 @@ def render(pose, with_ball=True, stand_hip_y=None):
         ball = ball_layer((bx, by), rot, squash)
         ball_center = (bx, by)
 
-    order = [far_arm, far_leg, near_leg, body, head]
-    if ball is not None and with_ball:
+    if pose.get("arms_behind_head"):
+        # arms straight up would hide the face, so tuck them behind the head
+        order = [far_arm, far_leg, near_leg, body, near_arm, head]
+    else:
+        order = [far_arm, far_leg, near_leg, body, head]
+    if pose.get("arms_behind_head"):
+        pass
+    elif ball is not None and with_ball:
         if pose.get("ball_behind_arm", True):
             order += [ball, near_arm]
         else:
@@ -324,6 +351,9 @@ def render(pose, with_ball=True, stand_hip_y=None):
     img = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
     pix = img.load()
     clipped = False
+    for (x, y), c in smear.items():
+        if 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+            pix[x, y + dy] = c
     for layer in order:
         for src in (layer.outline(), layer.px):
             for (x, y), c in src.items():
@@ -471,6 +501,47 @@ def shoot_frames():
     ]
 
 
+def steal_frames():
+    # low defensive stance, then a lunge with a big sweeping swipe of the near arm
+    windup = (228, 205)
+    return [
+        # 0 ready: low stance, hands out
+        P((46, -8, 0), (-14, -40, 12), (45, 75), (35, 70), lean=26),
+        # 1 wind-up: near hand cocked up behind the head
+        P((50, -6, 0), (-18, -44, 14), windup, (20, 55), lean=22, arms_behind_head=True),
+        # 2 lunge forward, swipe comes through at shoulder height
+        P((60, 10, -4), (-30, -56, 22), (100, 96), (5, 40), lean=32, dx=2,
+          smear=[windup, (150, 150)]),
+        # 3 swipe through the ball, arm fully extended
+        P((62, 14, -4), (-34, -60, 24), (62, 58), (-5, 30), lean=36, dx=3,
+          smear=[(100, 96)]),
+        # 4 follow-through low
+        P((60, 12, -4), (-32, -58, 22), (28, 30), (0, 35), lean=34, dx=3,
+          smear=[(62, 58)]),
+        # 5 recover back to the stance
+        P((48, -6, 0), (-18, -42, 12), (40, 70), (30, 65), lean=28, dx=1),
+    ]
+
+
+def block_frames():
+    # big vertical leap with both arms straight up in a V over the head
+    up = dict(arms_behind_head=True, reach=1.3, shrug=3)
+    return [
+        # 0 load: deep crouch, arms down and back
+        P((64, -18, 0), (58, -22, 0), (-30, 10), (-36, 6), lean=26),
+        # 1 explode off the floor, arms swinging up in front
+        P((6, -2, 45), (-4, -8, 50), (95, 120), (88, 112), lean=6),
+        # 2 rising, arms going up
+        P((14, -10, 35), (2, -18, 40), (158, 162), (196, 194), lean=2, lift=8, **up),
+        # 3 peak: fully stretched, hands high
+        P((22, -8, 30), (8, -16, 35), (160, 164), (198, 196), lean=0, lift=11, **up),
+        # 4 coming down, arms still up
+        P((16, -6, 20), (4, -14, 25), (155, 160), (194, 192), lean=2, lift=6, **up),
+        # 5 land
+        P((58, -18, 0), (50, -24, 0), (60, 90), (40, 70), lean=22),
+    ]
+
+
 ANIMS = [
     # name, frames-fn, fps, loop
     ("idle", idle_frames, 6, True),
@@ -479,6 +550,8 @@ ANIMS = [
     ("dribble_run", dribble_run_frames, 12, True),
     ("jump", jump_frames, 10, False),
     ("shoot", shoot_frames, 12, False),
+    ("steal", steal_frames, 14, False),
+    ("block", block_frames, 10, False),
 ]
 
 
@@ -558,6 +631,7 @@ def main():
                 "frame": {"x": col * FRAME_W, "y": row * FRAME_H, "w": FRAME_W, "h": FRAME_H},
                 "ball": info.get("ball"),
                 "near_hand": info["near_hand"],
+                "far_hand": info["far_hand"],
             }
             frames_meta.append(key)
             imgs.append(img)
@@ -565,6 +639,12 @@ def main():
         if name == "shoot":
             anim["release_frame"] = 5
             anim["release_ball_pos"] = meta["frames"]["shoot_4"]["ball"]
+        # frames where the move can actually knock the ball away; use each
+        # frame's near_hand / far_hand position for the hitbox
+        if name == "steal":
+            anim["active_frames"] = [2, 3, 4]
+        if name == "block":
+            anim["active_frames"] = [2, 3, 4]
         meta["animations"][name] = anim
         previews[name] = (imgs, fps)
 

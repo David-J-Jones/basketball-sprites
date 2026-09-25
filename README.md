@@ -27,11 +27,14 @@ Each frame is **48×64 px**. Each row is one animation, and frames read left to 
 | 3 | `dribble_run` | 8 | 12 | yes | Dribbling on the move; one bounce per cycle |
 | 4 | `jump` | 6 | 10 | no | Crouch, take-off, rise, peak, fall, land. Rebound/block jump |
 | 5 | `shoot` | 8 | 12 | no | Jump shot. Ball leaves the hand after frame 4 |
+| 6 | `steal` | 6 | 14 | no | Stance, wind-up, lunge and swiping arm with a motion streak, recover |
+| 7 | `block` | 6 | 10 | no | Crouch, explode up, both arms straight overhead, land. Built-in lift like `shoot` |
 
 - **Facing:** right. Flip horizontally to face left.
 - **Anchor / feet:** grounded frames put the soles on pixel row 61 (the outline is row 62), with the body centered around x = 22. Anchor at `(22, 62)` (bottom-center-ish) and the feet stay planted.
 - **Jumping:** `jump` has only a small built-in hop, so your game code should move the sprite up and down for the jump arc. `shoot` has a small hop built in, so it can play in place.
 - **Shooting:** frames 0–4 show the ball in hand. From frame 5 (`release_frame`) the ball is gone, so spawn a ball projectile at `release_ball_pos` (frame-local pixel coordinates in the JSON).
+- **Steal / block hitboxes:** these two animations have `active_frames` ([2, 3, 4]) in the JSON. Those are the frames where the swipe or block can hit the ball. Each frame also has `near_hand` and `far_hand` positions, so you can put a hitbox on the hands.
 - **Separate ball:** each frame in the JSON has a `ball` field (center in frame pixels, or `null`) so you can draw `ball.png` yourself on `player_white_noball.png`.
 
 ## Palette
@@ -47,7 +50,7 @@ The sprites use a small fixed palette defined at the top of `tools/generate_spri
 
 ## Engine quick-start
 
-**Godot 4:** make an `AnimatedSprite2D` and create `SpriteFrames` → "Add frames from sprite sheet", with 8 horizontal × 6 vertical cells. Pick the row for each animation. Set the texture filter to *Nearest*.
+**Godot 4:** make an `AnimatedSprite2D` and create `SpriteFrames` → "Add frames from sprite sheet", with 8 horizontal × 8 vertical cells. Pick the row for each animation. Set the texture filter to *Nearest*.
 
 **Phaser 3:**
 ```js
@@ -67,4 +70,4 @@ pip install pillow
 python3 tools/generate_sprites.py
 ```
 
-Poses are tables of joint angles in `run_frames()`, `dribble_frames()`, `jump_frames()`, `shoot_frames()` and so on. For angles, 0° points straight down, 90° forward and 180° straight up.
+Poses are tables of joint angles in `run_frames()`, `dribble_frames()`, `jump_frames()`, `shoot_frames()`, `steal_frames()`, `block_frames()` and so on. For angles, 0° points straight down, 90° forward and 180° straight up.
