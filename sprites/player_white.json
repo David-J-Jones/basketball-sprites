@@ -1,0 +1,688 @@
+{
+  "frames": {
+    "idle_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        26.2,
+        43.5
+      ]
+    },
+    "idle_1": {
+      "frame": {
+        "x": 48,
+        "y": 0,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        26.2,
+        43.5
+      ]
+    },
+    "idle_2": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        25.7,
+        44.8
+      ]
+    },
+    "idle_3": {
+      "frame": {
+        "x": 144,
+        "y": 0,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        25.7,
+        44.8
+      ]
+    },
+    "run_0": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        27.7,
+        35.7
+      ]
+    },
+    "run_1": {
+      "frame": {
+        "x": 48,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        27.8,
+        37.5
+      ]
+    },
+    "run_2": {
+      "frame": {
+        "x": 96,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        26.1,
+        39.8
+      ]
+    },
+    "run_3": {
+      "frame": {
+        "x": 144,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        22.0,
+        43.2
+      ]
+    },
+    "run_4": {
+      "frame": {
+        "x": 192,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        21.2,
+        43.3
+      ]
+    },
+    "run_5": {
+      "frame": {
+        "x": 240,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        22.7,
+        42.9
+      ]
+    },
+    "run_6": {
+      "frame": {
+        "x": 288,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        25.5,
+        40.3
+      ]
+    },
+    "run_7": {
+      "frame": {
+        "x": 336,
+        "y": 64,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        27.6,
+        37.2
+      ]
+    },
+    "dribble_0": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        29.5,
+        46.5
+      ],
+      "near_hand": [
+        27.9,
+        41.6
+      ]
+    },
+    "dribble_1": {
+      "frame": {
+        "x": 48,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        27.5,
+        49.5
+      ],
+      "near_hand": [
+        26.3,
+        44.9
+      ]
+    },
+    "dribble_2": {
+      "frame": {
+        "x": 96,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        34.5,
+        52.5
+      ],
+      "near_hand": [
+        26.1,
+        45.2
+      ]
+    },
+    "dribble_3": {
+      "frame": {
+        "x": 144,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        33.5,
+        57.5
+      ],
+      "near_hand": [
+        27.0,
+        44.3
+      ]
+    },
+    "dribble_4": {
+      "frame": {
+        "x": 192,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        34.5,
+        51.5
+      ],
+      "near_hand": [
+        27.6,
+        42.5
+      ]
+    },
+    "dribble_5": {
+      "frame": {
+        "x": 240,
+        "y": 128,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        29.5,
+        46.5
+      ],
+      "near_hand": [
+        27.9,
+        41.6
+      ]
+    },
+    "dribble_run_0": {
+      "frame": {
+        "x": 0,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        29.5,
+        46.5
+      ],
+      "near_hand": [
+        28.1,
+        42.3
+      ]
+    },
+    "dribble_run_1": {
+      "frame": {
+        "x": 48,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        28.5,
+        49.5
+      ],
+      "near_hand": [
+        27.2,
+        44.0
+      ]
+    },
+    "dribble_run_2": {
+      "frame": {
+        "x": 96,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        35.5,
+        47.5
+      ],
+      "near_hand": [
+        26.1,
+        43.1
+      ]
+    },
+    "dribble_run_3": {
+      "frame": {
+        "x": 144,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        35.5,
+        54.5
+      ],
+      "near_hand": [
+        25.9,
+        44.3
+      ]
+    },
+    "dribble_run_4": {
+      "frame": {
+        "x": 192,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        35.5,
+        57.5
+      ],
+      "near_hand": [
+        26.9,
+        43.5
+      ]
+    },
+    "dribble_run_5": {
+      "frame": {
+        "x": 240,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        35.5,
+        54.5
+      ],
+      "near_hand": [
+        27.5,
+        42.7
+      ]
+    },
+    "dribble_run_6": {
+      "frame": {
+        "x": 288,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        35.5,
+        47.5
+      ],
+      "near_hand": [
+        27.9,
+        40.9
+      ]
+    },
+    "dribble_run_7": {
+      "frame": {
+        "x": 336,
+        "y": 192,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        29.5,
+        46.5
+      ],
+      "near_hand": [
+        28.1,
+        41.3
+      ]
+    },
+    "jump_0": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        14.8,
+        48.5
+      ]
+    },
+    "jump_1": {
+      "frame": {
+        "x": 48,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        31.4,
+        26.6
+      ]
+    },
+    "jump_2": {
+      "frame": {
+        "x": 96,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        30.7,
+        19.2
+      ]
+    },
+    "jump_3": {
+      "frame": {
+        "x": 144,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        29.8,
+        15.8
+      ]
+    },
+    "jump_4": {
+      "frame": {
+        "x": 192,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        32.0,
+        22.0
+      ]
+    },
+    "jump_5": {
+      "frame": {
+        "x": 240,
+        "y": 256,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        27.7,
+        44.4
+      ]
+    },
+    "shoot_0": {
+      "frame": {
+        "x": 0,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        28.5,
+        34.5
+      ],
+      "near_hand": [
+        25.8,
+        36.3
+      ]
+    },
+    "shoot_1": {
+      "frame": {
+        "x": 48,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        27.5,
+        37.5
+      ],
+      "near_hand": [
+        24.5,
+        38.5
+      ]
+    },
+    "shoot_2": {
+      "frame": {
+        "x": 96,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        29.5,
+        23.5
+      ],
+      "near_hand": [
+        28.7,
+        27.8
+      ]
+    },
+    "shoot_3": {
+      "frame": {
+        "x": 144,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        28.5,
+        16.5
+      ],
+      "near_hand": [
+        28.3,
+        21.2
+      ]
+    },
+    "shoot_4": {
+      "frame": {
+        "x": 192,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": [
+        32.5,
+        13.5
+      ],
+      "near_hand": [
+        30.5,
+        17.1
+      ]
+    },
+    "shoot_5": {
+      "frame": {
+        "x": 240,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        30.9,
+        17.2
+      ]
+    },
+    "shoot_6": {
+      "frame": {
+        "x": 288,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        32.9,
+        24.9
+      ]
+    },
+    "shoot_7": {
+      "frame": {
+        "x": 336,
+        "y": 320,
+        "w": 48,
+        "h": 64
+      },
+      "ball": null,
+      "near_hand": [
+        30.3,
+        40.4
+      ]
+    }
+  },
+  "animations": {
+    "idle": {
+      "frames": [
+        "idle_0",
+        "idle_1",
+        "idle_2",
+        "idle_3"
+      ],
+      "fps": 6,
+      "loop": true,
+      "row": 0
+    },
+    "run": {
+      "frames": [
+        "run_0",
+        "run_1",
+        "run_2",
+        "run_3",
+        "run_4",
+        "run_5",
+        "run_6",
+        "run_7"
+      ],
+      "fps": 12,
+      "loop": true,
+      "row": 1
+    },
+    "dribble": {
+      "frames": [
+        "dribble_0",
+        "dribble_1",
+        "dribble_2",
+        "dribble_3",
+        "dribble_4",
+        "dribble_5"
+      ],
+      "fps": 10,
+      "loop": true,
+      "row": 2
+    },
+    "dribble_run": {
+      "frames": [
+        "dribble_run_0",
+        "dribble_run_1",
+        "dribble_run_2",
+        "dribble_run_3",
+        "dribble_run_4",
+        "dribble_run_5",
+        "dribble_run_6",
+        "dribble_run_7"
+      ],
+      "fps": 12,
+      "loop": true,
+      "row": 3
+    },
+    "jump": {
+      "frames": [
+        "jump_0",
+        "jump_1",
+        "jump_2",
+        "jump_3",
+        "jump_4",
+        "jump_5"
+      ],
+      "fps": 10,
+      "loop": false,
+      "row": 4
+    },
+    "shoot": {
+      "frames": [
+        "shoot_0",
+        "shoot_1",
+        "shoot_2",
+        "shoot_3",
+        "shoot_4",
+        "shoot_5",
+        "shoot_6",
+        "shoot_7"
+      ],
+      "fps": 12,
+      "loop": false,
+      "row": 5,
+      "release_frame": 5,
+      "release_ball_pos": [
+        32.5,
+        13.5
+      ]
+    }
+  },
+  "meta": {
+    "image": "player_white.png",
+    "image_no_ball": "player_white_noball.png",
+    "frame_size": {
+      "w": 48,
+      "h": 64
+    },
+    "size": {
+      "w": 384,
+      "h": 384
+    },
+    "anchor": {
+      "x": 22,
+      "y": 62,
+      "note": "feet touch the floor at this pixel when grounded"
+    },
+    "facing": "right"
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "frames": {
+    "ball_spin_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_1": {
+      "frame": {
+        "x": 11,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_2": {
+      "frame": {
+        "x": 22,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_3": {
+      "frame": {
+        "x": 33,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_4": {
+      "frame": {
+        "x": 44,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_5": {
+      "frame": {
+        "x": 55,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_6": {
+      "frame": {
+        "x": 66,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_spin_7": {
+      "frame": {
+        "x": 77,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_squash": {
+      "frame": {
+        "x": 88,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    },
+    "ball_shadow": {
+      "frame": {
+        "x": 99,
+        "y": 0,
+        "w": 11,
+        "h": 11
+      }
+    }
+  },
+  "meta": {
+    "image": "ball.png",
+    "size": {
+      "w": 110,
+      "h": 11
+    },
+    "frameTags": [
+      {
+        "name": "spin",
+        "from": 0,
+        "to": 7,
+        "fps": 16
+      },
+      {
+        "name": "squash",
+        "from": 8,
+        "to": 8
+      },
+      {
+        "name": "shadow",
+        "from": 9,
+        "to": 9
+      }
+    ]
+  }
+}
