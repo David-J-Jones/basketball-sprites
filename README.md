@@ -23,7 +23,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
 - **32 team jerseys + a white one**, 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
 - **Always the same:** black shorts, grey shoes.
-- **17 animations:** `idle`, `run`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **22 animations:** `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -44,6 +44,7 @@ Everything the app needs is in **`integration/react-native/playerSprites/`**.
 | `appearance.ts` | `playerLook(id, heightIn, weightLbs)` / `lookFromFace()` for sprites, `bodyFor()`, teams, `jerseysForGame()`. |
 | `PlayerSprite.tsx` | `<PlayerSprite>` plus `frameAt`, `scaleForHeight`, `frameToScreen`. |
 | `moves.ts` | `crossoverFor(dy)`, `handAfter()`, `dribbleAnim(hand, moving)`. |
+| `animController.ts` | `PlayerAnimator`: picks animation, frame and facing from velocity, with smooth turns and transitions (see below). |
 | `faceArt.test.ts`, `appearance.test.ts` | Jest tests (see below). |
 | `spriteData.*`, `atlas/*.png` | Generated. Don't edit by hand. |
 
@@ -58,6 +59,34 @@ Same design as the app's current system:
 5. Nothing is stored. The face is recomputed from the id every time.
 
 This is a fresh implementation, so its random draws won't line up with the old `faceArt.ts`. **Existing players will get new faces**, but each one stays stable from then on.
+
+## Smooth movement (no flicker)
+
+When players, especially the AI, change direction a lot, flipping the sprite the instant `vx` changes sign makes them strobe. Restarting animations on every state change makes them pop. `PlayerAnimator` fixes both. Create one per player and call it every rendered frame:
+
+```ts
+const animator = new PlayerAnimator(initialFacing);   // once per player
+
+// every frame (dt in seconds, velocity in court ft/s)
+const { anim, frame, flip } = animator.update(dt, { vx, vy, hasBall });
+<PlayerSprite look={look} colors={colors} anim={anim} frame={frame} flip={flip} ... />
+
+// one-off moves: they play once, then movement resumes
+animator.play('shoot', towardBasket);  // optional facing, applied instantly
+animator.play(crossoverFor(dy));       // the dribbling hand updates itself
+```
+
+- **Turns:** facing changes only after the new direction has held for `turnDelay` (0.15 s), and always through a turn animation:
+  - `turn`: standing pivot;
+  - `turn_run`: plant, skid and go the other way;
+  - `turn_dribble`: turning with the ball, which bounces under him while he turns.
+
+  Each turn passes through two square-on frames that mirror each other, and the flip happens between them (`events.flipAt`), so it doesn't read as a jump.
+- **Start and stop:** `run_start` and `run_stop` play between standing and running. Both have hysteresis and a short minimum hold, so a player hovering around the run threshold doesn't flicker between idle and run.
+- **Stride:** the run cycles are now 12 frames at 18 fps (in-betweens generated from the key poses). `run`, `dribble_run` and `dribble_run_far` share one stride clock, so picking up or giving up the ball never restarts the legs. The stride speeds up and slows down with actual speed, so feet don't slide.
+- **Tuning:** all thresholds are options: `runOn`, `runOff`, `turnSpeed`, `turnDelay`, `minHold`, `refSpeed`. The defaults assume feet per second.
+
+If you drive animations yourself instead, keep the same rules: never flip `facing` directly from the sign of `vx`, and don't reset the frame counter when switching between run and dribble_run.
 
 ## Directions: up/down, near/far
 
@@ -116,10 +145,12 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | Animation | Frames | FPS | Loop | Events |
 |---|---|---|---|---|
 | `idle` | 4 | 6 | yes | |
-| `run` | 8 | 12 | yes | |
+| `run` | 12 | 18 | yes | |
+| `run_start` / `run_stop` | 3 / 5 | 14 | no | Standing ↔ running |
+| `turn` / `turn_run` / `turn_dribble` | 6 | 16 | no | `flipAt: 3`: draw frames from 3 on facing the new way |
 | `dribble` | 6 | 17.14 | yes | `bounce: 3` (0.35 s per bounce) |
-| `dribble_run` | 8 | 11.43 | yes | `bounce: 2`, `bounce2: 6` |
-| `dribble_far` / `dribble_run_far` | 6 / 8 | same | yes | Same as above, with the far hand |
+| `dribble_run` | 12 | 17.14 | yes | `bounce: 3`, `bounce2: 9` |
+| `dribble_far` / `dribble_run_far` | 6 / 12 | same | yes | Same as above, with the far hand |
 | `crossover_up` / `crossover_down` | 6 | 14 | no | `cross: 2` (bounce in front), `catch: 3`, `cutStart: 3` |
 | `shoot` | 8 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
 | `layup` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4`. Near hand |
@@ -135,9 +166,9 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail layer, then facial hair and hair. There are up to 8 small `View`+`Image` pairs per player.
 
-- **Masks** (the tinted parts) are stored at 2× and **detail** at 5×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
-- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 12–16 MB per body, plus about 15 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 110 MB.
-- **Knob:** set `SCALE = 4` in the generator to cut body memory by about a third, with slightly softer outlines. `SCALE = 6` is sharper and uses about 45% more.
+- **Masks** (the tinted parts) are stored at 2× and **detail** at 4×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
+- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 11–15 MB per body, plus about 10 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 100 MB.
+- **Knob:** `SCALE` in the generator is 4. `SCALE = 5` gives sharper outlines on big screens, for about 45% more body memory.
 
 ## Tests
 
@@ -155,6 +186,7 @@ The tests cover:
 - body classes are picked correctly;
 - the sprite data covers every body × animation × hair × facial hair;
 - crossovers move the ball across the body, and the direction helpers pick the right animation;
+- `PlayerAnimator`: jittery velocity never flips the sprite, real direction changes turn at `flipAt`, start/stop transitions play, the stride survives run ↔ dribble_run, and the run never skips a frame at 60 fps;
 - jersey clashes switch the away team to white.
 
 ## Regenerating the sprite art

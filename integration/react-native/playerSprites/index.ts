@@ -9,4 +9,6 @@ export { PlayerSprite, frameAt, animDuration, scaleForHeight, frameToScreen } fr
 export type { PlayerSpriteProps } from './PlayerSprite';
 export { crossoverFor, handAfter, dribbleAnim } from './moves';
 export type { BallHand } from './moves';
+export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS } from './animController';
+export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';

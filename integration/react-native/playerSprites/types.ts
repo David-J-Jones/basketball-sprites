@@ -5,6 +5,11 @@ export type { BodyKey } from './features';
 export type AnimName =
   | 'idle'
   | 'run'
+  | 'run_start'
+  | 'run_stop'
+  | 'turn'
+  | 'turn_run'
+  | 'turn_dribble'
   | 'dribble'
   | 'dribble_run'
   | 'dribble_far'

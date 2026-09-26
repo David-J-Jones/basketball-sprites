@@ -44,7 +44,7 @@ FRAME_W, FRAME_H = 64, 80
 ANCHOR_X, ANCHOR_Y = FRAME_W // 2, FRAME_H   # bottom centre, at the feet
 GROUND = FRAME_H - 2      # last row of sole pixels; the outline sits on the bottom row
 HIP_X = ANCHOR_X
-SCALE = 5                 # detail layers: atlas pixels per art pixel (crisp outlines)
+SCALE = 4                 # detail layers: atlas pixels per art pixel (crisp outlines)
 MASK_RES = 2              # tint masks: texels per art pixel (edges hide under outlines)
 PAGE_PX = 2040            # max atlas page width/height in pixels
 PAD = 1                   # gap between atlas pieces, in stored units
@@ -574,23 +574,33 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
                     if y < skull_top:
                         put(x, y, tag, dy)
 
+    def ball_spot(spec):
+        """Ball centre (before the vertical shift) and depth for a ball spec.
+        Depth: +1 near (camera) side, 0 centred in front, -1 far side."""
+        kind, a, b = spec[:3]
+        d = spec[3] if len(spec) > 3 else BALL_DEPTH[kind]
+        if kind == "near":
+            pt = add(near_hand, (a, b))
+        elif kind == "far":
+            pt = add(far_hand, (a, b))
+        elif kind == "between":
+            pt = add(((near_hand[0] + far_hand[0]) / 2, (near_hand[1] + far_hand[1]) / 2), (a, b))
+        elif kind == "hip":
+            pt = add(hip, (a, b))
+        else:                    # "ground": resting on the floor, x relative to the hip
+            pt = (hip[0] + a, GROUND + 1 - BALL_R - dy)
+        return pt, d
+
     ball = None
     depth = None
     if pose.get("ball"):
-        kind, a, b = pose["ball"][:3]
-        # which side of the body the ball is on: +1 near (camera) side,
-        # 0 centred in front of the body, -1 far side (behind the body)
-        depth = pose["ball"][3] if len(pose["ball"]) > 3 else BALL_DEPTH[kind]
-        if kind == "near":
-            ball = add(near_hand, (a, b))
-        elif kind == "far":
-            ball = add(far_hand, (a, b))
-        elif kind == "between":
-            ball = add(((near_hand[0] + far_hand[0]) / 2, (near_hand[1] + far_hand[1]) / 2), (a, b))
-        elif kind == "hip":
-            ball = add(hip, (a, b))
-        elif kind == "ground":   # resting on the floor, x relative to the hip
-            ball = (hip[0] + a, GROUND + 1 - BALL_R - dy)
+        if pose["ball"][0] == "lerp":           # in-between frame: blend two specs
+            _, spec_a, spec_b, t = pose["ball"]
+            (pa, da), (pb, db) = ball_spot(spec_a), ball_spot(spec_b)
+            ball = (pa[0] + (pb[0] - pa[0]) * t, pa[1] + (pb[1] - pa[1]) * t)
+            depth = round(da + (db - da) * t, 2)
+        else:
+            ball, depth = ball_spot(pose["ball"])
         ball = [ball[0], ball[1] + dy]
 
     info = {
@@ -613,6 +623,41 @@ def P(near_leg, far_leg, near_arm, far_arm, **kw):
     d = {"near_leg": near_leg, "far_leg": far_leg, "near_arm": near_arm, "far_arm": far_arm}
     d.update(kw)
     return d
+
+
+def lerp_pose(a, b, t):
+    """In-between of two poses: joint angles and offsets blend linearly,
+    on/off switches come from the nearer pose, and the ball blends too."""
+    out = dict(a if t < 0.5 else b)
+    for k in ("near_leg", "far_leg", "near_arm", "far_arm"):
+        ta, tb = list(a[k]), list(b[k])
+        n = max(len(ta), len(tb))
+        ta += [0] * (n - len(ta))
+        tb += [0] * (n - len(tb))
+        out[k] = tuple(x + (y - x) * t for x, y in zip(ta, tb))
+    for k, default in (("lean", 8), ("dx", 0), ("shrug", 0), ("reach", 1.0)):
+        if k in a or k in b:
+            out[k] = a.get(k, default) + (b.get(k, default) - a.get(k, default)) * t
+    for k in ("bob", "head_dx", "head_dy"):
+        if k in a or k in b:
+            out[k] = int(round(a.get(k, 0) + (b.get(k, 0) - a.get(k, 0)) * t))
+    if a.get("ball") and b.get("ball"):
+        out["ball"] = a["ball"] if t == 0 else ("lerp", a["ball"], b["ball"], t)
+    return out
+
+
+def resample(keys, n, loop=True):
+    """n evenly spaced poses through a list of key poses."""
+    span = len(keys) if loop else len(keys) - 1
+    out = []
+    for i in range(n):
+        pos = i * span / (n if loop else n - 1)
+        k = int(pos)
+        t = pos - k
+        a = keys[k % len(keys)]
+        b = keys[(k + 1) % len(keys)] if (loop or k + 1 < len(keys)) else a
+        out.append(lerp_pose(a, b, t) if t > 1e-6 else dict(a))
+    return out
 
 
 def swap_sides(pose, legs=True):
@@ -654,9 +699,16 @@ def idle_frames():
             for b in [0, 0, 1, 1]]
 
 
-def run_frames():
+RUN_FRAMES = 12   # locomotion cycles are 12 frames: 8 key poses + in-betweens
+
+
+def run_keys():
     return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], RUN_ARM[i],
               lean=14, bob=RUN_BOB[i]) for i in range(8)]
+
+
+def run_frames():
+    return resample(run_keys(), RUN_FRAMES)
 
 
 def dribble_frames():
@@ -673,8 +725,8 @@ def dribble_run_frames():
     # two bounces per stride; the near hand keeps dribbling out in front
     arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
     ball = [("near", 1.5, 4.5, 1), ("hip", 13, 8, 1), ("ground", 13, 0, 1), ("hip", 13, 8, 1)] * 2
-    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], RUN_ARM[i],
-              lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)]
+    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], RUN_ARM[i],
+                       lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
 
 
 def dribble_far_frames():
@@ -687,8 +739,72 @@ def dribble_run_far_frames():
     # mid-run; only the dribbling hand changes
     arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
     ball = [("far", 1.5, 4.5, -1), ("hip", 13, 8, -1), ("ground", 13, 0, -1), ("hip", 13, 8, -1)] * 2
-    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], arm[i],
-              lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)]
+    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], arm[i],
+                       lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
+
+
+IDLE_POSE = P((8, -4, 0), (-6, -2, 0), (22, 50), (-14, 20), lean=4)
+DRIBBLE_POSE = P((22, -14, 0), (-14, -34, 12), (30, 70), (40, 90), lean=16, ball=("near", 1.5, 4.5, 1))
+
+
+def run_start_frames():
+    # from standing into the first stride; ends one step before run frame 0
+    return [
+        P((10, -10, 0), (-10, -14, 10), (10, 60), (-10, 30), lean=8, bob=1),       # load
+        P((26, -16, 0), (-16, -34, 20), (-12, 58), (18, 105), lean=13, bob=1),     # first push
+        P((38, 4, -6), (-26, -56, 32), (-26, 52), (34, 125), lean=15),             # stride out
+    ]
+
+
+def run_stop_frames():
+    # plant the lead foot, skid, settle into the idle stance
+    return [
+        P((44, 10, -10), (-20, -50, 30), (-10, 40), (20, 100), lean=4),
+        P((46, 20, -12), (-8, -40, 20), (20, 60), (30, 80), lean=-8, bob=1),
+        P((30, 2, 0), (-4, -20, 10), (24, 58), (-6, 36), lean=-2, bob=1),
+        P((14, -6, 0), (-6, -4, 0), (22, 52), (-12, 22), lean=3),
+        dict(IDLE_POSE),
+    ]
+
+
+# Turns flip facing at events.flipAt. The frames either side of the flip are
+# square-on and mirror each other, so the switch doesn't read as a jump.
+def turn_frames():
+    square = dict(near_leg=(0, -2, 0), far_leg=(0, -2, 0), near_arm=(6, 32), far_arm=(-4, 26))
+    return [
+        dict(IDLE_POSE),
+        P((4, -4, 0), (-2, -4, 0), (12, 42), (-8, 28), lean=2, bob=1),          # gather
+        P(**square, lean=-1, bob=1, dx=-1),                                     # square up (old facing)
+        P(**square, lean=1, bob=1, dx=1),                                       # square up (new facing)
+        P((12, -6, 0), (-8, -6, 5), (18, 48), (-12, 24), lean=6),               # settle
+        dict(IDLE_POSE),
+    ]
+
+
+def turn_run_frames():
+    square = dict(near_leg=(20, -10, 0), far_leg=(10, -20, 0), near_arm=(20, 60), far_arm=(15, 55))
+    return [
+        P((44, 10, -10), (-20, -50, 30), (-10, 40), (20, 100), lean=2),          # plant
+        P((50, 22, -14), (-4, -36, 20), (30, 70), (40, 90), lean=-10, bob=1),    # skid
+        P(**square, lean=-3, bob=1, dx=-1),                                      # low and square (old facing)
+        P(**square, lean=10, bob=1, dx=1),                                       # push off (new facing)
+        P((30, -20, 0), (-24, -50, 30), (-20, 60), (25, 115), lean=16),          # first stride
+        run_keys()[0],                                                           # = run frame 0
+    ]
+
+
+def turn_dribble_frames():
+    # the ball bounces between the feet while the body squares up, so the
+    # flip happens with the ball on the floor under the player
+    square = dict(near_leg=(16, -10, 0), far_leg=(4, -18, 0), near_arm=(25, 40), far_arm=(30, 60))
+    return [
+        dict(DRIBBLE_POSE),
+        P((30, -2, -6), (-10, -30, 15), (28, 45), (40, 80), lean=2, bob=1, ball=("hip", 8, 8, 0.6)),
+        P(**square, lean=-2, bob=1, dx=-1, ball=("ground", 0, 0, 0.3)),
+        P(**square, lean=4, bob=1, dx=1, ball=("ground", 0, 0, 0.3)),
+        P((24, -12, 0), (-12, -30, 10), (28, 45), (40, 85), lean=12, ball=("hip", 10, 8, 1)),
+        dict(DRIBBLE_POSE),
+    ]
 
 
 def crossover_up_frames():
@@ -900,11 +1016,16 @@ def dunk_hang_frames():
 ANIMS = [
     # name, frames-fn, fps, loop, events (name -> frame index)
     ("idle", idle_frames, 6, True, {}),
-    ("run", run_frames, 12, True, {}),
+    ("run", run_frames, 18, True, {}),
+    ("run_start", run_start_frames, 14, False, {}),
+    ("run_stop", run_stop_frames, 14, False, {}),
+    ("turn", turn_frames, 16, False, {"flipAt": 3}),
+    ("turn_run", turn_run_frames, 16, False, {"flipAt": 3}),
+    ("turn_dribble", turn_dribble_frames, 16, False, {"flipAt": 3, "bounce": 2}),
     ("dribble", dribble_frames, round(6 / 0.35, 2), True, {"bounce": 3}),
-    ("dribble_run", dribble_run_frames, round(8 / 0.70, 2), True, {"bounce": 2, "bounce2": 6}),
+    ("dribble_run", dribble_run_frames, round(RUN_FRAMES / 0.70, 2), True, {"bounce": 3, "bounce2": 9}),
     ("dribble_far", dribble_far_frames, round(6 / 0.35, 2), True, {"bounce": 3}),
-    ("dribble_run_far", dribble_run_far_frames, round(8 / 0.70, 2), True, {"bounce": 2, "bounce2": 6}),
+    ("dribble_run_far", dribble_run_far_frames, round(RUN_FRAMES / 0.70, 2), True, {"bounce": 3, "bounce2": 9}),
     ("crossover_up", crossover_up_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
     ("crossover_down", crossover_down_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
     ("shoot", shoot_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
