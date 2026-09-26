@@ -23,7 +23,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
 - **32 team jerseys + a white one**, 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
 - **Always the same:** black shorts, grey shoes.
-- **13 animations:** `idle`, `run`, `dribble`, `dribble_run`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **17 animations:** `idle`, `run`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -43,6 +43,7 @@ Everything the app needs is in **`integration/react-native/playerSprites/`**.
 | `Headshot.tsx` | `<Headshot playerId size jersey />`, a thin `SvgXml` wrapper. |
 | `appearance.ts` | `playerLook(id, heightIn, weightLbs)` / `lookFromFace()` for sprites, `bodyFor()`, teams, `jerseysForGame()`. |
 | `PlayerSprite.tsx` | `<PlayerSprite>` plus `frameAt`, `scaleForHeight`, `frameToScreen`. |
+| `moves.ts` | `crossoverFor(dy)`, `handAfter()`, `dribbleAnim(hand, moving)`. |
 | `faceArt.test.ts`, `appearance.test.ts` | Jest tests (see below). |
 | `spriteData.*`, `atlas/*.png` | Generated. Don't edit by hand. |
 
@@ -57,6 +58,31 @@ Same design as the app's current system:
 5. Nothing is stored. The face is recomputed from the id every time.
 
 This is a fresh implementation, so its random draws won't line up with the old `faceArt.ts`. **Existing players will get new faces**, but each one stays stable from then on.
+
+## Directions: up/down, near/far
+
+The camera sits on the near sideline, so moving **up the screen** means moving away from the camera and **down** means toward it. For a player facing right, his **left** side is up (the far side) and his **right** side is down (the camera side).
+
+The sprites name things by screen side, not by left or right hand:
+
+| Term | Meaning |
+|---|---|
+| **near hand** | The camera-side hand, drawn in front of the body. It's the player's right hand when facing right and his left hand when flipped to face left. |
+| **far hand** | The other hand, drawn behind the body. |
+| `crossover_up` | Ball goes near hand → far hand, and the player cuts **up** the screen. Facing right, that's a cross to his left. |
+| `crossover_down` | Ball goes far hand → near hand, and the player cuts **down** the screen. |
+
+These meanings hold whether or not the sprite is flipped, because flipping only mirrors left and right. You only need to track which hand has the ball (`'near'` or `'far'`):
+
+```ts
+// ball handler changes direction on screen (dy < 0 = up, away from the camera)
+const anim = crossoverFor(dy);          // 'crossover_up' | 'crossover_down'
+// start moving on events.cutStart; when it finishes:
+hand = handAfter(anim);                 // 'far' after crossing up, 'near' after crossing down
+const next = dribbleAnim(hand, moving); // dribble / dribble_run / dribble_far / dribble_run_far
+```
+
+Every frame has a `ballDepth` value from +1 (near side, toward the camera) through 0 (centred in front) to -1 (far side). Draw the ball **behind** the player when it's below 0, and nudge it down the screen by about `ballDepth × 4` art pixels so it sits on the right side of the body. The previews do exactly this.
 
 ## Using it
 
@@ -93,6 +119,8 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `run` | 8 | 12 | yes | |
 | `dribble` | 6 | 17.14 | yes | `bounce: 3` (0.35 s per bounce) |
 | `dribble_run` | 8 | 11.43 | yes | `bounce: 2`, `bounce2: 6` |
+| `dribble_far` / `dribble_run_far` | 6 / 8 | same | yes | Same as above, with the far hand |
+| `crossover_up` / `crossover_down` | 6 | 14 | no | `cross: 2` (bounce in front), `catch: 3`, `cutStart: 3` |
 | `shoot` | 8 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
 | `layup` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4`. Near hand |
 | `pass` | 6 | 14 | no | `release: 3` |
@@ -108,7 +136,7 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail layer, then facial hair and hair. There are up to 8 small `View`+`Image` pairs per player.
 
 - **Masks** (the tinted parts) are stored at 2× and **detail** at 5×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
-- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 10–14 MB per body, plus about 14 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 90 MB.
+- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 12–16 MB per body, plus about 15 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 110 MB.
 - **Knob:** set `SCALE = 4` in the generator to cut body memory by about a third, with slightly softer outlines. `SCALE = 6` is sharper and uses about 45% more.
 
 ## Tests
@@ -126,6 +154,7 @@ The tests cover:
 - the sprite look matches the headshot;
 - body classes are picked correctly;
 - the sprite data covers every body × animation × hair × facial hair;
+- crossovers move the ball across the body, and the direction helpers pick the right animation;
 - jersey clashes switch the away team to white.
 
 ## Regenerating the sprite art

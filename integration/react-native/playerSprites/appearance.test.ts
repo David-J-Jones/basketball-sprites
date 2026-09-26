@@ -8,6 +8,7 @@ import {
   WHITE_JERSEY,
 } from './appearance';
 import { faceFromSeed } from './faceArt';
+import { crossoverFor, dribbleAnim, handAfter } from './moves';
 import { BODY_KEYS, FACIAL_HAIR, HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from './features';
 import raw from './spriteData.json';
 import type { AnimName, SpriteData } from './types';
@@ -75,6 +76,19 @@ describe('sprite data', () => {
     }
   });
 
+  it('crossovers move the ball across the body', () => {
+    for (const body of BODY_KEYS) {
+      const up = SPRITES.frames[body].crossover_up.map((f) => f.ballDepth ?? 0);
+      const down = SPRITES.frames[body].crossover_down.map((f) => f.ballDepth ?? 0);
+      expect(up[0]).toBe(1);
+      expect(up[up.length - 1]).toBe(-1);
+      expect(down[0]).toBe(-1);
+      expect(down[down.length - 1]).toBe(1);
+      expect(SPRITES.frames[body].dribble_far.every((f) => (f.ballDepth ?? 0) < 0)).toBe(true);
+      expect(SPRITES.frames[body].dribble_run_far.every((f) => (f.ballDepth ?? 0) < 0)).toBe(true);
+    }
+  });
+
   it('marks the dunk moments', () => {
     expect(SPRITES.anims.dunk_basic.events.dunk).toBeDefined();
     expect(SPRITES.anims.dunk_athletic.events.dunk).toBeDefined();
@@ -94,5 +108,21 @@ describe('jerseys', () => {
     expect(away.jersey).toBe(WHITE_JERSEY.jersey);
     const other = jerseysForGame(teamById('LAL'), teamById('BOS'));
     expect(other.away.jersey).toBe(teamById('BOS').jersey);
+  });
+});
+
+describe('direction helpers', () => {
+  it('crosses up the screen to the far hand and down to the near hand', () => {
+    expect(crossoverFor(-1)).toBe('crossover_up');
+    expect(crossoverFor(2)).toBe('crossover_down');
+    expect(handAfter('crossover_up')).toBe('far');
+    expect(handAfter('crossover_down')).toBe('near');
+  });
+
+  it('picks the dribble for the ball hand', () => {
+    expect(dribbleAnim('near', false)).toBe('dribble');
+    expect(dribbleAnim('near', true)).toBe('dribble_run');
+    expect(dribbleAnim('far', false)).toBe('dribble_far');
+    expect(dribbleAnim('far', true)).toBe('dribble_run_far');
   });
 });

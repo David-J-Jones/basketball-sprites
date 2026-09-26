@@ -7,6 +7,10 @@ export type AnimName =
   | 'run'
   | 'dribble'
   | 'dribble_run'
+  | 'dribble_far'
+  | 'dribble_run_far'
+  | 'crossover_up'
+  | 'crossover_down'
   | 'shoot'
   | 'layup'
   | 'pass'
@@ -41,6 +45,12 @@ export type FrameData = {
   farHand: [number, number];
   /** where a held/dribbled ball should be drawn (ball centre), or null */
   ball: [number, number] | null;
+  /**
+   * Which side of the body the ball is on: +1 = near side (toward the
+   * camera, lower on screen), 0 = centred in front, -1 = far side (away from
+   * the camera, higher on screen). Draw the ball behind the player when < 0.
+   */
+  ballDepth: number | null;
   /** how far the feet are raised off the floor in this frame (baked jump) */
   lift: number;
 };

@@ -575,10 +575,16 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
                         put(x, y, tag, dy)
 
     ball = None
+    depth = None
     if pose.get("ball"):
         kind, a, b = pose["ball"][:3]
+        # which side of the body the ball is on: +1 near (camera) side,
+        # 0 centred in front of the body, -1 far side (behind the body)
+        depth = pose["ball"][3] if len(pose["ball"]) > 3 else BALL_DEPTH[kind]
         if kind == "near":
             ball = add(near_hand, (a, b))
+        elif kind == "far":
+            ball = add(far_hand, (a, b))
         elif kind == "between":
             ball = add(((near_hand[0] + far_hand[0]) / 2, (near_hand[1] + far_hand[1]) / 2), (a, b))
         elif kind == "hip":
@@ -592,6 +598,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "near_hand": [near_hand[0], near_hand[1] + dy],
         "far_hand": [far_hand[0], far_hand[1] + dy],
         "ball": ball,
+        "ball_depth": depth,
         "lift": max(0, GROUND - (legs_bottom + dy_legs)),
         "clipped": clipped,
     }
@@ -599,10 +606,28 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
 
 
 # ---------------------------------------------------------------- animations
+BALL_DEPTH = {"near": 0.5, "far": -0.5, "between": 0.0, "hip": 0.5, "ground": 0.5}
+
+
 def P(near_leg, far_leg, near_arm, far_arm, **kw):
     d = {"near_leg": near_leg, "far_leg": far_leg, "near_arm": near_arm, "far_arm": far_arm}
     d.update(kw)
     return d
+
+
+def swap_sides(pose, legs=True):
+    """Mirror a pose through the body: near and far limbs trade places and
+    the ball moves to the other side (depth flips)."""
+    p = dict(pose)
+    p["near_arm"], p["far_arm"] = pose["far_arm"], pose["near_arm"]
+    if legs:
+        p["near_leg"], p["far_leg"] = pose["far_leg"], pose["near_leg"]
+    if pose.get("ball"):
+        b = pose["ball"]
+        kind = {"near": "far", "far": "near"}.get(b[0], b[0])
+        depth = b[3] if len(b) > 3 else BALL_DEPTH[b[0]]
+        p["ball"] = (kind, b[1], b[2], -depth)
+    return p
 
 
 # Run cycle: (thigh, shin, foot_rot) per frame for the near leg. The far leg
@@ -637,8 +662,8 @@ def run_frames():
 def dribble_frames():
     # one bounce per cycle: hand pushes down, ball hits the floor on frame 3
     arm = [(30, 70), (28, 45), (30, 40), (32, 50), (32, 60), (30, 70)]
-    ball = [("near", 1.5, 4.5), ("near", 1.5, 5.0), ("hip", 12, 7),
-            ("ground", 11, 0), ("hip", 12, 7), ("near", 1.5, 4.8)]
+    ball = [("near", 1.5, 4.5, 1), ("near", 1.5, 5.0, 1), ("hip", 12, 7, 1),
+            ("ground", 11, 0, 1), ("hip", 12, 7, 1), ("near", 1.5, 4.8, 1)]
     bob = [0, 1, 1, 1, 0, 0]
     return [P((22, -14, 0), (-14, -34, 12), arm[i], (40, 90), lean=16, bob=bob[i], ball=ball[i])
             for i in range(6)]
@@ -647,9 +672,49 @@ def dribble_frames():
 def dribble_run_frames():
     # two bounces per stride; the near hand keeps dribbling out in front
     arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
-    ball = [("near", 1.5, 4.5), ("hip", 13, 8), ("ground", 13, 0), ("hip", 13, 8)] * 2
+    ball = [("near", 1.5, 4.5, 1), ("hip", 13, 8, 1), ("ground", 13, 0, 1), ("hip", 13, 8, 1)] * 2
     return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], RUN_ARM[i],
               lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)]
+
+
+def dribble_far_frames():
+    # the same dribble with the far hand (after a crossover up the screen)
+    return [swap_sides(p) for p in dribble_frames()]
+
+
+def dribble_run_far_frames():
+    # the legs keep the same stride as dribble_run so the two can swap
+    # mid-run; only the dribbling hand changes
+    arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
+    ball = [("far", 1.5, 4.5, -1), ("hip", 13, 8, -1), ("ground", 13, 0, -1), ("hip", 13, 8, -1)] * 2
+    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], arm[i],
+              lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)]
+
+
+def crossover_up_frames():
+    """Crossover from the near hand to the far hand. The near side faces the
+    camera, so the player cuts up the screen (away from the camera). Facing
+    right that is a cross to his left; flipped to face left it is still up."""
+    return [
+        # 0 dribbling with the near hand
+        P((22, -14, 0), (-14, -34, 12), (30, 70), (40, 90), lean=16, ball=("near", 1.5, 4.5, 1)),
+        # 1 sink low and push the ball down across the body
+        P((30, -20, 0), (-22, -44, 15), (42, 40), (35, 75), lean=22, bob=1, ball=("hip", 11, 9, 0.5)),
+        # 2 ball bounces in front, between the feet
+        P((30, -20, 0), (-22, -44, 15), (22, 40), (38, 55), lean=24, bob=1, ball=("ground", 10, 0, 0)),
+        # 3 far hand catches it; near foot plants and pushes off
+        P((-5, -24, 18), (34, -4, -4), (0, 60), (35, 50), lean=22, bob=1, ball=("far", 1.5, 4.5, -0.6)),
+        # 4 far hand dribbles it away, step through
+        P((10, -30, 10), (30, -10, -4), (40, 90), (30, 55), lean=18, ball=("far", 1.5, 5.0, -1)),
+        # 5 settled, dribbling with the far hand
+        swap_sides(P((22, -14, 0), (-14, -34, 12), (30, 70), (40, 90), lean=16, ball=("near", 1.5, 4.5, 1))),
+    ]
+
+
+def crossover_down_frames():
+    """Crossover from the far hand back to the near hand: the player cuts
+    down the screen, toward the camera. The mirror image of crossover_up."""
+    return [swap_sides(p) for p in crossover_up_frames()]
 
 
 def shoot_frames():
@@ -838,6 +903,10 @@ ANIMS = [
     ("run", run_frames, 12, True, {}),
     ("dribble", dribble_frames, round(6 / 0.35, 2), True, {"bounce": 3}),
     ("dribble_run", dribble_run_frames, round(8 / 0.70, 2), True, {"bounce": 2, "bounce2": 6}),
+    ("dribble_far", dribble_far_frames, round(6 / 0.35, 2), True, {"bounce": 3}),
+    ("dribble_run_far", dribble_run_far_frames, round(8 / 0.70, 2), True, {"bounce": 2, "bounce2": 6}),
+    ("crossover_up", crossover_up_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
+    ("crossover_down", crossover_down_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
     ("shoot", shoot_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
     ("layup", layup_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
     ("pass", pass_frames, 14, False, {"release": 3}),
@@ -1108,6 +1177,7 @@ def build_all():
                 rec["nearHand"] = _pt(info["near_hand"])
                 rec["farHand"] = _pt(info["far_hand"])
                 rec["ball"] = _pt(info["ball"])
+                rec["ballDepth"] = info["ball_depth"]
                 rec["lift"] = info["lift"] * SCALE
                 out.append(rec)
             frames[body][name] = out
@@ -1256,9 +1326,30 @@ def write_previews(data, pages, palettes):
         label(d, (cx - 22, 186), body)
     court.save(os.path.join(PREVIEW_DIR, "matchup.png"))
 
-    # full animation sheet + gifs for one look
+    # full animation sheet + gifs for one look, with the ball drawn the way
+    # the game should: at the frame's ball point, nudged down the screen by
+    # ballDepth (toward the camera) and behind the player when depth < 0
     look = {"skin": skins[3], "hair": "locs", "facial": "goatee", "hairColor": hair_c["black"]}
     team = palettes["teams"][9]
+    ball_img = Image.new("RGBA", (BALL_CELL, BALL_CELL), (0, 0, 0, 0))
+    _blit_rgba(ball_img, ball_layer((5.5, 5.5), 0))
+    ball_img = ball_img.resize((BALL_CELL * 2, BALL_CELL * 2), Image.NEAREST)
+
+    def with_ball(img, rec):
+        if not rec["ball"]:
+            return img
+        depth = rec["ballDepth"] or 0
+        bx = rec["ball"][0] * 2 / SCALE - BALL_CELL
+        by = rec["ball"][1] * 2 / SCALE - BALL_CELL + depth * 4
+        out = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        layers = [ball_img, img] if depth < 0 else [img, ball_img]
+        for layer in layers:
+            if layer is ball_img:
+                out.alpha_composite(ball_img, (int(round(bx)), int(round(by))))
+            else:
+                out.alpha_composite(layer)
+        return out
+
     ncols = max(a["frameCount"] for a in data["anims"].values())
     sheet = Image.new("RGBA", (ncols * fw, len(data["anims"]) * fh), bg)
     d = ImageDraw.Draw(sheet)
@@ -1266,7 +1357,7 @@ def write_previews(data, pages, palettes):
         n = data["anims"][name]["frameCount"]
         imgs = []
         for c in range(n):
-            img = small(comp.frame(mid, name, c, look, team))
+            img = with_ball(small(comp.frame(mid, name, c, look, team)), data["frames"][mid][name][c])
             sheet.alpha_composite(img, (c * fw, r * fh))
             f = Image.new("RGBA", img.size, bg)
             f.alpha_composite(img)

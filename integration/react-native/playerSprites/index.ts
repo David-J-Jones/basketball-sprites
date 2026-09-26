@@ -7,4 +7,6 @@ export { Headshot } from './Headshot';
 export type { HeadshotProps } from './Headshot';
 export { PlayerSprite, frameAt, animDuration, scaleForHeight, frameToScreen } from './PlayerSprite';
 export type { PlayerSpriteProps } from './PlayerSprite';
+export { crossoverFor, handAfter, dribbleAnim } from './moves';
+export type { BallHand } from './moves';
 export { SPRITES } from './spriteData';
