@@ -1,13 +1,20 @@
+import { faceFromSeed, type FaceSpec } from './faceArt';
+import {
+  FACIAL_HAIR,
+  HAIR_COLORS,
+  HAIR_STYLES,
+  SKIN_TONES,
+  type BodyKey,
+  type HeightClass,
+  type WeightClass,
+} from './features';
 import palettes from './palettes.json';
-import type { BuildName, HairStyle, JerseyColors, PlayerLook } from './types';
+import type { JerseyColors, PlayerLook, SpriteFacialHair, SpriteHairStyle } from './types';
 
 export type Team = { id: string; name: string; jersey: string; trim: string };
 
 export const TEAMS: Team[] = palettes.teams;
 export const WHITE_JERSEY: Team = palettes.white;
-export const SKIN_TONES = palettes.skinTones;
-export const HAIR_STYLES = palettes.hairStyles as { id: HairStyle; weight: number }[];
-export const HAIR_COLORS = palettes.hairColors;
 
 export function teamById(id: string): Team {
   const team = TEAMS.find((t) => t.id === id);
@@ -15,55 +22,56 @@ export function teamById(id: string): Team {
   return team;
 }
 
-export function buildForHeight(inches: number): BuildName {
-  if (inches <= palettes.builds.guardMaxInches) return 'guard';
-  if (inches <= palettes.builds.wingMaxInches) return 'wing';
-  return 'big';
-}
+// ------------------------------------------------------------------ bodies
 
-/** Small seeded RNG (mulberry32) so a player's look never changes between sessions. */
-function rng(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function pickWeighted<T extends { weight: number }>(items: T[], r: number): T {
-  const total = items.reduce((sum, it) => sum + it.weight, 0);
-  let x = r * total;
-  for (const it of items) {
-    x -= it.weight;
-    if (x <= 0) return it;
+export function heightClass(inches: number): HeightClass {
+  for (const c of palettes.heightClasses) {
+    if (c.maxInches === null || inches <= c.maxInches) return c.class as HeightClass;
   }
-  return items[items.length - 1];
+  return 5;
 }
 
-/**
- * Generate a player's look when the player is created. Pass a stable seed
- * (e.g. hash of the player id) and store the result on the player record.
- */
-export function generateLook(seed: number, heightInches: number): PlayerLook {
-  const next = rng(seed);
+/** Weight class from BMI (703 x lbs / inches^2); cutoffs live in palettes.json. */
+export function weightClass(inches: number, lbs: number): WeightClass {
+  const bmi = (703 * lbs) / (inches * inches);
+  if (bmi < palettes.weightClasses.slimBelowBmi) return 'slim';
+  if (bmi >= palettes.weightClasses.heavyFromBmi) return 'heavy';
+  return 'average';
+}
+
+export function bodyFor(heightInches: number, weightLbs: number): BodyKey {
+  return `h${heightClass(heightInches)}-${weightClass(heightInches, weightLbs)}`;
+}
+
+// ------------------------------------------------------------------ looks
+
+/** The on-court look for a face, so the sprite always matches the headshot. */
+export function lookFromFace(face: FaceSpec, heightInches: number, weightLbs: number): PlayerLook {
+  const hair = HAIR_STYLES[face.hair];
+  const facial = FACIAL_HAIR[face.facialHair];
   return {
-    build: buildForHeight(heightInches),
-    skinTone: SKIN_TONES[Math.floor(next() * SKIN_TONES.length)].id,
-    hairStyle: pickWeighted(HAIR_STYLES, next()).id,
-    hairColor: pickWeighted(HAIR_COLORS, next()).id,
+    body: bodyFor(heightInches, weightLbs),
+    skinTone: SKIN_TONES[face.skin],
+    hairStyle: hair === 'bald' ? null : (hair as SpriteHairStyle),
+    hairColor: HAIR_COLORS[face.hairColor],
+    facialHair: facial === 'none' ? null : (facial as SpriteFacialHair),
   };
+}
+
+/** Everything from the player's numeric id (the same seed as the headshot). */
+export function playerLook(playerId: number, heightInches: number, weightLbs: number): PlayerLook {
+  return lookFromFace(faceFromSeed(playerId), heightInches, weightLbs);
 }
 
 export function skinColor(look: PlayerLook): string {
-  return (SKIN_TONES.find((s) => s.id === look.skinTone) ?? SKIN_TONES[0]).color;
+  return (palettes.skinTones.find((s) => s.id === look.skinTone) ?? palettes.skinTones[0]).color;
 }
 
 export function hairColor(look: PlayerLook): string {
-  return (HAIR_COLORS.find((h) => h.id === look.hairColor) ?? HAIR_COLORS[0]).color;
+  return (palettes.hairColors.find((h) => h.id === look.hairColor) ?? palettes.hairColors[0]).color;
 }
+
+// ------------------------------------------------------------------ jerseys
 
 export function teamColors(team: Team): JerseyColors {
   return { jersey: team.jersey, trim: team.trim };

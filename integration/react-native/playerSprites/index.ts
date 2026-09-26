@@ -1,5 +1,10 @@
 export * from './types';
+export * from './features';
 export * from './appearance';
+export { faceFromSeed, faceSvg, HEADSHOT_VIEWBOX, BY_SKIN } from './faceArt';
+export type { FaceSpec, HeadshotJersey, FaceSvgOptions } from './faceArt';
+export { Headshot } from './Headshot';
+export type { HeadshotProps } from './Headshot';
 export { PlayerSprite, frameAt, animDuration, scaleForHeight, frameToScreen } from './PlayerSprite';
 export type { PlayerSpriteProps } from './PlayerSprite';
 export { SPRITES } from './spriteData';

@@ -1,63 +1,309 @@
 {
-  "_comment": "Runtime colors for the player sprites. Edit freely - no need to regenerate the art. jersey = main jersey color, trim = collar/armholes/waistband.",
+  "_comment": "Runtime colors for the player sprites and headshots. Edit freely - no need to regenerate the art.",
   "teams": [
-    { "id": "ATL", "name": "Atlanta Hawks",          "jersey": "#E03A3E", "trim": "#C1D32F" },
-    { "id": "BOS", "name": "Boston Celtics",         "jersey": "#007A33", "trim": "#FFFFFF" },
-    { "id": "BKN", "name": "Brooklyn Nets",          "jersey": "#232323", "trim": "#FFFFFF" },
-    { "id": "CHA", "name": "Charlotte Hornets",      "jersey": "#00788C", "trim": "#1D1160" },
-    { "id": "CHI", "name": "Chicago Bulls",          "jersey": "#CE1141", "trim": "#1A1A1A" },
-    { "id": "CLE", "name": "Cleveland Cavaliers",    "jersey": "#860038", "trim": "#FDBB30" },
-    { "id": "DAL", "name": "Dallas Mavericks",       "jersey": "#00538C", "trim": "#B8C4CA" },
-    { "id": "DEN", "name": "Denver Nuggets",         "jersey": "#0E2240", "trim": "#FEC524" },
-    { "id": "DET", "name": "Detroit Pistons",        "jersey": "#1D42BA", "trim": "#C8102E" },
-    { "id": "GSW", "name": "Golden State Warriors",  "jersey": "#1D428A", "trim": "#FFC72C" },
-    { "id": "HOU", "name": "Houston Rockets",        "jersey": "#CE1141", "trim": "#C4CED4" },
-    { "id": "IND", "name": "Indiana Pacers",         "jersey": "#FDBB30", "trim": "#002D62" },
-    { "id": "LAC", "name": "LA Clippers",            "jersey": "#C8102E", "trim": "#1D428A" },
-    { "id": "LAL", "name": "Los Angeles Lakers",     "jersey": "#552583", "trim": "#FDB927" },
-    { "id": "MEM", "name": "Memphis Grizzlies",      "jersey": "#5D76A9", "trim": "#12173F" },
-    { "id": "MIA", "name": "Miami Heat",             "jersey": "#98002E", "trim": "#F9A01B" },
-    { "id": "MIL", "name": "Milwaukee Bucks",        "jersey": "#00471B", "trim": "#EEE1C6" },
-    { "id": "MIN", "name": "Minnesota Timberwolves", "jersey": "#0C2340", "trim": "#78BE20" },
-    { "id": "NOP", "name": "New Orleans Pelicans",   "jersey": "#0C2340", "trim": "#C8102E" },
-    { "id": "NYK", "name": "New York Knicks",        "jersey": "#006BB6", "trim": "#F58426" },
-    { "id": "OKC", "name": "Oklahoma City Thunder",  "jersey": "#007AC1", "trim": "#EF3B24" },
-    { "id": "ORL", "name": "Orlando Magic",          "jersey": "#0077C0", "trim": "#1A1A1A" },
-    { "id": "PHI", "name": "Philadelphia 76ers",     "jersey": "#006BB6", "trim": "#ED174C" },
-    { "id": "PHX", "name": "Phoenix Suns",           "jersey": "#1D1160", "trim": "#E56020" },
-    { "id": "POR", "name": "Portland Trail Blazers", "jersey": "#232323", "trim": "#E03A3E" },
-    { "id": "SAC", "name": "Sacramento Kings",       "jersey": "#5A2D81", "trim": "#A2AAAD" },
-    { "id": "SAS", "name": "San Antonio Spurs",      "jersey": "#232323", "trim": "#C4CED4" },
-    { "id": "TOR", "name": "Toronto Raptors",        "jersey": "#CE1141", "trim": "#B4975A" },
-    { "id": "UTA", "name": "Utah Jazz",              "jersey": "#002B5C", "trim": "#F9A01B" },
-    { "id": "WAS", "name": "Washington Wizards",     "jersey": "#E31837", "trim": "#002B5C" },
-    { "id": "SEA", "name": "Seattle (expansion)",    "jersey": "#00653A", "trim": "#FFC200" },
-    { "id": "LV",  "name": "Las Vegas (expansion)",  "jersey": "#B4975A", "trim": "#1A1A1A" }
+    {
+      "id": "ATL",
+      "name": "Atlanta Hawks",
+      "jersey": "#E03A3E",
+      "trim": "#C1D32F"
+    },
+    {
+      "id": "BOS",
+      "name": "Boston Celtics",
+      "jersey": "#007A33",
+      "trim": "#FFFFFF"
+    },
+    {
+      "id": "BKN",
+      "name": "Brooklyn Nets",
+      "jersey": "#232323",
+      "trim": "#FFFFFF"
+    },
+    {
+      "id": "CHA",
+      "name": "Charlotte Hornets",
+      "jersey": "#00788C",
+      "trim": "#1D1160"
+    },
+    {
+      "id": "CHI",
+      "name": "Chicago Bulls",
+      "jersey": "#CE1141",
+      "trim": "#1A1A1A"
+    },
+    {
+      "id": "CLE",
+      "name": "Cleveland Cavaliers",
+      "jersey": "#860038",
+      "trim": "#FDBB30"
+    },
+    {
+      "id": "DAL",
+      "name": "Dallas Mavericks",
+      "jersey": "#00538C",
+      "trim": "#B8C4CA"
+    },
+    {
+      "id": "DEN",
+      "name": "Denver Nuggets",
+      "jersey": "#0E2240",
+      "trim": "#FEC524"
+    },
+    {
+      "id": "DET",
+      "name": "Detroit Pistons",
+      "jersey": "#1D42BA",
+      "trim": "#C8102E"
+    },
+    {
+      "id": "GSW",
+      "name": "Golden State Warriors",
+      "jersey": "#1D428A",
+      "trim": "#FFC72C"
+    },
+    {
+      "id": "HOU",
+      "name": "Houston Rockets",
+      "jersey": "#CE1141",
+      "trim": "#C4CED4"
+    },
+    {
+      "id": "IND",
+      "name": "Indiana Pacers",
+      "jersey": "#FDBB30",
+      "trim": "#002D62"
+    },
+    {
+      "id": "LAC",
+      "name": "LA Clippers",
+      "jersey": "#C8102E",
+      "trim": "#1D428A"
+    },
+    {
+      "id": "LAL",
+      "name": "Los Angeles Lakers",
+      "jersey": "#552583",
+      "trim": "#FDB927"
+    },
+    {
+      "id": "MEM",
+      "name": "Memphis Grizzlies",
+      "jersey": "#5D76A9",
+      "trim": "#12173F"
+    },
+    {
+      "id": "MIA",
+      "name": "Miami Heat",
+      "jersey": "#98002E",
+      "trim": "#F9A01B"
+    },
+    {
+      "id": "MIL",
+      "name": "Milwaukee Bucks",
+      "jersey": "#00471B",
+      "trim": "#EEE1C6"
+    },
+    {
+      "id": "MIN",
+      "name": "Minnesota Timberwolves",
+      "jersey": "#0C2340",
+      "trim": "#78BE20"
+    },
+    {
+      "id": "NOP",
+      "name": "New Orleans Pelicans",
+      "jersey": "#0C2340",
+      "trim": "#C8102E"
+    },
+    {
+      "id": "NYK",
+      "name": "New York Knicks",
+      "jersey": "#006BB6",
+      "trim": "#F58426"
+    },
+    {
+      "id": "OKC",
+      "name": "Oklahoma City Thunder",
+      "jersey": "#007AC1",
+      "trim": "#EF3B24"
+    },
+    {
+      "id": "ORL",
+      "name": "Orlando Magic",
+      "jersey": "#0077C0",
+      "trim": "#1A1A1A"
+    },
+    {
+      "id": "PHI",
+      "name": "Philadelphia 76ers",
+      "jersey": "#006BB6",
+      "trim": "#ED174C"
+    },
+    {
+      "id": "PHX",
+      "name": "Phoenix Suns",
+      "jersey": "#1D1160",
+      "trim": "#E56020"
+    },
+    {
+      "id": "POR",
+      "name": "Portland Trail Blazers",
+      "jersey": "#232323",
+      "trim": "#E03A3E"
+    },
+    {
+      "id": "SAC",
+      "name": "Sacramento Kings",
+      "jersey": "#5A2D81",
+      "trim": "#A2AAAD"
+    },
+    {
+      "id": "SAS",
+      "name": "San Antonio Spurs",
+      "jersey": "#232323",
+      "trim": "#C4CED4"
+    },
+    {
+      "id": "TOR",
+      "name": "Toronto Raptors",
+      "jersey": "#CE1141",
+      "trim": "#B4975A"
+    },
+    {
+      "id": "UTA",
+      "name": "Utah Jazz",
+      "jersey": "#002B5C",
+      "trim": "#F9A01B"
+    },
+    {
+      "id": "WAS",
+      "name": "Washington Wizards",
+      "jersey": "#E31837",
+      "trim": "#002B5C"
+    },
+    {
+      "id": "SEA",
+      "name": "Seattle (expansion)",
+      "jersey": "#00653A",
+      "trim": "#FFC200"
+    },
+    {
+      "id": "LV",
+      "name": "Las Vegas (expansion)",
+      "jersey": "#B4975A",
+      "trim": "#1A1A1A"
+    }
   ],
-  "white": { "id": "WHITE", "name": "Generic white", "jersey": "#F2F2F2", "trim": "#9AA0AE" },
+  "white": {
+    "id": "WHITE",
+    "name": "Generic white",
+    "jersey": "#F2F2F2",
+    "trim": "#9AA0AE"
+  },
   "skinTones": [
-    { "id": "light",  "color": "#F2C8A0" },
-    { "id": "medium", "color": "#D6A476" },
-    { "id": "tan",    "color": "#A87048" },
-    { "id": "dark",   "color": "#6C462E" }
-  ],
-  "hairStyles": [
-    { "id": "short",         "weight": 35 },
-    { "id": "buzz",          "weight": 30 },
-    { "id": "afro",          "weight": 15 },
-    { "id": "long_headband", "weight": 20 }
+    {
+      "id": "light",
+      "color": "#F2C8A0"
+    },
+    {
+      "id": "medium",
+      "color": "#D9A778"
+    },
+    {
+      "id": "tan",
+      "color": "#B67E52"
+    },
+    {
+      "id": "brown",
+      "color": "#8A5634"
+    },
+    {
+      "id": "deep",
+      "color": "#5A3522"
+    }
   ],
   "hairColors": [
-    { "id": "black",      "color": "#1E1814", "weight": 45 },
-    { "id": "dark_brown", "color": "#3B2518", "weight": 25 },
-    { "id": "brown",      "color": "#6B4226", "weight": 14 },
-    { "id": "blonde",     "color": "#C9A25A", "weight": 9 },
-    { "id": "red",        "color": "#8C3A1E", "weight": 5 },
-    { "id": "gray",       "color": "#A0A0A0", "weight": 2 }
+    {
+      "id": "black",
+      "color": "#1E1814"
+    },
+    {
+      "id": "darkBrown",
+      "color": "#3B2518"
+    },
+    {
+      "id": "brown",
+      "color": "#6B4226"
+    },
+    {
+      "id": "auburn",
+      "color": "#8C3A1E"
+    },
+    {
+      "id": "blond",
+      "color": "#C9A25A"
+    },
+    {
+      "id": "bleached",
+      "color": "#E6DAB0"
+    }
   ],
-  "builds": {
-    "_comment": "Height (inches) cutoffs for the three body builds. The game still scales every sprite by the player's real height.",
-    "guardMaxInches": 75,
-    "wingMaxInches": 80
+  "eyeColors": [
+    {
+      "id": "darkBrown",
+      "color": "#3A2416"
+    },
+    {
+      "id": "brown",
+      "color": "#6B4424"
+    },
+    {
+      "id": "hazel",
+      "color": "#8A6A2E"
+    },
+    {
+      "id": "green",
+      "color": "#4F7A3F"
+    },
+    {
+      "id": "blue",
+      "color": "#4A7DB8"
+    }
+  ],
+  "heightClasses": [
+    {
+      "class": 1,
+      "maxInches": 74,
+      "label": "6'2\" and under"
+    },
+    {
+      "class": 2,
+      "maxInches": 77,
+      "label": "6'3\"-6'5\""
+    },
+    {
+      "class": 3,
+      "maxInches": 80,
+      "label": "6'6\"-6'8\""
+    },
+    {
+      "class": 4,
+      "maxInches": 83,
+      "label": "6'9\"-6'11\""
+    },
+    {
+      "class": 5,
+      "maxInches": null,
+      "label": "7'0\" and up"
+    }
+  ],
+  "weightClasses": {
+    "_comment": "By BMI (703 x lbs / inches^2). Typical NBA BMI is 23-27.",
+    "slimBelowBmi": 23.5,
+    "heavyFromBmi": 26.5
+  },
+  "neutralJersey": {
+    "jersey": "#1F2A44",
+    "trim": "#9AA0AE"
   }
 }

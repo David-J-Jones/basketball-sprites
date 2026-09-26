@@ -11,13 +11,17 @@ into layers that the game colors at runtime with React Native's
     trim    white mask   -> tinted with the team's trim color
     detail  full color   -> outlines, black shorts, grey shoes, socks, eyes,
                             plus see-through shading over the tinted parts
-    hair    per style: a white mask (tinted hair color) + its own detail
+    facial  per facial-hair type: white mask (tinted hair color) + detail
+    hair    per hair style: white mask (tinted hair color) + detail
 
-Draw order: skin, jersey, trim, detail, hair mask, hair detail.
+Draw order: skin, jersey, trim, detail, facial mask, facial detail,
+hair mask, hair detail.
 
-There are three body builds (guard / wing / big) with different
-proportions. Every piece is trimmed, de-duplicated, scaled up SCALE times
-(nearest neighbour, so it stays crisp) and packed into shared atlas pages.
+There are 15 bodies: 5 height classes x 3 weight classes. Every piece is
+trimmed, de-duplicated, scaled up SCALE times (nearest neighbour, so it
+stays crisp) and packed into atlas pages. Each body gets its own pages, so
+the app only decodes the bodies that are on court; hair and facial hair
+share a common set of pages.
 
 Run:  python3 tools/generate_sprites.py
 """
@@ -40,9 +44,10 @@ FRAME_W, FRAME_H = 64, 80
 ANCHOR_X, ANCHOR_Y = FRAME_W // 2, FRAME_H   # bottom centre, at the feet
 GROUND = FRAME_H - 2      # last row of sole pixels; the outline sits on the bottom row
 HIP_X = ANCHOR_X
-SCALE = 6                 # atlas pixels per art pixel
-PAGE_1X = 340             # atlas page width/height at 1x (2040 px after scaling)
-PAD = 1                   # gap between atlas pieces at 1x
+SCALE = 5                 # detail layers: atlas pixels per art pixel (crisp outlines)
+MASK_RES = 2              # tint masks: texels per art pixel (edges hide under outlines)
+PAGE_PX = 2040            # max atlas page width/height in pixels
+PAD = 1                   # gap between atlas pieces, in stored units
 
 LIGHT = (-0.6, -0.8)      # light from the upper-left
 BALL_R = 4.8
@@ -66,36 +71,51 @@ FIXED = {
     "band1": (196, 198, 206, 255),
     "smear": (255, 255, 255, 150),
 }
-TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, or None)
-    "skin0": ("skin", None),
-    "skin1": ("skin", (72, 26, 12, 70)),
-    "skin2": ("skin", (72, 26, 12, 118)),
-    "skin3": ("skin", (48, 14, 8, 150)),
-    "jersey0": ("jersey", None),
-    "jersey1": ("jersey", (16, 18, 44, 58)),
-    "trim0": ("trim", None),
-    "trim1": ("trim", (16, 18, 44, 70)),
-    "hair0": ("hair", None),
-    "hair1": ("hair", (0, 0, 0, 95)),
+TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
+    "skin0": ("skin", None, 255),
+    "skin1": ("skin", (72, 26, 12, 70), 255),
+    "skin2": ("skin", (72, 26, 12, 118), 255),
+    "skin3": ("skin", (48, 14, 8, 150), 255),
+    "jersey0": ("jersey", None, 255),
+    "jersey1": ("jersey", (16, 18, 44, 58), 255),
+    "trim0": ("trim", None, 255),
+    "trim1": ("trim", (16, 18, 44, 70), 255),
+    "hair0": ("hair", None, 255),
+    "hair1": ("hair", (0, 0, 0, 95), 255),
+    "hairF": ("hair", None, 140),        # faded sides: see-through hair
+    "fh0": ("facial", None, 255),
+    "fh1": ("facial", (0, 0, 0, 95), 255),
+    "stub": ("facial", None, 105),       # stubble: see-through hair color
 }
 BODY_SLOTS = ["skin", "jersey", "trim"]
 WHITE = (255, 255, 255, 255)
 
 # ---------------------------------------------------------------- builds
-BUILDS = {
-    "guard": dict(thigh=7.3, shin=7.3, upper=5.6, fore=5.6, shoulder=9.4, neck=11.4,
-                  torso_r=4.4, hip_r=4.3, thigh_r=2.0, shin_r=1.5, arm_r=1.4),
-    "wing": dict(thigh=8.0, shin=8.0, upper=6.0, fore=6.0, shoulder=10.0, neck=12.0,
-                 torso_r=4.7, hip_r=4.5, thigh_r=2.1, shin_r=1.6, arm_r=1.5),
-    "big": dict(thigh=9.2, shin=9.2, upper=6.8, fore=6.8, shoulder=11.2, neck=13.2,
-                torso_r=5.2, hip_r=4.9, thigh_r=2.3, shin_r=1.7, arm_r=1.6),
-}
-B = BUILDS["wing"]
+# 5 height classes scale the bone lengths, 3 weight classes scale the
+# thickness. The head is the same size on every body, so taller players
+# look lankier, not just bigger.
+BASE_BODY = dict(thigh=8.0, shin=8.0, upper=6.0, fore=6.0, shoulder=10.0, neck=12.0,
+                 torso_r=4.7, hip_r=4.5, thigh_r=2.1, shin_r=1.6, arm_r=1.5, neck_r=1.6)
+HEIGHT_CLASSES = {1: 0.90, 2: 0.95, 3: 1.0, 4: 1.07, 5: 1.14}
+WEIGHT_CLASSES = {"slim": 0.8, "average": 1.0, "heavy": 1.3}
+LENGTHS = ("thigh", "shin", "upper", "fore", "shoulder", "neck")
 
 
-def use_build(name):
+def _make_body(h, w):
+    b = {}
+    for k, v in BASE_BODY.items():
+        b[k] = v * (HEIGHT_CLASSES[h] if k in LENGTHS else WEIGHT_CLASSES[w])
+    b["belly"] = w == "heavy"
+    return b
+
+
+BODIES = {"h%d-%s" % (h, w): _make_body(h, w) for h in HEIGHT_CLASSES for w in WEIGHT_CLASSES}
+B = BODIES["h3-average"]
+
+
+def use_body(name):
     global B
-    B = BUILDS[name]
+    B = BODIES[name]
 
 
 def vec(deg, length=1.0):
@@ -172,8 +192,13 @@ SKULL = [
 ]
 SKULL_TAGS = {"S": "skin0", "s": "skin1", "E": "eye", "e": "skin3", "M": "skin3"}
 
-# Hair is painted over the skull; '.' lets the skull show through.
-SHORT_SRC = [
+# Hair and facial hair are painted over the skull on the head grid.
+# Template chars: H hair, h hair shade, f faded (see-through) hair; for
+# facial hair B beard, b beard shade, t stubble. '.' lets the skull show.
+HAIR_CHARS = {"H": "hair0", "h": "hair1", "f": "hairF"}
+FACIAL_CHARS = {"B": "fh0", "b": "fh1", "t": "stub"}
+
+CREW_SRC = [
     "...hhhhh...",
     ".hhHHHHHhh.",
     "hhHHHHHHHHh",
@@ -193,14 +218,37 @@ BUZZ_SRC = [
     "hh.........",
     "h..........",
 ]
+FADE_SRC = [
+    "..hHHHHHh..",
+    ".hHHHHHHHh.",
+    "hhHHHHHHHHh",
+    "fhHHHHHHHHH",
+    "ffhHHH....h",
+    "fff........",
+    "ff.........",
+    "f..........",
+]
+CORNROWS_SRC = [
+    "...hhhhh...",
+    ".hHhHhHhh..",
+    "hhHhHhHhHh.",
+    "hHhHhHhHhHh",
+    "hhHhHh....h",
+    "hhhH.......",
+    "hh.........",
+    "hh.........",
+    ".h.........",
+]
 
 
-def _from_src(src):
+def _from_src(src, chars=HAIR_CHARS, extra=()):
     m = {}
     for r, row in enumerate(src):
         for c, ch in enumerate(row):
-            if ch in "Hh":
-                m[(c + SKULL_OFF[0], r + SKULL_OFF[1])] = "hair0" if ch == "H" else "hair1"
+            if ch in chars:
+                m[(c + SKULL_OFF[0], r + SKULL_OFF[1])] = chars[ch]
+    for c, r, tag in extra:           # extra pixels in head-grid coords
+        m[(c, r)] = tag
     return m
 
 
@@ -226,39 +274,93 @@ def _afro():
     return m
 
 
-def _long_headband():
-    m = _from_src(SHORT_SRC)
-    # hair falling down the back of the neck
-    for r, c0, c1 in [(8, 1, 1), (9, 1, 1), (10, 1, 2), (11, 1, 2), (12, 1, 3), (13, 2, 4),
-                      (14, 2, 4), (15, 2, 5), (16, 3, 5), (17, 3, 4)]:
+def _locs():
+    m = _from_src(CROWN_VOLUME_SRC)
+    # rope-like locs hanging down the back to the shoulders
+    for r, c0, c1 in [(7, 1, 1), (8, 0, 2), (9, 0, 2), (10, 0, 3), (11, 0, 3), (12, 0, 4),
+                      (13, 1, 4), (14, 1, 5), (15, 1, 5), (16, 2, 5), (17, 2, 5), (18, 3, 4)]:
         for c in range(c0, c1 + 1):
-            m[(c, r)] = "hair1" if (c == c1 or r >= 16) else "hair0"
-    # headband across the top of the forehead
-    sil = set(m) | _skull_pixels()
-    for c in range(HEAD_GRID_W):
-        if (c, 7) in sil:
-            m[(c, 7)] = "band1" if c <= 3 else "band0"
+            twist = (r + c) % 3 == 0
+            m[(c, r)] = "hair1" if (c % 2 == 1 or twist or c == c1) else "hair0"
     return m
 
 
+CROWN_VOLUME_SRC = [
+    "..hHHHHHh..",
+    ".hHHhHHhHh.",
+    "hHhHHhHHhHh",
+    "hHHhHHhHHHH",
+    "hhHHhH....h",
+    "hhhH.......",
+    "hh.........",
+    "hh.........",
+    ".h.........",
+]
+
 HAIR_STYLES = {
-    "short": _from_src(SHORT_SRC),
     "buzz": _from_src(BUZZ_SRC),
+    "fade": _from_src(FADE_SRC, extra=[(c, 3, "hair1") for c in range(5, 10)]),
+    "crew": _from_src(CREW_SRC),
+    "cornrows": _from_src(CORNROWS_SRC, extra=[(1, 12, "hair1"), (1, 13, "hair0"), (2, 14, "hair1")]),
     "afro": _afro(),
-    "long_headband": _long_headband(),
+    "locs": _locs(),
+}
+
+# facial hair, in skull coordinates (face on the right, mouth at row 9 col 8)
+STUBBLE_SRC = [
+    "", "", "", "", "", "",
+    "....t......",
+    "....t......",
+    "....tttttt.",
+    "...ttttt.t.",
+    "...tttttt..",
+    "....ttt....",
+]
+MUSTACHE_SRC = [
+    "", "", "", "", "", "", "", "",
+    ".......BBB.",
+    ".........b.",
+]
+GOATEE_SRC = [
+    "", "", "", "", "", "", "", "",
+    ".......BBB.",
+    ".........b.",
+    "......BBB..",
+    "....BBb....",
+    ".....bb....",
+]
+BEARD_SRC = [
+    "", "", "", "", "",
+    "....b......",
+    "....B......",
+    "...bB......",
+    "...BBBBBBB.",
+    "..bBBBBB.b.",
+    "..bBBBBBB..",
+    "..bBBBBbb..",
+    "...bbbb....",
+    "....bb.....",
+]
+FACIAL_HAIR = {
+    "stubble": _from_src(STUBBLE_SRC, FACIAL_CHARS),
+    "mustache": _from_src(MUSTACHE_SRC, FACIAL_CHARS),
+    "goatee": _from_src(GOATEE_SRC, FACIAL_CHARS),
+    "beard": _from_src(BEARD_SRC, FACIAL_CHARS),
 }
 
 
-def blit_head(layer, origin, style):
+def blit_head(layer, origin, style=None, facial=None):
     ox, oy = origin
     for r, row in enumerate(SKULL):
         for c, ch in enumerate(row):
             if ch != ".":
                 layer.px[(ox + c + SKULL_OFF[0], oy + r + SKULL_OFF[1])] = SKULL_TAGS[ch]
+    if facial:
+        for (c, r), tag in FACIAL_HAIR[facial].items():
+            layer.px[(ox + c, oy + r)] = tag
     if style:
         for (c, r), tag in HAIR_STYLES[style].items():
             layer.px[(ox + c, oy + r)] = tag
-
 
 # ---------------------------------------------------------------- ball (separate sheet)
 BALL_COLORS = {
@@ -358,7 +460,7 @@ def draw_arm(layer, shoulder, upper_deg, fore_deg, far, reach=1.0):
     return hand
 
 
-def render(pose, style=None, stand_hip_y=None):
+def render(pose, style=None, stand_hip_y=None, facial=None):
     """Render one pose. Returns (pixels, info): pixels maps (x, y) in the
     virtual frame to a color tag."""
     lean = pose.get("lean", 8)
@@ -384,6 +486,10 @@ def render(pose, style=None, stand_hip_y=None):
             return "trim0"          # collar / arm-hole trim
         return "jersey1" if lit(ox, oy) < -0.35 else "jersey0"
     body.capsule(chest_lo, chest_hi, B["torso_r"], jersey_fn)
+    if B["belly"]:
+        fwd = vec(90 - lean)
+        bl = add(hip, (tdir[0] * 3.2 + fwd[0] * 1.4, tdir[1] * 3.2 + fwd[1] * 1.4))
+        body.capsule(bl, add(bl, (tdir[0] * 1.5, tdir[1] * 1.5)), B["torso_r"] * 0.8, jersey_fn)
 
     waist = 2.6   # distance up the torso from the hip to the top of the shorts
 
@@ -400,10 +506,10 @@ def render(pose, style=None, stand_hip_y=None):
     body.capsule(shoulder, add(shoulder, (tdir[0] * 1.2, tdir[1] * 1.2)), 2.0,
                  lambda t, ox, oy: "jersey0")
     # neck + head
-    head.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, 1.6, shaded("skin0", "skin1", 0.1))
+    head.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, B["neck_r"], shaded("skin0", "skin1", 0.1))
     hx = int(round(neck[0])) - HEAD_ANCHOR[0] + pose.get("head_dx", 0)
     hy = int(round(neck[1])) - HEAD_ANCHOR[1] + pose.get("head_dy", 0)
-    blit_head(head, (hx, hy), style)
+    blit_head(head, (hx, hy), style, facial)
 
     reach = pose.get("reach", 1.0)
     fa, na = pose["far_arm"], pose["near_arm"]
@@ -650,6 +756,82 @@ def rebound_frames():
     ]
 
 
+def dunk_basic_frames():
+    # one-hand dunk off a layup-style approach, near (camera-side) hand
+    up = dict(arms_behind_head=True, reach=1.25, shrug=2)
+    return [
+        # 0 gather at the hip mid-stride
+        P((34, 12, -6), (-24, -48, 30), (20, 110), (25, 100), lean=16, ball=("near", 2.5, 0.0)),
+        # 1 plant, ball to the chest
+        P((-20, -60, 30), (36, 14, -6), (15, 140), (25, 125), lean=10, ball=("near", 3.0, -1.5)),
+        # 2 take-off, knee drive, ball coming up
+        P((80, -5, 10), (-12, -18, 40), (95, 160), (80, 140), lean=4, ball=("near", 1.5, -4.0)),
+        # 3 rising, ball cocked high over the head
+        P((88, 5, 5), (-4, -24, 35), (172, 178), (70, 100), lean=0, lift=12,
+          ball=("near", 0.5, -4.0), **up),
+        # 4 slam: arm whips forward and down through the rim
+        P((70, 0, 5), (0, -26, 30), (138, 118), (65, 95), lean=4, lift=14, head_dx=-1,
+          ball=("near", 3.0, -1.0)),
+        # 5 after the slam, arm follows through
+        P((40, -8, 10), (4, -20, 25), (100, 70), (55, 85), lean=6, lift=10),
+        # 6 dropping
+        P((20, -6, 15), (4, -14, 20), (60, 60), (45, 70), lean=4, lift=4),
+        # 7 land
+        P((48, -16, 0), (40, -22, 0), (40, 70), (30, 60), lean=16),
+    ]
+
+
+def dunk_athletic_frames():
+    # two-foot take-off, heels kicked up behind, both hands overhead
+    up = dict(arms_behind_head=True, reach=1.3, shrug=3)
+    return [
+        # 0 last stride, ball in both hands
+        P((34, 12, -6), (-24, -48, 30), (15, 140), (25, 125), lean=14, ball=("near", 3.0, -1.5)),
+        # 1 two-foot load, ball low
+        P((64, -18, 0), (58, -22, 0), (-10, 60), (-15, 55), lean=28, ball=("between", 1.5, 1.0)),
+        # 2 explode, ball swinging up
+        P((6, -2, 45), (-4, -8, 50), (120, 150), (115, 145), lean=6, ball=("between", 1.0, -3.0)),
+        # 3 rising, ball overhead in both hands
+        P((60, -40, 20), (48, -50, 25), (168, 176), (182, 182), lean=0, lift=13,
+          ball=("between", 0.0, -3.5), **up),
+        # 4 peak: feet kicked up behind, fully stretched
+        P((40, -110, 30), (26, -118, 35), (170, 178), (188, 186), lean=-6, lift=17,
+          ball=("between", 0.0, -3.5), **up),
+        # 5 slam with both hands
+        P((50, -70, 25), (38, -80, 30), (132, 115), (126, 110), lean=6, lift=15, head_dx=-1,
+          ball=("between", 2.0, -1.0)),
+        # 6 dropping, legs reach for the floor
+        P((18, -6, 15), (4, -14, 20), (80, 70), (70, 60), lean=4, lift=6),
+        # 7 land
+        P((58, -18, 0), (50, -24, 0), (40, 70), (30, 60), lean=20),
+    ]
+
+
+def dunk_hang_frames():
+    # big-man dunk: power it down, then hang on the rim (rim not drawn)
+    up = dict(arms_behind_head=True, reach=1.3, shrug=3)
+    return [
+        # 0 gather with both hands
+        P((30, 8, -4), (-18, -40, 20), (15, 140), (25, 125), lean=12, ball=("near", 3.0, -1.5)),
+        # 1 two-foot power load
+        P((60, -16, 0), (54, -20, 0), (10, 130), (20, 120), lean=22, ball=("near", 3.0, -1.5)),
+        # 2 take-off, ball up
+        P((8, -4, 40), (-2, -10, 45), (130, 160), (125, 155), lean=6, ball=("between", 1.0, -3.0)),
+        # 3 rising, ball overhead
+        P((24, -16, 25), (12, -24, 30), (164, 172), (180, 180), lean=2, lift=10,
+          ball=("between", 0.0, -3.5), **up),
+        # 4 slam: both hands over the rim
+        P((20, -10, 20), (8, -18, 25), (150, 160), (160, 165), lean=4, lift=12,
+          ball=("between", 1.5, -2.0), **up),
+        # 5 hanging on the rim, legs swing forward
+        P((26, 16, 10), (14, 8, 15), (172, 180), (186, 184), lean=-4, lift=12, **up),
+        # 6 hanging, legs swing back
+        P((-12, -22, 20), (-20, -30, 25), (172, 180), (186, 184), lean=6, lift=12, **up),
+        # 7 let go and land
+        P((58, -18, 0), (50, -24, 0), (60, 90), (40, 70), lean=22),
+    ]
+
+
 ANIMS = [
     # name, frames-fn, fps, loop, events (name -> frame index)
     ("idle", idle_frames, 6, True, {}),
@@ -662,19 +844,32 @@ ANIMS = [
     ("steal", steal_frames, 14, False, {"activeStart": 2, "activeEnd": 4}),
     ("block", block_frames, 10, False, {"takeoff": 1, "activeStart": 2, "activeEnd": 4}),
     ("rebound", rebound_frames, 10, False, {"takeoff": 1, "catch": 3}),
+    ("dunk_basic", dunk_basic_frames, 12, False, {"gather": 0, "takeoff": 2, "dunk": 4}),
+    ("dunk_athletic", dunk_athletic_frames, 11, False, {"gather": 0, "takeoff": 2, "dunk": 5}),
+    ("dunk_hang", dunk_hang_frames, 10, False,
+     {"gather": 0, "takeoff": 2, "dunk": 4, "hangStart": 5, "hangEnd": 6}),
 ]
 
 
 # ---------------------------------------------------------------- layer split
-def _dilate_under(mask, covered):
-    """Grow a mask 1px into pixels that later layers cover, so no seams show
-    between tinted layers when the image is scaled with filtering."""
+def to_mask_res(mask, covered):
+    """Upsample a 1x mask to MASK_RES texels and grow it one texel (half an
+    art pixel) into pixels that later layers cover. The mask is shown with
+    smooth scaling, so its soft edge then sits under the covering layer
+    (usually the crisp outline) instead of showing a seam or a halo."""
+    r = MASK_RES
+    tex = {}
+    for (x, y), c in mask.items():
+        for i in range(r):
+            for j in range(r):
+                tex[(x * r + i, y * r + j)] = c
     grow = {}
-    for (x, y) in mask:
-        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-            if n in covered and n not in mask:
-                grow[n] = WHITE
-    mask.update(grow)
+    for (tx, ty), c in tex.items():
+        for n in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+            if n not in tex and (n[0] // r, n[1] // r) in covered:
+                grow[n] = c
+    tex.update(grow)
+    return tex
 
 
 def body_layers(grid):
@@ -682,31 +877,32 @@ def body_layers(grid):
     detail = {}
     for p, tag in grid.items():
         if tag in TINTED:
-            slot, over = TINTED[tag]
-            masks[slot][p] = WHITE
+            slot, over, alpha = TINTED[tag]
+            masks[slot][p] = (255, 255, 255, alpha)
             if over:
                 detail[p] = over
         else:
             detail[p] = FIXED[tag]
     opaque = {p for p, c in detail.items() if c[3] == 255}
+    out = {}
     for i, slot in enumerate(BODY_SLOTS):
         covered = set(opaque)
         for later in BODY_SLOTS[i + 1:]:
             covered |= set(masks[later])
-        _dilate_under(masks[slot], covered)
-    return masks, detail
+        out[slot] = to_mask_res(masks[slot], covered)
+    return out, detail
 
 
-def hair_layers(bald, styled, where):
-    """Hair overlay = every pixel that differs from the bald render, so it
-    already has holes wherever an arm passes in front of the head."""
+def overlay_layers(bald, styled, slot, where):
+    """Hair / facial-hair overlay = every pixel that differs from the plain
+    render, so it already has holes wherever an arm passes in front."""
     mask, detail = {}, {}
     for p, tag in styled.items():
         if bald.get(p) == tag:
             continue
-        if tag in ("hair0", "hair1"):
-            mask[p] = WHITE
-            over = TINTED[tag][1]
+        if tag in TINTED and TINTED[tag][0] == slot:
+            _, over, alpha = TINTED[tag]
+            mask[p] = (255, 255, 255, alpha)
             if over:
                 detail[p] = over
         elif tag in FIXED:
@@ -716,18 +912,29 @@ def hair_layers(bald, styled, where):
     missing = [p for p in bald if p not in styled]
     if missing:
         raise ValueError("%s: hair render lost %d pixels" % (where, len(missing)))
-    _dilate_under(mask, {p for p, c in detail.items() if c[3] == 255})
+    mask = to_mask_res(mask, {p for p, c in detail.items() if c[3] == 255})
     return mask, detail
+
 
 
 # ---------------------------------------------------------------- atlas
 class Atlas:
+    """Detail pieces are stored at 1x and upscaled to SCALE (nearest) when
+    packed; mask pieces are stored at MASK_RES and drawn scaled up by the
+    app. Pages are packed per (group, kind) so each body's pages load only
+    when that body is on screen."""
+
+    UPSCALE = {"detail": SCALE, "mask": 1}        # stored units -> page pixels
+    PER_UNIT = {"detail": 1, "mask": MASK_RES}    # stored units per art pixel
+
     def __init__(self):
         self.images = []
+        self.keys = []      # (group, kind)
         self.index = {}
 
-    def add(self, pixels):
-        """pixels: {(x, y): rgba} in frame coords -> [piece, dx, dy] or None."""
+    def add(self, pixels, group, kind):
+        """pixels: {(x, y): rgba} in stored units -> [piece, dx, dy] with the
+        offset in frame pixels (SCALE per art pixel), or None."""
         if not pixels:
             return None
         xs = [x for x, _ in pixels]
@@ -737,40 +944,48 @@ class Atlas:
         pix = img.load()
         for (x, y), c in pixels.items():
             pix[x - x0, y - y0] = c
-        key = hashlib.sha1(img.tobytes() + bytes(str(img.size), "ascii")).hexdigest()
+        key = hashlib.sha1((group + kind).encode() + img.tobytes() + bytes(str(img.size), "ascii")).hexdigest()
         if key not in self.index:
             self.index[key] = len(self.images)
             self.images.append(img)
-        return [self.index[key], x0 * SCALE, y0 * SCALE]
+            self.keys.append((group, kind))
+        k = SCALE / self.PER_UNIT[kind]
+        return [self.index[key], round(x0 * k, 2), round(y0 * k, 2)]
 
     def pack(self):
-        """Shelf-pack every piece into pages. Returns (page images, rects)."""
-        order = sorted(range(len(self.images)), key=lambda i: -self.images[i].height)
+        """Shelf-pack pieces into pages. Returns (page images, page groups,
+        page scales, rects); a page scale says how many frame pixels one page
+        pixel covers."""
         rects = [None] * len(self.images)
-        pages = []           # [(used_w, used_h)]
-        x = y = shelf_h = 0
-        page = -1
-        for i in order:
-            w, h = self.images[i].size
-            if page < 0 or x + w + PAD > PAGE_1X:
-                x, y, shelf_h = PAD, y + shelf_h + PAD, 0
-            if page < 0 or y + h + PAD > PAGE_1X:
-                page += 1
-                pages.append([0, 0])
-                x, y, shelf_h = PAD, PAD, 0
-            rects[i] = (page, x, y, w, h)
-            pages[page][0] = max(pages[page][0], x + w + PAD)
-            pages[page][1] = max(pages[page][1], y + h + PAD)
-            x += w + PAD
-            shelf_h = max(shelf_h, h)
-        out = []
-        for pw, ph in pages:
-            out.append(Image.new("RGBA", (pw, ph), (0, 0, 0, 0)))
+        pages, page_groups, page_scales = [], [], []
+        for group, kind in dict.fromkeys(self.keys):
+            limit = PAGE_PX // self.UPSCALE[kind]
+            order = sorted((i for i, g in enumerate(self.keys) if g == (group, kind)),
+                           key=lambda i: -self.images[i].height)
+            page = None
+            x = y = shelf_h = 0
+            for i in order:
+                w, h = self.images[i].size
+                if page is not None and x + w + PAD > limit:
+                    x, y, shelf_h = PAD, y + shelf_h + PAD, 0
+                if page is None or y + h + PAD > limit:
+                    page = len(pages)
+                    pages.append([0, 0, kind])
+                    page_groups.append(group)
+                    page_scales.append(SCALE / (self.PER_UNIT[kind] * self.UPSCALE[kind]))
+                    x, y, shelf_h = PAD, PAD, 0
+                rects[i] = (page, x, y, w, h)
+                pages[page][0] = max(pages[page][0], x + w + PAD)
+                pages[page][1] = max(pages[page][1], y + h + PAD)
+                x += w + PAD
+                shelf_h = max(shelf_h, h)
+        out = [Image.new("RGBA", (pw, ph), (0, 0, 0, 0)) for pw, ph, _ in pages]
         for i, (page, px, py, w, h) in enumerate(rects):
             out[page].paste(self.images[i], (px, py))
-        out = [im.resize((im.width * SCALE, im.height * SCALE), Image.NEAREST) for im in out]
-        rects = [[p, px * SCALE, py * SCALE, w * SCALE, h * SCALE] for p, px, py, w, h in rects]
-        return out, rects
+        ups = [self.UPSCALE[kind] for _, _, kind in pages]
+        out = [im.resize((im.width * u, im.height * u), Image.NEAREST) for im, u in zip(out, ups)]
+        rects = [[p, px * ups[p], py * ups[p], w * ups[p], h * ups[p]] for p, px, py, w, h in rects]
+        return out, page_groups, page_scales, rects
 
 
 # ---------------------------------------------------------------- previews (emulate the app)
@@ -797,20 +1012,27 @@ class Compositor:
         if key not in self.cache:
             p, sx, sy, w, h = self.data["pieces"][idx]
             img = self.pages[p].crop((sx, sy, sx + w, sy + h))
+            k = self.data["pageScale"][p]
+            if k != 1:
+                img = img.resize((round(w * k), round(h * k)), Image.BILINEAR)
             self.cache[key] = tinted(img, tint) if tint else img
         return self.cache[key]
 
-    def frame(self, build, anim, i, look, colors):
-        f = self.data["frames"][build][anim][i]
+    def frame(self, body, anim, i, look, colors):
+        f = self.data["frames"][body][anim][i]
         canvas = Image.new("RGBA", (self.data["frameWidth"], self.data["frameHeight"]), (0, 0, 0, 0))
         layers = [(f["skin"], look["skin"]), (f["jersey"], colors["jersey"]),
                   (f["trim"], colors["trim"]), (f["detail"], None)]
+        if look.get("facial"):
+            m, d = f["facial"][look["facial"]]
+            layers += [(m, look["hairColor"]), (d, None)]
         if look.get("hair"):
             m, d = f["hair"][look["hair"]]
             layers += [(m, look["hairColor"]), (d, None)]
         for ref, tint in layers:
             if ref:
-                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None), (ref[1], ref[2]))
+                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None),
+                                       (round(ref[1]), round(ref[2])))
         return canvas
 
 
@@ -858,33 +1080,39 @@ def build_all():
     atlas = Atlas()
     frames = {}
     standing = {}
-    for build in BUILDS:
-        use_build(build)
-        stand_grid, stand = render(P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0), "short")
-        standing[build] = (FRAME_H - min(y for _, y in stand_grid)) * SCALE
-        frames[build] = {}
+    for body in BODIES:
+        use_body(body)
+        stand_grid, stand = render(P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0), "crew")
+        standing[body] = (FRAME_H - min(y for _, y in stand_grid)) * SCALE
+        frames[body] = {}
         for name, fn, _, _, _ in ANIMS:
             out = []
             for i, pose in enumerate(fn()):
-                where = "%s/%s/%d" % (build, name, i)
+                where = "%s/%s/%d" % (body, name, i)
                 bald, info = render(pose, None, stand["hip"][1])
                 if info["clipped"]:
                     print("WARNING: %s clipped" % where)
                 masks, detail = body_layers(bald)
-                rec = {s: atlas.add(masks[s]) for s in BODY_SLOTS}
-                rec["detail"] = atlas.add(detail)
+                rec = {s: atlas.add(masks[s], body, "mask") for s in BODY_SLOTS}
+                rec["detail"] = atlas.add(detail, body, "detail")
+                rec["facial"] = {}
+                for kind in FACIAL_HAIR:
+                    styled, _ = render(pose, None, stand["hip"][1], kind)
+                    m, d = overlay_layers(bald, styled, "facial", where + "/" + kind)
+                    rec["facial"][kind] = [atlas.add(m, "heads", "mask"), atlas.add(d, "heads", "detail")]
                 rec["hair"] = {}
                 for style in HAIR_STYLES:
                     styled, _ = render(pose, style, stand["hip"][1])
-                    hm, hd = hair_layers(bald, styled, where + "/" + style)
-                    rec["hair"][style] = [atlas.add(hm), atlas.add(hd)]
+                    m, d = overlay_layers(bald, styled, "hair", where + "/" + style)
+                    rec["hair"][style] = [atlas.add(m, "heads", "mask"), atlas.add(d, "heads", "detail")]
                 rec["nearHand"] = _pt(info["near_hand"])
                 rec["farHand"] = _pt(info["far_hand"])
                 rec["ball"] = _pt(info["ball"])
                 rec["lift"] = info["lift"] * SCALE
                 out.append(rec)
-            frames[build][name] = out
-    pages, rects = atlas.pack()
+            frames[body][name] = out
+        print("built", body)
+    pages, page_groups, page_scales, rects = atlas.pack()
     data = {
         "_comment": "AUTO-GENERATED by tools/generate_sprites.py. All positions are atlas pixels.",
         "scale": SCALE,
@@ -893,9 +1121,12 @@ def build_all():
         "anchorX": ANCHOR_X * SCALE,
         "anchorY": ANCHOR_Y * SCALE,
         "pages": [[p.width, p.height] for p in pages],
+        "pageGroups": page_groups,
+        "pageScale": page_scales,
         "pieces": rects,
         "standingHeight": standing,
-        "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames["wing"][name]), "events": ev}
+        "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames["h3-average"][name]),
+                         "events": ev}
                   for name, _, fps, loop, ev in ANIMS},
         "frames": frames,
     }
@@ -927,94 +1158,106 @@ def write_rn(data, pages):
         f.write("\n".join(lines))
 
 
-def weighted(rng, items):
-    total = sum(it["weight"] for it in items)
-    r = rng.uniform(0, total)
-    for it in items:
-        r -= it["weight"]
-        if r <= 0:
-            return it
-    return items[-1]
+def body_for(palettes, inches, lbs):
+    h = next(c["class"] for c in palettes["heightClasses"]
+             if c["maxInches"] is None or inches <= c["maxInches"])
+    bmi = 703.0 * lbs / (inches * inches)
+    wc = palettes["weightClasses"]
+    w = "slim" if bmi < wc["slimBelowBmi"] else "heavy" if bmi >= wc["heavyFromBmi"] else "average"
+    return "h%d-%s" % (h, w)
 
 
 def write_previews(data, pages, palettes):
-    shutil.rmtree(PREVIEW_DIR, ignore_errors=True)
-    os.makedirs(PREVIEW_DIR)
+    os.makedirs(PREVIEW_DIR, exist_ok=True)
     comp = Compositor(data, pages)
     bg = (40, 70, 170, 255)
-    down = 3                       # previews at 2x art pixels
-    fw, fh = data["frameWidth"] // down, data["frameHeight"] // down
-    skins = palettes["skinTones"]
+    fw, fh = FRAME_W * 2, FRAME_H * 2      # previews at 2 px per art pixel
+    crop_top = fh // 3
+    skins = [s["color"] for s in palettes["skinTones"]]
     hair_c = {h["id"]: h["color"] for h in palettes["hairColors"]}
-    base_look = {"skin": skins[1]["color"], "hair": "short", "hairColor": hair_c["black"]}
-    white = palettes["white"]
+    base = {"skin": skins[1], "hair": "crew", "hairColor": hair_c["black"]}
+    mid = "h3-average"
 
     def small(img):
-        return img.resize((img.width // down, img.height // down), Image.NEAREST)
+        return img.resize((fw, fh), Image.NEAREST)
 
     def label(d, xy, text):
         d.text(xy, text, fill=(255, 255, 255, 255))
 
+    def cell(body, look, team, anim="idle", i=0):
+        return small(comp.frame(body, anim, i, look, team)).crop((0, crop_top, fw, fh))
+
     # every jersey
-    teams = palettes["teams"] + [white]
+    teams = palettes["teams"] + [palettes["white"]]
     cols = 11
     rows = (len(teams) + cols - 1) // cols
-    crop_top = fh // 3
     sheet = Image.new("RGBA", (cols * fw, rows * (fh - crop_top + 14)), bg)
     d = ImageDraw.Draw(sheet)
     for i, t in enumerate(teams):
         x, y = (i % cols) * fw, (i // cols) * (fh - crop_top + 14)
-        img = small(comp.frame("wing", "idle", 0, base_look, t)).crop((0, crop_top, fw, fh))
-        sheet.alpha_composite(img, (x, y + 12))
+        sheet.alpha_composite(cell(mid, base, t), (x, y + 12))
         label(d, (x + 4, y + 1), t["id"])
     sheet.save(os.path.join(PREVIEW_DIR, "jerseys.png"))
 
-    # skin tones x hair styles, then the three builds
-    styles = list(HAIR_STYLES)
-    sheet = Image.new("RGBA", (len(styles) * fw + 60, (len(skins) + 1) * (fh - crop_top) + 16), bg)
+    # skin tones x hair styles, then facial hair
+    styles = [None] + list(HAIR_STYLES)
+    hcols = ["black", "darkBrown", "brown", "auburn", "blond", "bleached"]
+    ch = fh - crop_top
+    sheet = Image.new("RGBA", (len(styles) * fw + 60, (len(skins) + 1) * ch + 30), bg)
     d = ImageDraw.Draw(sheet)
     team = palettes["teams"][13]
     for c, st in enumerate(styles):
-        label(d, (60 + c * fw + 4, 2), st)
-        for r, sk in enumerate(skins):
-            look = {"skin": sk["color"], "hair": st, "hairColor": hair_c["black" if c % 2 == 0 else "brown"]}
-            img = small(comp.frame("wing", "idle", 0, look, team)).crop((0, crop_top, fw, fh))
-            sheet.alpha_composite(img, (60 + c * fw, 16 + r * (fh - crop_top)))
+        label(d, (60 + c * fw + 4, 2), st or "bald")
+        for r, sk in enumerate(palettes["skinTones"]):
+            look = {"skin": sk["color"], "hair": st, "hairColor": hair_c[hcols[(c + r) % 6]]}
+            sheet.alpha_composite(cell(mid, look, team), (60 + c * fw, 16 + r * ch))
             if c == 0:
-                label(d, (4, 16 + r * (fh - crop_top) + 40), sk["id"])
-    y = 16 + len(skins) * (fh - crop_top)
-    for c, b in enumerate(BUILDS):
-        img = small(comp.frame(b, "idle", 0, base_look, team)).crop((0, crop_top, fw, fh))
-        sheet.alpha_composite(img, (60 + c * fw, y))
-        label(d, (60 + c * fw + 4, y + 2), b)
-    label(d, (4, y + 40), "builds")
+                label(d, (4, 16 + r * ch + 40), sk["id"])
+    y = 16 + len(skins) * ch + 14
+    for c, fac in enumerate([None] + list(FACIAL_HAIR)):
+        look = dict(base, facial=fac, skin=skins[c % 5], hairColor=hair_c[hcols[c]])
+        sheet.alpha_composite(cell(mid, look, team), (60 + c * fw, y))
+        label(d, (60 + c * fw + 4, y - 12), fac or "clean")
+    label(d, (4, y + 40), "facial")
     sheet.save(os.path.join(PREVIEW_DIR, "looks.png"))
 
-    # a random matchup, drawn the way the game will: build by height,
-    # then scaled by real height
-    rng = random.Random(11)
+    # 5 height classes x 3 weight classes
+    sheet = Image.new("RGBA", (len(HEIGHT_CLASSES) * fw + 60, len(WEIGHT_CLASSES) * fh + 24), bg)
+    d = ImageDraw.Draw(sheet)
+    for c, h in enumerate(HEIGHT_CLASSES):
+        label(d, (60 + c * fw + 4, 2), "height %d" % h)
+        for r, w in enumerate(WEIGHT_CLASSES):
+            img = small(comp.frame("h%d-%s" % (h, w), "idle", 0, base, team))
+            sheet.alpha_composite(img, (60 + c * fw, 16 + r * fh))
+            if c == 0:
+                label(d, (4, 16 + r * fh + fh // 2), w)
+    sheet.save(os.path.join(PREVIEW_DIR, "bodies.png"))
+
+    # a random matchup, drawn the way the game will: body from height and
+    # weight, then scaled by real height
+    rng = random.Random(5)
     home, away = palettes["teams"][13], palettes["teams"][1]
     court = Image.new("RGBA", (10 * 80 + 40, 200), bg)
     d = ImageDraw.Draw(court)
     d.rectangle((0, 170, court.width, court.height), fill=(30, 50, 140, 255))
-    gb = palettes["builds"]
     for i in range(10):
-        inches = rng.randint(72, 86)
-        build = "guard" if inches <= gb["guardMaxInches"] else "wing" if inches <= gb["wingMaxInches"] else "big"
-        look = {"skin": rng.choice(skins)["color"], "hair": weighted(rng, palettes["hairStyles"])["id"],
-                "hairColor": weighted(rng, palettes["hairColors"])["color"]}
-        img = comp.frame(build, "idle", 0, look, home if i < 5 else away)
-        # ~in-game size (6'6" -> ~125 px), smoothly scaled like the phone does
-        s = (inches * 1.6) / data["standingHeight"][build]
+        inches = rng.randint(72, 87)
+        lbs = int(inches * inches * rng.uniform(21.5, 29) / 703)
+        body = body_for(palettes, inches, lbs)
+        look = {"skin": rng.choice(skins), "hair": rng.choice(styles),
+                "facial": rng.choice([None, None, "stubble", "mustache", "goatee", "beard"]),
+                "hairColor": hair_c[rng.choice(["black", "black", "darkBrown", "brown", "blond", "auburn"])]}
+        img = comp.frame(body, "idle", 0, look, home if i < 5 else away)
+        s = (inches * 1.6) / data["standingHeight"][body]      # ~in-game size
         img = img.resize((int(img.width * s), int(img.height * s)), Image.BILINEAR)
         cx = 50 + i * 80 + (20 if i >= 5 else 0)
         court.alpha_composite(img, (cx - img.width // 2, 170 - img.height))
-        label(d, (cx - 14, 174), "%d'%d\"" % (inches // 12, inches % 12))
-        label(d, (cx - 14, 186), build)
+        label(d, (cx - 22, 174), "%d'%d\" %d" % (inches // 12, inches % 12, lbs))
+        label(d, (cx - 22, 186), body)
     court.save(os.path.join(PREVIEW_DIR, "matchup.png"))
 
     # full animation sheet + gifs for one look
-    look = {"skin": skins[2]["color"], "hair": "afro", "hairColor": hair_c["black"]}
+    look = {"skin": skins[3], "hair": "locs", "facial": "goatee", "hairColor": hair_c["black"]}
     team = palettes["teams"][9]
     ncols = max(a["frameCount"] for a in data["anims"].values())
     sheet = Image.new("RGBA", (ncols * fw, len(data["anims"]) * fh), bg)
@@ -1023,7 +1266,7 @@ def write_previews(data, pages, palettes):
         n = data["anims"][name]["frameCount"]
         imgs = []
         for c in range(n):
-            img = small(comp.frame("wing", name, c, look, team))
+            img = small(comp.frame(mid, name, c, look, team))
             sheet.alpha_composite(img, (c * fw, r * fh))
             f = Image.new("RGBA", img.size, bg)
             f.alpha_composite(img)
@@ -1048,8 +1291,11 @@ def main():
     with open(os.path.join(SPRITE_DIR, "ball.json"), "w") as f:
         json.dump(ball_meta, f, indent=2)
     write_previews(data, pages, palettes)
-    mb = sum(p.width * p.height * 4 for p in pages) / 1e6
-    print("pieces: %d  pages: %s  (~%.0f MB decoded)" % (len(data["pieces"]), data["pages"], mb))
+    per = {}
+    for (w, h), g in zip(data["pages"], data["pageGroups"]):
+        per[g] = per.get(g, 0) + w * h * 4 / 1e6
+    print("pieces: %d  pages: %d  total ~%.0f MB decoded" % (len(data["pieces"]), len(pages), sum(per.values())))
+    print("per group MB:", {g: round(v, 1) for g, v in per.items()})
     print("standing height (atlas px):", data["standingHeight"])
 
 

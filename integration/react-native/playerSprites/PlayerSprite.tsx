@@ -2,8 +2,9 @@ import React, { memo } from 'react';
 import { Image, View } from 'react-native';
 
 import { hairColor, skinColor } from './appearance';
+import type { BodyKey } from './features';
 import { PAGES, SPRITES } from './spriteData';
-import type { AnimName, BuildName, JerseyColors, PieceRef, PlayerLook } from './types';
+import type { AnimName, JerseyColors, PieceRef, PlayerLook } from './types';
 
 export type PlayerSpriteProps = {
   look: PlayerLook;
@@ -13,13 +14,13 @@ export type PlayerSpriteProps = {
   /** screen position of the player's feet (the sprite's bottom-centre anchor) */
   x: number;
   y: number;
-  /** screen px per atlas px; use scaleForHeight() */
+  /** screen px per frame px; use scaleForHeight() */
   scale: number;
   /** true when the player faces left */
   flip?: boolean;
   /**
-   * Jump frames (shoot, layup, block, rebound) have a small hop drawn in.
-   * If the sim already raises the player off the floor (z), set this to
+   * Jump frames (shoot, layup, block, rebound, dunks) have a small hop drawn
+   * in. If the sim already raises the player off the floor (z), set this to
    * false so the hop isn't added twice.
    */
   bakedLift?: boolean;
@@ -33,14 +34,16 @@ const Piece = ({ piece, scale, tint }: PieceProps) => {
   const [index, dx, dy] = piece;
   const [page, sx, sy, w, h] = SPRITES.pieces[index];
   const [pageW, pageH] = SPRITES.pages[page];
+  // mask pages are stored at lower resolution; k converts page px to frame px
+  const s = SPRITES.pageScale[page] * scale;
   return (
     <View
       style={{
         position: 'absolute',
         left: dx * scale,
         top: dy * scale,
-        width: w * scale,
-        height: h * scale,
+        width: w * s,
+        height: h * s,
         overflow: 'hidden',
       }}
     >
@@ -49,10 +52,10 @@ const Piece = ({ piece, scale, tint }: PieceProps) => {
         fadeDuration={0}
         style={{
           position: 'absolute',
-          left: -sx * scale,
-          top: -sy * scale,
-          width: pageW * scale,
-          height: pageH * scale,
+          left: -sx * s,
+          top: -sy * s,
+          width: pageW * s,
+          height: pageH * s,
           tintColor: tint,
         }}
       />
@@ -71,9 +74,11 @@ export const PlayerSprite = memo(function PlayerSprite({
   flip = false,
   bakedLift = true,
 }: PlayerSpriteProps) {
-  const frames = SPRITES.frames[look.build][anim];
+  const frames = SPRITES.frames[look.body][anim];
   const f = frames[((frame % frames.length) + frames.length) % frames.length];
+  const facial = look.facialHair ? f.facial[look.facialHair] : null;
   const hair = look.hairStyle ? f.hair[look.hairStyle] : null;
+  const hairTint = hairColor(look);
   const drop = bakedLift ? 0 : f.lift * scale;
   return (
     <View
@@ -91,7 +96,9 @@ export const PlayerSprite = memo(function PlayerSprite({
       <Piece piece={f.jersey} scale={scale} tint={colors.jersey} />
       <Piece piece={f.trim} scale={scale} tint={colors.trim} />
       <Piece piece={f.detail} scale={scale} />
-      {hair && <Piece piece={hair[0]} scale={scale} tint={hairColor(look)} />}
+      {facial && <Piece piece={facial[0]} scale={scale} tint={hairTint} />}
+      {facial && <Piece piece={facial[1]} scale={scale} />}
+      {hair && <Piece piece={hair[0]} scale={scale} tint={hairTint} />}
       {hair && <Piece piece={hair[1]} scale={scale} />}
     </View>
   );
@@ -111,8 +118,8 @@ export function animDuration(anim: AnimName): number {
 }
 
 /** Scale so the standing player is `screenHeightPx` tall (sole to top of head). */
-export function scaleForHeight(build: BuildName, screenHeightPx: number): number {
-  return screenHeightPx / SPRITES.standingHeight[build];
+export function scaleForHeight(body: BodyKey, screenHeightPx: number): number {
+  return screenHeightPx / SPRITES.standingHeight[body];
 }
 
 /**
