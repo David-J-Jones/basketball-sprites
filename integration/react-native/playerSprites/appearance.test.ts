@@ -97,17 +97,18 @@ describe('sprite data', () => {
 });
 
 describe('jerseys', () => {
-  it('has 32 teams plus white', () => {
-    expect(TEAMS).toHaveLength(32);
-    expect(new Set(TEAMS.map((t) => t.id)).size).toBe(32);
+  it('has the 30 league teams plus white', () => {
+    expect(TEAMS).toHaveLength(30);
+    expect(new Set(TEAMS.map((t) => t.id)).size).toBe(30);
     expect(WHITE_JERSEY.jersey).toBeDefined();
   });
 
   it('puts the away team in white on a color clash', () => {
-    const { away } = jerseysForGame(teamById('CHI'), teamById('HOU'));
+    // LA Cars and Toronto Sorries are both red
+    const { away } = jerseysForGame(teamById('LAC'), teamById('TOR'));
     expect(away.jersey).toBe(WHITE_JERSEY.jersey);
-    const other = jerseysForGame(teamById('LAL'), teamById('BOS'));
-    expect(other.away.jersey).toBe(teamById('BOS').jersey);
+    const other = jerseysForGame(teamById('CHA'), teamById('NO'));
+    expect(other.away.jersey).toBe(teamById('NO').jersey);
   });
 });
 

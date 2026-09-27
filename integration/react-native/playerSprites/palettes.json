@@ -2,196 +2,184 @@
   "_comment": "Runtime colors for the player sprites and headshots. Edit freely - no need to regenerate the art.",
   "teams": [
     {
-      "id": "ATL",
-      "name": "Atlanta Hawks",
-      "jersey": "#E03A3E",
-      "trim": "#C1D32F"
+      "id": "PHX",
+      "name": "Phoenix Buns",
+      "jersey": "#E56020",
+      "trim": "#5A2D12"
     },
     {
-      "id": "BOS",
-      "name": "Boston Celtics",
-      "jersey": "#007A33",
-      "trim": "#FFFFFF"
-    },
-    {
-      "id": "BKN",
-      "name": "Brooklyn Nets",
-      "jersey": "#232323",
-      "trim": "#FFFFFF"
-    },
-    {
-      "id": "CHA",
-      "name": "Charlotte Hornets",
-      "jersey": "#00788C",
-      "trim": "#1D1160"
+      "id": "SLC",
+      "name": "Salt Lake Soakers",
+      "jersey": "#1FA2D6",
+      "trim": "#F5E03A"
     },
     {
       "id": "CHI",
-      "name": "Chicago Bulls",
-      "jersey": "#CE1141",
+      "name": "Chicago Cows",
+      "jersey": "#1E1E1E",
+      "trim": "#F4A6B8"
+    },
+    {
+      "id": "CHA",
+      "name": "Charlotte Bees",
+      "jersey": "#F2C12E",
       "trim": "#1A1A1A"
     },
     {
-      "id": "CLE",
-      "name": "Cleveland Cavaliers",
-      "jersey": "#860038",
-      "trim": "#FDBB30"
+      "id": "NY",
+      "name": "New York Rats",
+      "jersey": "#6E6E78",
+      "trim": "#D0342C"
     },
     {
-      "id": "DAL",
-      "name": "Dallas Mavericks",
-      "jersey": "#00538C",
-      "trim": "#B8C4CA"
+      "id": "GA",
+      "name": "Georgia Peaches",
+      "jersey": "#F59A6A",
+      "trim": "#4E9A3A"
     },
     {
-      "id": "DEN",
-      "name": "Denver Nuggets",
-      "jersey": "#0E2240",
-      "trim": "#FEC524"
-    },
-    {
-      "id": "DET",
-      "name": "Detroit Pistons",
-      "jersey": "#1D42BA",
-      "trim": "#C8102E"
-    },
-    {
-      "id": "GSW",
-      "name": "Golden State Warriors",
-      "jersey": "#1D428A",
-      "trim": "#FFC72C"
-    },
-    {
-      "id": "HOU",
-      "name": "Houston Rockets",
-      "jersey": "#CE1141",
-      "trim": "#C4CED4"
-    },
-    {
-      "id": "IND",
-      "name": "Indiana Pacers",
-      "jersey": "#FDBB30",
-      "trim": "#002D62"
-    },
-    {
-      "id": "LAC",
-      "name": "LA Clippers",
-      "jersey": "#C8102E",
-      "trim": "#1D428A"
-    },
-    {
-      "id": "LAL",
-      "name": "Los Angeles Lakers",
-      "jersey": "#552583",
-      "trim": "#FDB927"
-    },
-    {
-      "id": "MEM",
-      "name": "Memphis Grizzlies",
-      "jersey": "#5D76A9",
-      "trim": "#12173F"
-    },
-    {
-      "id": "MIA",
-      "name": "Miami Heat",
-      "jersey": "#98002E",
-      "trim": "#F9A01B"
-    },
-    {
-      "id": "MIL",
-      "name": "Milwaukee Bucks",
-      "jersey": "#00471B",
-      "trim": "#EEE1C6"
-    },
-    {
-      "id": "MIN",
-      "name": "Minnesota Timberwolves",
-      "jersey": "#0C2340",
-      "trim": "#78BE20"
-    },
-    {
-      "id": "NOP",
-      "name": "New Orleans Pelicans",
-      "jersey": "#0C2340",
-      "trim": "#C8102E"
-    },
-    {
-      "id": "NYK",
-      "name": "New York Knicks",
-      "jersey": "#006BB6",
-      "trim": "#F58426"
-    },
-    {
-      "id": "OKC",
-      "name": "Oklahoma City Thunder",
-      "jersey": "#007AC1",
-      "trim": "#EF3B24"
+      "id": "BOS",
+      "name": "Boston Deli",
+      "jersey": "#2E6B3A",
+      "trim": "#E8C44A"
     },
     {
       "id": "ORL",
-      "name": "Orlando Magic",
-      "jersey": "#0077C0",
-      "trim": "#1A1A1A"
+      "name": "Orlando Tourists",
+      "jersey": "#1BB5A6",
+      "trim": "#FF5C8A"
+    },
+    {
+      "id": "MIA",
+      "name": "Miami Breeze",
+      "jersey": "#6EC6F0",
+      "trim": "#FF8C5A"
+    },
+    {
+      "id": "NO",
+      "name": "New Orleans Voodoo",
+      "jersey": "#4B2A6B",
+      "trim": "#7BC043"
     },
     {
       "id": "PHI",
-      "name": "Philadelphia 76ers",
-      "jersey": "#006BB6",
-      "trim": "#ED174C"
+      "name": "Philadelphia Nice People",
+      "jersey": "#1D4FB8",
+      "trim": "#FFD23F"
     },
     {
-      "id": "PHX",
-      "name": "Phoenix Suns",
-      "jersey": "#1D1160",
-      "trim": "#E56020"
+      "id": "BKN",
+      "name": "Brooklyn Mice",
+      "jersey": "#3A3A40",
+      "trim": "#F4C542"
     },
     {
-      "id": "POR",
-      "name": "Portland Trail Blazers",
-      "jersey": "#232323",
-      "trim": "#E03A3E"
+      "id": "HOU",
+      "name": "Houston Pockets",
+      "jersey": "#3B5B8C",
+      "trim": "#E8A33A"
+    },
+    {
+      "id": "DET",
+      "name": "Detroit Junkers",
+      "jersey": "#9C4A1E",
+      "trim": "#B8BCC4"
+    },
+    {
+      "id": "IND",
+      "name": "Indiana Corn",
+      "jersey": "#3F7D2B",
+      "trim": "#F2C230"
+    },
+    {
+      "id": "SF",
+      "name": "San Francisco Fruit",
+      "jersey": "#5B2A86",
+      "trim": "#6DB33F"
+    },
+    {
+      "id": "LAC",
+      "name": "Los Angeles Cars",
+      "jersey": "#D22630",
+      "trim": "#C0C6CF"
+    },
+    {
+      "id": "LAB",
+      "name": "Los Angeles Bridges",
+      "jersey": "#2C4F7C",
+      "trim": "#C9C3B5"
+    },
+    {
+      "id": "DC",
+      "name": "DC Lawyers",
+      "jersey": "#14213D",
+      "trim": "#C9A227"
+    },
+    {
+      "id": "DEN",
+      "name": "Denver Miners",
+      "jersey": "#B8733A",
+      "trim": "#2B2B2B"
+    },
+    {
+      "id": "DAL",
+      "name": "Dallas Losers",
+      "jersey": "#4A5568",
+      "trim": "#C0C6CF"
     },
     {
       "id": "SAC",
-      "name": "Sacramento Kings",
-      "jersey": "#5A2D81",
-      "trim": "#A2AAAD"
+      "name": "Sacramento Bears",
+      "jersey": "#6B4226",
+      "trim": "#E8A23A"
     },
     {
-      "id": "SAS",
-      "name": "San Antonio Spurs",
-      "jersey": "#232323",
-      "trim": "#C4CED4"
+      "id": "MIL",
+      "name": "Milwaukee Trees",
+      "jersey": "#1F5A33",
+      "trim": "#7A4E2A"
+    },
+    {
+      "id": "POR",
+      "name": "Portland Tents",
+      "jersey": "#B59B6A",
+      "trim": "#B8322B"
+    },
+    {
+      "id": "OKC",
+      "name": "Oklahoma Texans",
+      "jersey": "#3B8FD6",
+      "trim": "#D32F2F"
+    },
+    {
+      "id": "SA",
+      "name": "San Antonio Spoons",
+      "jersey": "#1B9AAA",
+      "trim": "#C0C6CF"
+    },
+    {
+      "id": "MIN",
+      "name": "Minnesota Water",
+      "jersey": "#2A6FDB",
+      "trim": "#BDE3F5"
+    },
+    {
+      "id": "CLE",
+      "name": "Cleveland Pierogies",
+      "jersey": "#7A1F3D",
+      "trim": "#F2DDB0"
+    },
+    {
+      "id": "MEM",
+      "name": "Memphis Ribs",
+      "jersey": "#8B2E16",
+      "trim": "#B0A89E"
     },
     {
       "id": "TOR",
-      "name": "Toronto Raptors",
-      "jersey": "#CE1141",
-      "trim": "#B4975A"
-    },
-    {
-      "id": "UTA",
-      "name": "Utah Jazz",
-      "jersey": "#002B5C",
-      "trim": "#F9A01B"
-    },
-    {
-      "id": "WAS",
-      "name": "Washington Wizards",
-      "jersey": "#E31837",
-      "trim": "#002B5C"
-    },
-    {
-      "id": "SEA",
-      "name": "Seattle (expansion)",
-      "jersey": "#00653A",
-      "trim": "#FFC200"
-    },
-    {
-      "id": "LV",
-      "name": "Las Vegas (expansion)",
-      "jersey": "#B4975A",
-      "trim": "#1A1A1A"
+      "name": "Toronto Sorries",
+      "jersey": "#D52B1E",
+      "trim": "#F5F5F5"
     }
   ],
   "white": {

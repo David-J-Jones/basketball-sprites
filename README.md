@@ -21,7 +21,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   | Height | 6'2" and under | 6'3"–6'5" | 6'6"–6'8" | 6'9"–6'11" | 7'0"+ |
 
   The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
-- **32 team jerseys + a white one**, 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
+- **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
 - **Always the same:** black shorts, grey shoes.
 - **22 animations:** `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
@@ -30,6 +30,28 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - `faceFromSeed(playerId)` → `FaceSpec`, then `faceSvg(face, id, jersey)` → one self-contained SVG, on the same 200×240 grid and square crop (`viewBox="12 24 176 176"`) as before.
 - Drawn as 50×60 pixel art in the same style as the sprites. Every pixel is a crisp square, grouped into one `<path>` per color with `shape-rendering="crispEdges"`, so it stays sharp at any size.
 - **Features:** 4 head shapes, 5 eye shapes, 5 noses, 4 mouths, 5 eye colors, brow weight, plus the same skin, hair and facial-hair options as the sprite. The jersey uses the team color (navy if none) and can show a number.
+
+## Team logos
+
+![team logos](previews/logos.png)
+
+30 retro pixel-art badges for the league's own teams, in **`integration/react-native/teamLogos/`**:
+
+| File | What it is |
+|---|---|
+| `png/<ID>.png` | Full round badge, 512×512 |
+| `png/<ID>_icon.png` | Icon only, transparent, 384×384 (scoreboards, small UI) |
+| `svg/<ID>.svg` | Badge as crisp vector squares |
+| `teams.json` / `index.ts` | Ids, city, name, jersey and trim colors, plus `TEAM_LOGOS` / `TEAM_ICONS` require maps |
+
+```tsx
+import { LEAGUE_TEAMS, TEAM_LOGOS } from './teamLogos';
+<Image source={TEAM_LOGOS['PHX']} style={{ width: 64, height: 64 }} />
+```
+
+**Team colors live in `tools/generate_logos.py`.** Running `python3 tools/generate_logos.py` redraws the logos and also writes the same 30 teams into `playerSprites/palettes.json`, so jerseys always match the logos.
+
+Three teams are placeholders because your list didn't cover them: **Cleveland Pierogies, Memphis Ribs and Toronto Sorries**. Orlando is the **Tourists**, because Mickey is still a Disney trademark. To rename or redraw a team, edit its row in `TEAMS` and its `icon_*` function, then rerun.
 
 ## Files
 

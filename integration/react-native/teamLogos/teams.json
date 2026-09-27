@@ -1,0 +1,242 @@
+[
+  {
+    "id": "PHX",
+    "city": "Phoenix",
+    "name": "Buns",
+    "fullName": "Phoenix Buns",
+    "jersey": "#E56020",
+    "trim": "#5A2D12"
+  },
+  {
+    "id": "SLC",
+    "city": "Salt Lake",
+    "name": "Soakers",
+    "fullName": "Salt Lake Soakers",
+    "jersey": "#1FA2D6",
+    "trim": "#F5E03A"
+  },
+  {
+    "id": "CHI",
+    "city": "Chicago",
+    "name": "Cows",
+    "fullName": "Chicago Cows",
+    "jersey": "#1E1E1E",
+    "trim": "#F4A6B8"
+  },
+  {
+    "id": "CHA",
+    "city": "Charlotte",
+    "name": "Bees",
+    "fullName": "Charlotte Bees",
+    "jersey": "#F2C12E",
+    "trim": "#1A1A1A"
+  },
+  {
+    "id": "NY",
+    "city": "New York",
+    "name": "Rats",
+    "fullName": "New York Rats",
+    "jersey": "#6E6E78",
+    "trim": "#D0342C"
+  },
+  {
+    "id": "GA",
+    "city": "Georgia",
+    "name": "Peaches",
+    "fullName": "Georgia Peaches",
+    "jersey": "#F59A6A",
+    "trim": "#4E9A3A"
+  },
+  {
+    "id": "BOS",
+    "city": "Boston",
+    "name": "Deli",
+    "fullName": "Boston Deli",
+    "jersey": "#2E6B3A",
+    "trim": "#E8C44A"
+  },
+  {
+    "id": "ORL",
+    "city": "Orlando",
+    "name": "Tourists",
+    "fullName": "Orlando Tourists",
+    "jersey": "#1BB5A6",
+    "trim": "#FF5C8A"
+  },
+  {
+    "id": "MIA",
+    "city": "Miami",
+    "name": "Breeze",
+    "fullName": "Miami Breeze",
+    "jersey": "#6EC6F0",
+    "trim": "#FF8C5A"
+  },
+  {
+    "id": "NO",
+    "city": "New Orleans",
+    "name": "Voodoo",
+    "fullName": "New Orleans Voodoo",
+    "jersey": "#4B2A6B",
+    "trim": "#7BC043"
+  },
+  {
+    "id": "PHI",
+    "city": "Philadelphia",
+    "name": "Nice People",
+    "fullName": "Philadelphia Nice People",
+    "jersey": "#1D4FB8",
+    "trim": "#FFD23F"
+  },
+  {
+    "id": "BKN",
+    "city": "Brooklyn",
+    "name": "Mice",
+    "fullName": "Brooklyn Mice",
+    "jersey": "#3A3A40",
+    "trim": "#F4C542"
+  },
+  {
+    "id": "HOU",
+    "city": "Houston",
+    "name": "Pockets",
+    "fullName": "Houston Pockets",
+    "jersey": "#3B5B8C",
+    "trim": "#E8A33A"
+  },
+  {
+    "id": "DET",
+    "city": "Detroit",
+    "name": "Junkers",
+    "fullName": "Detroit Junkers",
+    "jersey": "#9C4A1E",
+    "trim": "#B8BCC4"
+  },
+  {
+    "id": "IND",
+    "city": "Indiana",
+    "name": "Corn",
+    "fullName": "Indiana Corn",
+    "jersey": "#3F7D2B",
+    "trim": "#F2C230"
+  },
+  {
+    "id": "SF",
+    "city": "San Francisco",
+    "name": "Fruit",
+    "fullName": "San Francisco Fruit",
+    "jersey": "#5B2A86",
+    "trim": "#6DB33F"
+  },
+  {
+    "id": "LAC",
+    "city": "Los Angeles",
+    "name": "Cars",
+    "fullName": "Los Angeles Cars",
+    "jersey": "#D22630",
+    "trim": "#C0C6CF"
+  },
+  {
+    "id": "LAB",
+    "city": "Los Angeles",
+    "name": "Bridges",
+    "fullName": "Los Angeles Bridges",
+    "jersey": "#2C4F7C",
+    "trim": "#C9C3B5"
+  },
+  {
+    "id": "DC",
+    "city": "DC",
+    "name": "Lawyers",
+    "fullName": "DC Lawyers",
+    "jersey": "#14213D",
+    "trim": "#C9A227"
+  },
+  {
+    "id": "DEN",
+    "city": "Denver",
+    "name": "Miners",
+    "fullName": "Denver Miners",
+    "jersey": "#B8733A",
+    "trim": "#2B2B2B"
+  },
+  {
+    "id": "DAL",
+    "city": "Dallas",
+    "name": "Losers",
+    "fullName": "Dallas Losers",
+    "jersey": "#4A5568",
+    "trim": "#C0C6CF"
+  },
+  {
+    "id": "SAC",
+    "city": "Sacramento",
+    "name": "Bears",
+    "fullName": "Sacramento Bears",
+    "jersey": "#6B4226",
+    "trim": "#E8A23A"
+  },
+  {
+    "id": "MIL",
+    "city": "Milwaukee",
+    "name": "Trees",
+    "fullName": "Milwaukee Trees",
+    "jersey": "#1F5A33",
+    "trim": "#7A4E2A"
+  },
+  {
+    "id": "POR",
+    "city": "Portland",
+    "name": "Tents",
+    "fullName": "Portland Tents",
+    "jersey": "#B59B6A",
+    "trim": "#B8322B"
+  },
+  {
+    "id": "OKC",
+    "city": "Oklahoma",
+    "name": "Texans",
+    "fullName": "Oklahoma Texans",
+    "jersey": "#3B8FD6",
+    "trim": "#D32F2F"
+  },
+  {
+    "id": "SA",
+    "city": "San Antonio",
+    "name": "Spoons",
+    "fullName": "San Antonio Spoons",
+    "jersey": "#1B9AAA",
+    "trim": "#C0C6CF"
+  },
+  {
+    "id": "MIN",
+    "city": "Minnesota",
+    "name": "Water",
+    "fullName": "Minnesota Water",
+    "jersey": "#2A6FDB",
+    "trim": "#BDE3F5"
+  },
+  {
+    "id": "CLE",
+    "city": "Cleveland",
+    "name": "Pierogies",
+    "fullName": "Cleveland Pierogies",
+    "jersey": "#7A1F3D",
+    "trim": "#F2DDB0"
+  },
+  {
+    "id": "MEM",
+    "city": "Memphis",
+    "name": "Ribs",
+    "fullName": "Memphis Ribs",
+    "jersey": "#8B2E16",
+    "trim": "#B0A89E"
+  },
+  {
+    "id": "TOR",
+    "city": "Toronto",
+    "name": "Sorries",
+    "fullName": "Toronto Sorries",
+    "jersey": "#D52B1E",
+    "trim": "#F5F5F5"
+  }
+]
