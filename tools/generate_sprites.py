@@ -44,7 +44,7 @@ FRAME_W, FRAME_H = 64, 80
 ANCHOR_X, ANCHOR_Y = FRAME_W // 2, FRAME_H   # bottom centre, at the feet
 GROUND = FRAME_H - 2      # last row of sole pixels; the outline sits on the bottom row
 HIP_X = ANCHOR_X
-SCALE = 4                 # detail layers: atlas pixels per art pixel (crisp outlines)
+SCALE = 3                 # detail layers: atlas pixels per art pixel (crisp outlines)
 MASK_RES = 2              # tint masks: texels per art pixel (edges hide under outlines)
 PAGE_PX = 2040            # max atlas page width/height in pixels
 PAD = 1                   # gap between atlas pieces, in stored units
@@ -1042,6 +1042,225 @@ def screen_contact_frames():
     ]
 
 
+# ---------------------------------------------------------------- walking
+WALK_LEG = [(24, 16, -8), (12, 6, 0), (0, -4, 4), (-12, -14, 10),
+            (-20, -30, 20), (-6, -34, 18), (12, -18, 6), (24, 6, -6)]
+WALK_ARM = [(-18, -6), (-10, 4), (0, 14), (10, 26), (18, 34), (10, 26), (0, 14), (-10, 4)]
+
+
+def walk_keys(lean=6):
+    return [P(WALK_LEG[i], WALK_LEG[(i + 4) % 8], WALK_ARM[(i + 4) % 8], WALK_ARM[i], lean=lean)
+            for i in range(8)]
+
+
+def walk_frames():
+    return resample(walk_keys(), RUN_FRAMES)
+
+
+def _walk_dribble(far):
+    # 3 bounces per 12-frame walk cycle (one every 0.35 s at 11.43 fps)
+    legs = resample(walk_keys(lean=12), RUN_FRAMES)
+    arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 3
+    ball = [("near", 1.5, 4.5, 1), ("hip", 12, 8, 1), ("ground", 12, 0, 1), ("hip", 12, 8, 1)] * 3
+    out = []
+    for i, p in enumerate(legs):
+        p = dict(p)
+        p["near_arm"] = arm[i]
+        p["far_arm"] = (35, 80)
+        p["ball"] = ball[i]
+        out.append(swap_sides(p, legs=False) if far else p)
+    return out
+
+
+def walk_dribble_frames():
+    return _walk_dribble(False)
+
+
+def walk_dribble_far_frames():
+    return _walk_dribble(True)
+
+
+def backpedal_frames():
+    # moving backward while still facing forward (defender giving ground)
+    keys = [P(WALK_LEG[i], WALK_LEG[(i + 4) % 8], (40, 80), (30, 70), lean=10)
+            for i in reversed(range(8))]
+    return keys
+
+
+# ---------------------------------------------------------------- idles
+def idle_hips_frames():
+    # hands on hips, waiting
+    arms = dict(near_arm=(-35, 70), far_arm=(-30, 75))
+    return [P((10, -4, 0), (-10, -4, 0), **arms, lean=l, bob=b) for l, b in ((2, 0), (2, 0), (3, 1), (3, 1))]
+
+
+def idle_knees_frames():
+    # bent over, hands on knees, catching his breath
+    return [P((34, -6, 0), (22, -14, 0), (0, 10), (4, 12), lean=l, bob=b)
+            for l, b in ((38, 1), (40, 2), (40, 2), (38, 1))]
+
+
+# ---------------------------------------------------------------- defense
+D_LEGS_WIDE = dict(near_leg=(32, -10, 0), far_leg=(-28, -30, 10))
+D_ARMS = dict(near_arm=(50, 70), far_arm=(162, 176), reach=1.2)   # low hand at the ball, high hand up
+
+
+def defense_stance_frames():
+    return [P(**D_LEGS_WIDE, **D_ARMS, lean=18, bob=b) for b in (2, 2, 3, 3)]
+
+
+def defense_slide_frames():
+    # shuffle: feet together, then wide again (two shuffles per loop)
+    legs = [((32, -10, 0), (-28, -30, 10)), ((22, -12, 0), (-18, -26, 8)), ((10, -10, 0), (-6, -18, 4)),
+            ((22, -12, 0), (-18, -26, 8))] * 2
+    return [P(n, f, **D_ARMS, lean=18, bob=(2 if i % 2 == 0 else 3)) for i, (n, f) in enumerate(legs)]
+
+
+def defense_hands_up_frames():
+    up = dict(arms_behind_head=True, reach=1.2, shrug=2)
+    return [P(**D_LEGS_WIDE, near_arm=(165, 172), far_arm=(190, 186), lean=6, bob=b, **up) for b in (1, 1, 2, 2)]
+
+
+# ---------------------------------------------------------------- more finishes
+def layup_finger_roll_frames():
+    frames = layup_frames()
+    frames[3] = P((88, 5, 5), (-4, -24, 35), (100, 120), (70, 100), lean=0, lift=8, ball=("near", 2.0, -2.5))
+    frames[4] = P((80, 0, 5), (0, -26, 30), (118, 125), (70, 100), lean=-2, lift=11, head_dx=-1,
+                  ball=("near", 2.5, -3.0))                                 # palm up, rolls it off
+    frames[5] = P((50, -10, 10), (4, -24, 30), (125, 150), (60, 95), lean=0, lift=9, head_dx=-1)
+    return frames
+
+
+def layup_euro_frames():
+    return [
+        P((34, 12, -6), (-24, -48, 30), (20, 110), (25, 100), lean=16, ball=("near", 2.5, 0.0, 1)),     # gather
+        P((44, 20, -8), (-30, -56, 34), (15, 140), (25, 125), lean=14, ball=("near", 3.0, -1.5, 0.6)),  # step one way
+        P((-26, -50, 30), (52, 24, -10), (40, 120), (10, 130), lean=22, bob=1,
+          ball=("far", 3.0, -1.0, -0.6)),                                                          # long step back across
+        P((80, -5, 10), (-12, -18, 40), (95, 160), (80, 140), lean=4, ball=("near", 1.5, -4.0, 0.3)),  # take-off
+        P((88, 5, 5), (-4, -24, 35), (122, 150), (70, 100), lean=0, lift=8, head_dx=-1,
+          ball=("near", 1.5, -4.0, 0.5)),
+        P((80, 0, 5), (0, -26, 30), (135, 150), (70, 100), lean=-2, lift=11, head_dx=-2,
+          ball=("near", 2.0, -4.0, 0.5)),                                                          # release
+        P((20, -6, 15), (4, -14, 20), (100, 100), (50, 80), lean=2, lift=4),
+        P((48, -16, 0), (40, -22, 0), (50, 80), (30, 60), lean=16),
+    ]
+
+
+def dunk_windmill_frames():
+    up = dict(arms_behind_head=True, reach=1.3, shrug=3)
+    return [
+        P((34, 12, -6), (-24, -48, 30), (15, 140), (25, 125), lean=14, ball=("near", 3.0, -1.5)),       # gather
+        P((64, -18, 0), (58, -22, 0), (10, 60), (-15, 55), lean=26, ball=("near", 2.0, 2.0)),         # load
+        P((6, -2, 45), (-4, -8, 50), (-20, 0), (100, 130), lean=6, ball=("near", 1.0, 3.0)),          # jump, ball low
+        P((50, -30, 20), (36, -40, 25), (-60, -40), (130, 150), lean=2, lift=10,
+          ball=("near", -1.0, 2.0)),                                                              # swing back
+        P((50, -30, 20), (36, -40, 25), (235, 225), (150, 160), lean=0, lift=14,
+          ball=("near", -1.5, -2.0, 0.2), **up),                                                  # over the top
+        P((40, -20, 20), (26, -30, 25), (175, 178), (150, 160), lean=0, lift=17,
+          ball=("near", 1.0, -4.0), **up),                                                        # peak
+        P((50, -40, 25), (38, -50, 30), (130, 110), (100, 110), lean=6, lift=15, head_dx=-1,
+          ball=("near", 3.0, -1.0)),                                                              # slam
+        P((58, -18, 0), (50, -24, 0), (40, 70), (30, 60), lean=20),                               # land
+    ]
+
+
+def dunk_tomahawk_frames():
+    up = dict(arms_behind_head=True, reach=1.3, shrug=3)
+    return [
+        P((34, 12, -6), (-24, -48, 30), (15, 140), (25, 125), lean=14, ball=("near", 3.0, -1.5)),
+        P((64, -18, 0), (58, -22, 0), (10, 130), (20, 120), lean=26, ball=("near", 3.0, -1.5)),
+        P((6, -2, 45), (-4, -8, 50), (150, 170), (145, 165), lean=6, ball=("between", 0.0, -3.0), **up),
+        P((60, -40, 20), (48, -50, 25), (215, 200), (222, 205), lean=-8, lift=13,
+          ball=("between", -2.0, -2.0, 0), **up),                                                 # cocked behind the head
+        P((60, -60, 20), (48, -70, 25), (205, 190), (212, 195), lean=-10, lift=17,
+          ball=("between", -2.0, -2.5, 0), **up),                                                 # peak, arched back
+        P((50, -40, 25), (38, -50, 30), (132, 112), (126, 106), lean=8, lift=15, head_dx=-1,
+          ball=("between", 2.0, -1.0)),                                                           # slam
+        P((58, -18, 0), (50, -24, 0), (40, 70), (30, 60), lean=20),
+    ]
+
+
+# ---------------------------------------------------------------- more dribble moves
+def behind_back_up_frames():
+    """Near hand to far hand around the back: cuts up the screen, like crossover_up."""
+    return [
+        dict(DRIBBLE_POSE),
+        P((26, -12, 0), (-18, -38, 14), (-30, 20), (40, 90), lean=16, bob=1, ball=("hip", -7, 5, 0.3)),   # swing it back
+        P((28, -12, 0), (-20, -40, 15), (-40, 0), (20, 60), lean=18, bob=1, ball=("hip", -5, 10, -0.4)),  # behind the back
+        P((28, -12, 0), (-20, -40, 15), (-10, 40), (30, 45), lean=18, bob=1, ball=("ground", 5, 0, -0.7)),
+        P((24, -14, 0), (-16, -36, 12), (35, 80), (30, 55), lean=16, ball=("far", 1.5, 5.0, -1)),        # far hand has it
+        swap_sides(dict(DRIBBLE_POSE)),
+    ]
+
+
+def behind_back_down_frames():
+    return [swap_sides(p) for p in behind_back_up_frames()]
+
+
+def between_legs_up_frames():
+    """Near hand to far hand through the legs (wide stance)."""
+    wide = dict(near_leg=(32, -6, 0), far_leg=(-26, -28, 10))
+    return [
+        dict(DRIBBLE_POSE),
+        P(**wide, near_arm=(30, 40), far_arm=(40, 85), lean=20, bob=2, ball=("hip", 5, 10, 0.5)),       # push down
+        P(**wide, near_arm=(20, 30), far_arm=(25, 50), lean=22, bob=2, ball=("ground", 1, 0, 0)),       # between the feet
+        P(**wide, near_arm=(35, 75), far_arm=(15, 40), lean=20, bob=2, ball=("far", 1.0, 4.5, -0.7)),   # far hand catches
+        P((24, -14, 0), (-16, -36, 12), (40, 90), (30, 55), lean=16, ball=("far", 1.5, 5.0, -1)),
+        swap_sides(dict(DRIBBLE_POSE)),
+    ]
+
+
+def between_legs_down_frames():
+    return [swap_sides(p) for p in between_legs_up_frames()]
+
+
+def hesitation_frames():
+    """Hesi: rise up tall to sell the stop, then burst forward (same hand)."""
+    return [
+        dict(DRIBBLE_POSE),
+        P((10, -4, 0), (-8, -12, 6), (30, 60), (35, 70), lean=4, ball=("near", 1.5, 3.5, 1)),            # rise up
+        P((8, -4, 0), (-8, -10, 6), (32, 55), (35, 70), lean=2, head_dy=-1, ball=("hip", 12, 7, 1)),     # sell it
+        P((34, -10, 0), (-26, -52, 30), (30, 40), (-20, 60), lean=26, bob=1, ball=("ground", 13, 0, 1)),  # burst
+        P((40, 4, -6), (-30, -60, 34), (32, 60), (-26, 52), lean=22, ball=("hip", 13, 8, 1)),
+        P(RUN_LEG[0], RUN_LEG[4], (32, 72), RUN_ARM[0], lean=16, ball=("near", 1.5, 4.5, 1)),         # into dribble_run
+    ]
+
+
+def hesitation_far_frames():
+    return [swap_sides(p, legs=False) for p in hesitation_frames()]
+
+
+def shoot_pullup_frames():
+    """Jumper off the move toward the basket: brake from a run, rise, drift forward."""
+    base = shoot_frames()
+    frames = [
+        P(RUN_LEG[7], RUN_LEG[3], (20, 140), (30, 120), lean=14, ball=("near", 3.0, -1.5)),   # gather on the run
+        P((50, -16, 0), (40, -22, 0), (10, 130), (22, 115), lean=2, bob=1, dx=1,
+          ball=("near", 3.2, -1.5)),                                                        # hop-stop, braking
+    ]
+    for i, p in enumerate(base[2:]):
+        p = dict(p)
+        p["dx"] = 2 + min(i, 3)                                                              # momentum carries forward
+        p["lean"] = p.get("lean", 8) + 3
+        frames.append(p)
+    return frames
+
+
+def shoot_fade_frames():
+    """Fadeaway: rise leaning back, drifting away from the basket."""
+    base = shoot_frames()
+    frames = [dict(base[0]), dict(base[1])]
+    for i, (p, lean, dx) in enumerate(zip(base[2:], (-6, -12, -16, -14, -8, -2), (-1, -2, -3, -4, -5, -5))):
+        p = dict(p)
+        p["lean"] = lean
+        p["dx"] = dx
+        if i == 4:                                   # legs reach forward to land going backward
+            p["near_leg"], p["far_leg"] = (24, 10, 10), (14, 2, 15)
+        frames.append(p)
+    return frames
+
+
 ANIMS = [
     # name, frames-fn, fps, loop, events (name -> frame index)
     ("idle", idle_frames, 6, True, {}),
@@ -1068,6 +1287,28 @@ ANIMS = [
     ("screen_set", screen_set_frames, 12, False, {"set": 3}),
     ("screen_hold", screen_hold_frames, 5, True, {}),
     ("screen_contact", screen_contact_frames, 14, False, {"contact": 1}),
+    ("walk", walk_frames, 12, True, {}),
+    ("walk_dribble", walk_dribble_frames, round(RUN_FRAMES / 1.05, 2), True, {"bounce": 2, "bounce2": 6, "bounce3": 10}),
+    ("walk_dribble_far", walk_dribble_far_frames, round(RUN_FRAMES / 1.05, 2), True,
+     {"bounce": 2, "bounce2": 6, "bounce3": 10}),
+    ("backpedal", backpedal_frames, 10, True, {}),
+    ("idle_hips", idle_hips_frames, 4, True, {}),
+    ("idle_knees", idle_knees_frames, 4, True, {}),
+    ("defense_stance", defense_stance_frames, 6, True, {}),
+    ("defense_slide", defense_slide_frames, 12, True, {}),
+    ("defense_hands_up", defense_hands_up_frames, 6, True, {}),
+    ("shoot_pullup", shoot_pullup_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
+    ("shoot_fade", shoot_fade_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
+    ("layup_finger_roll", layup_finger_roll_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
+    ("layup_euro", layup_euro_frames, 12, False, {"gather": 0, "takeoff": 3, "release": 5}),
+    ("dunk_windmill", dunk_windmill_frames, 12, False, {"gather": 0, "takeoff": 2, "dunk": 6}),
+    ("dunk_tomahawk", dunk_tomahawk_frames, 11, False, {"gather": 0, "takeoff": 2, "dunk": 5}),
+    ("behind_back_up", behind_back_up_frames, 14, False, {"cross": 3, "catch": 4, "cutStart": 4}),
+    ("behind_back_down", behind_back_down_frames, 14, False, {"cross": 3, "catch": 4, "cutStart": 4}),
+    ("between_legs_up", between_legs_up_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
+    ("between_legs_down", between_legs_down_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
+    ("hesitation", hesitation_frames, 12, False, {"burst": 3}),
+    ("hesitation_far", hesitation_far_frames, 12, False, {"burst": 3}),
     ("dunk_hang", dunk_hang_frames, 10, False,
      {"gather": 0, "takeoff": 2, "dunk": 4, "hangStart": 5, "hangEnd": 6}),
 ]

@@ -130,3 +130,54 @@ describe('PlayerAnimator screens', () => {
     expect(after[after.length - 1]).toBe('run');
   });
 });
+
+describe('PlayerAnimator walking, defense and idles', () => {
+  it('walks at low speed and runs at high speed without restarting the stride', () => {
+    const a = new PlayerAnimator('right');
+    const walk = run(a, 1, 4);
+    expect(walk[walk.length - 1].anim).toBe('walk');
+    const before = walk[walk.length - 1].frame;
+    const after = a.update(DT, { vx: 12 });
+    expect(after.anim).toBe('run');
+    const n = SPRITES.anims.run.frameCount;   // the cycle wraps, so measure around it
+    expect((after.frame - before + n) % n).toBeLessThanOrEqual(1);
+    expect(run(a, 1, 4).pop()?.anim).toBe('walk');
+  });
+
+  it('walks the ball up the court', () => {
+    const a = new PlayerAnimator('right');
+    expect(run(a, 1, 4, true).pop()?.anim).toBe('walk_dribble');
+  });
+
+  it('backpedals when told to keep facing one way while moving the other', () => {
+    const a = new PlayerAnimator('right');
+    const out = [];
+    for (let i = 0; i < 60; i++) out.push(a.update(DT, { vx: -4, face: 'right' }));
+    expect(out[out.length - 1]).toMatchObject({ anim: 'backpedal', facing: 'right' });
+    expect(out.some((o) => o.anim.startsWith('turn'))).toBe(false);
+  });
+
+  it('slides sideways and holds the stance on defense', () => {
+    const a = new PlayerAnimator('left');
+    let o = a.update(DT, { vx: 0, defending: true });
+    expect(o.anim).toBe('defense_stance');
+    for (let i = 0; i < 40; i++) o = a.update(DT, { vx: 0, vy: 5, defending: true, face: 'left' });
+    expect(o).toMatchObject({ anim: 'defense_slide', facing: 'left' });
+  });
+
+  it('gets hands on hips after waiting, and on knees when tired', () => {
+    const a = new PlayerAnimator('right');
+    expect(run(a, 6, 0).pop()?.anim).toBe('idle_hips');
+    const b = new PlayerAnimator('right');
+    expect(b.update(DT, { vx: 0, tired: true }).anim).toBe('idle_knees');
+  });
+
+  it('switches hands after behind-the-back and between-the-legs moves', () => {
+    const a = new PlayerAnimator('right');
+    run(a, 0.3, 0, true);
+    a.play('behind_back_up');
+    expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble_far', hand: 'far' });
+    a.play('between_legs_down');
+    expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble', hand: 'near' });
+  });
+});

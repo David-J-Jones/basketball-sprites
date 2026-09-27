@@ -27,9 +27,18 @@ export type Facing = 'right' | 'left';
 export type AnimatorInput = {
   /** velocity along the court's x axis (screen right = +), any unit */
   vx: number;
-  /** velocity in depth (screen down = +); only used for overall speed */
+  /** velocity in depth (screen down = +) */
   vy?: number;
   hasBall?: boolean;
+  /**
+   * Keep facing this way whatever the movement (e.g. a defender facing the
+   * ball handler). Moving the other way backpedals instead of turning.
+   */
+  face?: Facing;
+  /** defensive stance: idle -> defense_stance, sideways -> defense_slide, backward -> backpedal */
+  defending?: boolean;
+  /** tired: idles bent over, hands on knees */
+  tired?: boolean;
 };
 
 export type AnimatorOutput = {
@@ -55,6 +64,14 @@ export type AnimatorOptions = {
   minHold: number;
   /** speed at which the run cycle plays at its normal rate */
   refSpeed: number;
+  /** walking -> running above this speed */
+  sprintOn: number;
+  /** running -> walking below this speed (lower than sprintOn) */
+  sprintOff: number;
+  /** speed at which the walk cycle plays at its normal rate */
+  walkRefSpeed: number;
+  /** seconds standing before a waiting pose (hands on hips) */
+  idleVariantAfter: number;
 };
 
 /** Defaults assume the sim works in feet per second. */
@@ -65,6 +82,10 @@ export const DEFAULT_ANIMATOR_OPTIONS: AnimatorOptions = {
   turnDelay: 0.15,
   minHold: 0.2,
   refSpeed: 14,
+  sprintOn: 8,
+  sprintOff: 6,
+  walkRefSpeed: 4,
+  idleVariantAfter: 5,
 };
 
 type OneShot = {
@@ -75,13 +96,18 @@ type OneShot = {
   to: Facing;
 };
 
-const LOCOMOTION: AnimName[] = ['idle', 'run', 'dribble', 'dribble_run', 'dribble_far', 'dribble_run_far'];
+const LOCOMOTION: AnimName[] = [
+  'idle', 'run', 'walk', 'dribble', 'dribble_run', 'dribble_far', 'dribble_run_far',
+  'walk_dribble', 'walk_dribble_far', 'backpedal', 'defense_stance', 'defense_slide',
+];
 
 export class PlayerAnimator {
   facing: Facing;
   hand: BallHand = 'near';
   private opts: AnimatorOptions;
   private moving = false;
+  private running = false;   // running pace (vs walking) while moving
+  private loopT = 0;         // clock for backpedal / slides
   private sinceSwitch = 1e9;
   private pendingTurn = 0;
   private stride = 0;   // shared run-cycle clock, in frames
@@ -180,26 +206,33 @@ export class PlayerAnimator {
     }
 
     // ---- start / stop moving (with hysteresis and a minimum hold)
+    const plain = !hasBall && !input.defending;
     if (!this.moving && speed > o.runOn && this.sinceSwitch >= o.minHold) {
       this.moving = true;
+      this.running = speed > o.sprintOn;
       this.sinceSwitch = 0;
-      if (!hasBall) {
+      this.stride = 0;
+      this.loopT = 0;
+      if (plain && this.running) {
         this.shot = { anim: 'run_start', t: 0, from: this.facing, to: this.facing };
         return this.update(0, input);
       }
-      this.stride = 0;
     } else if (this.moving && speed < o.runOff && this.sinceSwitch >= o.minHold) {
       this.moving = false;
       this.sinceSwitch = 0;
       this.idleT = 0;
-      if (!hasBall) {
+      if (plain && this.running) {
         this.shot = { anim: 'run_stop', t: 0, from: this.facing, to: this.facing };
         return this.update(0, input);
       }
     }
+    // walk <-> run: both cycles are 12 frames on one stride clock, so no pop
+    if (this.moving && !this.running && speed > o.sprintOn) this.running = true;
+    if (this.moving && this.running && speed < o.sprintOff) this.running = false;
 
     // ---- facing: only turn once the new direction has held for a moment
-    const want: Facing | null = input.vx > o.turnSpeed ? 'right' : input.vx < -o.turnSpeed ? 'left' : null;
+    const want: Facing | null =
+      input.face ?? (input.vx > o.turnSpeed ? 'right' : input.vx < -o.turnSpeed ? 'left' : null);
     if (want && want !== this.facing) {
       this.pendingTurn += dt;
       if (this.pendingTurn >= o.turnDelay) {
@@ -214,12 +247,31 @@ export class PlayerAnimator {
 
     // ---- locomotion
     if (this.moving) {
-      const runFps = ANIMS.run.fps * Math.min(1.5, Math.max(0.7, speed / o.refSpeed));
-      this.stride = (this.stride + dt * runFps) % ANIMS.run.frameCount;
-      const anim: AnimName = !hasBall ? 'run' : this.hand === 'far' ? 'dribble_run_far' : 'dribble_run';
+      const vy = input.vy ?? 0;
+      const along = this.facing === 'right' ? input.vx : -input.vx;   // + = toward where he faces
+      const sideways = Math.abs(vy) > Math.abs(input.vx) * 1.2;
+      const backward = along < -o.turnSpeed && (input.face !== undefined || input.defending);
+      let loop: AnimName | null = null;
+      if (input.defending && sideways) loop = 'defense_slide';
+      else if (backward) loop = 'backpedal';
+      if (loop) {
+        this.loopT += dt;
+        const info = ANIMS[loop];
+        return this.out(loop, Math.floor(this.loopT * info.fps) % info.frameCount, this.facing);
+      }
+      const ref = this.running ? o.refSpeed : o.walkRefSpeed;
+      const base = this.running ? ANIMS.run.fps : ANIMS.walk.fps;
+      this.stride = (this.stride + dt * base * Math.min(1.5, Math.max(0.7, speed / ref))) % ANIMS.run.frameCount;
+      const far = this.hand === 'far' ? '_far' : '';
+      const anim = (!hasBall ? (this.running ? 'run' : 'walk')
+        : `${this.running ? 'dribble_run' : 'walk_dribble'}${far}`) as AnimName;
       return this.out(anim, Math.floor(this.stride) % ANIMS[anim].frameCount, this.facing);
     }
-    const anim: AnimName = !hasBall ? 'idle' : this.hand === 'far' ? 'dribble_far' : 'dribble';
+    let anim: AnimName;
+    if (hasBall) anim = this.hand === 'far' ? 'dribble_far' : 'dribble';
+    else if (input.defending) anim = 'defense_stance';
+    else if (input.tired) anim = 'idle_knees';
+    else anim = this.idleT > o.idleVariantAfter ? 'idle_hips' : 'idle';
     const info = ANIMS[anim];
     return this.out(anim, Math.floor(this.idleT * info.fps) % info.frameCount, this.facing);
   }
@@ -227,7 +279,7 @@ export class PlayerAnimator {
   private finish(s: OneShot): void {
     this.shot = null;
     this.facing = s.to;
-    if (s.anim === 'crossover_up' || s.anim === 'crossover_down') this.hand = handAfter(s.anim);
+    this.hand = handAfter(s.anim) ?? this.hand;
     // run_start ends just before run frame 0; turn_run ends on it
     if (s.anim === 'run_start') this.stride = 0;
     if (s.anim === 'turn_run') this.stride = 1;

@@ -8,7 +8,7 @@ import {
   WHITE_JERSEY,
 } from './appearance';
 import { faceFromSeed } from './faceArt';
-import { crossoverFor, dribbleAnim, handAfter } from './moves';
+import { crossoverFor, dribbleAnim, handAfter, handSwitch, hesitationFor, shotFor } from './moves';
 import { BODY_KEYS, FACIAL_HAIR, HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from './features';
 import raw from './spriteData.json';
 import type { AnimName, SpriteData } from './types';
@@ -125,5 +125,30 @@ describe('direction helpers', () => {
     expect(dribbleAnim('near', true)).toBe('dribble_run');
     expect(dribbleAnim('far', false)).toBe('dribble_far');
     expect(dribbleAnim('far', true)).toBe('dribble_run_far');
+  });
+});
+
+describe('move helpers', () => {
+  it('names hand-switch moves by screen direction', () => {
+    expect(handSwitch('behind_back', -1)).toBe('behind_back_up');
+    expect(handSwitch('between_legs', 1)).toBe('between_legs_down');
+    expect(handAfter('behind_back_down')).toBe('near');
+    expect(handAfter('between_legs_up')).toBe('far');
+    expect(handAfter('shoot')).toBeNull();
+  });
+
+  it('picks hesitation, walking dribbles and moving shots', () => {
+    expect(hesitationFor('far')).toBe('hesitation_far');
+    expect(dribbleAnim('far', true, true)).toBe('walk_dribble_far');
+    expect(shotFor(8)).toBe('shoot_pullup');
+    expect(shotFor(-8)).toBe('shoot_fade');
+    expect(shotFor(1)).toBe('shoot');
+  });
+
+  it('has every animation the helpers can return', () => {
+    for (const name of ['walk_dribble', 'walk_dribble_far', 'hesitation_far', 'shoot_pullup', 'shoot_fade',
+      'behind_back_up', 'behind_back_down', 'between_legs_up', 'between_legs_down']) {
+      expect(SPRITES.anims[name as AnimName]).toBeDefined();
+    }
   });
 });

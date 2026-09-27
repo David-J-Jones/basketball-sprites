@@ -23,7 +23,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
 - **Always the same:** black shorts, grey shoes.
-- **25 animations:** `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **46 animations:** `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -90,7 +90,12 @@ When players, especially the AI, change direction a lot, flipping the sprite the
 const animator = new PlayerAnimator(initialFacing);   // once per player
 
 // every frame (dt in seconds, velocity in court ft/s)
-const { anim, frame, flip } = animator.update(dt, { vx, vy, hasBall });
+const { anim, frame, flip } = animator.update(dt, {
+  vx, vy, hasBall,
+  face,        // optional: keep facing this way (defender on the ball handler) -> backpedals instead of turning
+  defending,   // optional: stance when still, slide when moving sideways, backpedal when giving ground
+  tired,       // optional: idles with hands on knees
+});
 <PlayerSprite look={look} colors={colors} anim={anim} frame={frame} flip={flip} ... />
 
 // one-off moves: they play once, then movement resumes
@@ -188,6 +193,17 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `screen_set` | 4 | 12 | no | `set: 3`: jog in, plant a wide base, arms folded across the chest |
 | `screen_hold` | 4 | 5 | yes | Braced screen stance (small breath) |
 | `screen_contact` | 4 | 14 | no | `contact: 1`: absorbs the defender, back to the stance |
+| `walk` | 12 | 12 | yes | Picked automatically below `sprintOn` speed; shares the stride clock with `run` |
+| `walk_dribble` / `walk_dribble_far` | 12 | 11.43 | yes | Bringing it up the court; `bounce: 2, 6, 10` |
+| `backpedal` | 8 | 10 | yes | Moving backward while facing forward |
+| `idle_hips` / `idle_knees` | 4 | 4 | yes | Waiting (after `idleVariantAfter`) / tired (`tired: true`) |
+| `defense_stance` / `defense_slide` | 4 / 8 | 6 / 12 | yes | Low hand at the ball, high hand up; slide = shuffle steps |
+| `defense_hands_up` | 4 | 6 | yes | Contest, e.g. `animator.hold('defense_hands_up')` |
+| `shoot_pullup` / `shoot_fade` | 8 | 12 | no | Moving shots: toward the basket / fading away. `shotFor(speedTowardBasket)` picks. `release: 4` |
+| `layup_finger_roll` / `layup_euro` | 8 | 12 | no | `release: 4` / `release: 5` (euro swings the ball across the body) |
+| `dunk_windmill` / `dunk_tomahawk` | 8 / 7 | 12 / 11 | no | `dunk: 6` / `dunk: 5` |
+| `behind_back_up/down`, `between_legs_up/down` | 6 | 14 | no | Hand switches like the crossovers; `handSwitch(move, dy)` picks |
+| `hesitation` / `hesitation_far` | 6 | 12 | no | Rise to sell the stop, then `burst: 3`; same hand |
 | `dunk_basic` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `dunk: 4`. One hand, like the layup |
 | `dunk_athletic` | 8 | 11 | no | `gather: 0`, `takeoff: 2`, `dunk: 5`. Heels kicked up, both hands |
 | `dunk_hang` | 8 | 10 | no | `gather: 0`, `takeoff: 2`, `dunk: 4`, `hangStart: 5`, `hangEnd: 6` |
@@ -196,9 +212,10 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail layer, then facial hair and hair. There are up to 8 small `View`+`Image` pairs per player.
 
-- **Masks** (the tinted parts) are stored at 2× and **detail** at 4×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
-- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 11–15 MB per body, plus about 10 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 100 MB.
-- **Knob:** `SCALE` in the generator is 4. `SCALE = 5` gives sharper outlines on big screens, for about 45% more body memory.
+- **Masks** (the tinted parts) are stored at 2× and **detail** at 3×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
+- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 12–17 MB per body, plus about 10 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 110 MB.
+- **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
+- **Data size:** `spriteData.json` is about 3 MB and is bundled into the JS. It works, but it could be slimmed down if app startup time matters.
 
 ## Tests
 
@@ -216,7 +233,7 @@ The tests cover:
 - body classes are picked correctly;
 - the sprite data covers every body × animation × hair × facial hair;
 - crossovers move the ball across the body, and the direction helpers pick the right animation;
-- `PlayerAnimator`: jittery velocity never flips the sprite, real direction changes turn at `flipAt`, start/stop transitions play, the stride survives run ↔ dribble_run, and the run never skips a frame at 60 fps;
+- `PlayerAnimator`: walk ↔ run keeps the stride, backpedal and defensive slides, idle variety, hand switches after every hand-switch move; jittery velocity never flips the sprite, real direction changes turn at `flipAt`, start/stop transitions play, the stride survives run ↔ dribble_run, and the run never skips a frame at 60 fps;
 - jersey clashes switch the away team to white.
 
 ## Regenerating the sprite art
