@@ -87,6 +87,7 @@ export class PlayerAnimator {
   private stride = 0;   // shared run-cycle clock, in frames
   private idleT = 0;    // shared clock for idle / dribble-in-place
   private shot: OneShot | null = null;
+  private holding: AnimName | null = null;
 
   constructor(facing: Facing = 'right', opts: Partial<AnimatorOptions> = {}) {
     this.facing = facing;
@@ -107,6 +108,30 @@ export class PlayerAnimator {
     if (face) this.facing = face;
     this.pendingTurn = 0;
     this.shot = { anim, t: 0, from: this.facing, to: this.facing };
+  }
+
+  /**
+   * Hold a looping pose in place of movement until release(), e.g. setting
+   * a screen: hold('screen_hold', 'screen_set'). The optional intro plays
+   * first. Facing and movement are frozen while holding; play() still works
+   * (e.g. 'screen_contact' when a defender runs into the screen).
+   */
+  hold(anim: AnimName, intro?: AnimName): void {
+    this.holding = anim;
+    this.moving = false;
+    this.pendingTurn = 0;
+    this.idleT = 0;
+    if (intro) this.play(intro);
+  }
+
+  /** Stop holding; movement picks up again on the next update. */
+  release(): void {
+    this.holding = null;
+    this.sinceSwitch = 1e9;
+  }
+
+  get isHolding(): boolean {
+    return this.holding !== null;
   }
 
   /** Snap facing without a turn animation (e.g. at an inbound or reset). */
@@ -145,6 +170,13 @@ export class PlayerAnimator {
         return this.out(s.anim, frame, face);
       }
       this.finish(s);
+    }
+
+    // ---- holding a pose (screens): ignore movement and turning
+    if (this.holding) {
+      const info = ANIMS[this.holding];
+      const i = Math.floor(this.idleT * info.fps);
+      return this.out(this.holding, info.loop ? i % info.frameCount : Math.min(i, info.frameCount - 1), this.facing);
     }
 
     // ---- start / stop moving (with hysteresis and a minimum hold)

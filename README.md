@@ -23,7 +23,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
 - **Always the same:** black shorts, grey shoes.
-- **22 animations:** `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **25 animations:** `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -96,6 +96,11 @@ const { anim, frame, flip } = animator.update(dt, { vx, vy, hasBall });
 // one-off moves: they play once, then movement resumes
 animator.play('shoot', towardBasket);  // optional facing, applied instantly
 animator.play(crossoverFor(dy));       // the dribbling hand updates itself
+
+// setting a screen: frozen in place (no turning, no running) until released
+animator.hold('screen_hold', 'screen_set');
+animator.play('screen_contact');       // when a defender runs into it
+animator.release();                    // roll or pop out: movement resumes
 ```
 
 - **Turns:** facing changes only after the new direction has held for `turnDelay` (0.15 s), and always through a turn animation:
@@ -180,6 +185,9 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `steal` | 6 | 14 | no | `activeStart: 2`, `activeEnd: 4` |
 | `block` | 6 | 10 | no | `takeoff: 1`, `activeStart: 2`, `activeEnd: 4` |
 | `rebound` | 6 | 10 | no | `takeoff: 1`, `catch: 3` |
+| `screen_set` | 4 | 12 | no | `set: 3`: jog in, plant a wide base, arms folded across the chest |
+| `screen_hold` | 4 | 5 | yes | Braced screen stance (small breath) |
+| `screen_contact` | 4 | 14 | no | `contact: 1`: absorbs the defender, back to the stance |
 | `dunk_basic` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `dunk: 4`. One hand, like the layup |
 | `dunk_athletic` | 8 | 11 | no | `gather: 0`, `takeoff: 2`, `dunk: 5`. Heels kicked up, both hands |
 | `dunk_hang` | 8 | 10 | no | `gather: 0`, `takeoff: 2`, `dunk: 4`, `hangStart: 5`, `hangEnd: 6` |

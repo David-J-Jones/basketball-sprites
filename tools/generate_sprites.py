@@ -1013,6 +1013,35 @@ def dunk_hang_frames():
     ]
 
 
+# Setting a screen (pick): wide base, knees bent, arms crossed over the chest
+SCREEN_ARMS = dict(near_arm=(62, 262), far_arm=(72, 272))
+SCREEN_LEGS = dict(near_leg=(34, 2, -4), far_leg=(-30, -14, 8))
+
+
+def screen_set_frames():
+    return [
+        P((30, -10, 0), (-20, -44, 25), (-10, 60), (20, 100), lean=12),                 # last step in
+        P((30, -8, 0), (-22, -24, 12), (10, 120), (20, 140), lean=10, bob=1),           # plant
+        P(**SCREEN_LEGS, near_arm=(50, 200), far_arm=(58, 215), lean=7, bob=1),        # arms come in
+        P(**SCREEN_LEGS, **SCREEN_ARMS, lean=5, bob=2),                                 # set
+    ]
+
+
+def screen_hold_frames():
+    # braced and still; just a small breath so it doesn't look frozen
+    return [P(**SCREEN_LEGS, **SCREEN_ARMS, lean=l, bob=b) for l, b in ((5, 2), (5, 2), (6, 3), (6, 3))]
+
+
+def screen_contact_frames():
+    # the defender runs into him: absorb it, then back to the set stance
+    return [
+        P(**SCREEN_LEGS, **SCREEN_ARMS, lean=5, bob=2),
+        P((30, 0, -4), (-26, -12, 8), near_arm=(56, 256), far_arm=(66, 266), lean=-5, bob=3, dx=-1),  # hit
+        P((32, 1, -4), (-28, -13, 8), near_arm=(59, 259), far_arm=(69, 269), lean=0, bob=3),
+        P(**SCREEN_LEGS, **SCREEN_ARMS, lean=5, bob=2),
+    ]
+
+
 ANIMS = [
     # name, frames-fn, fps, loop, events (name -> frame index)
     ("idle", idle_frames, 6, True, {}),
@@ -1036,6 +1065,9 @@ ANIMS = [
     ("rebound", rebound_frames, 10, False, {"takeoff": 1, "catch": 3}),
     ("dunk_basic", dunk_basic_frames, 12, False, {"gather": 0, "takeoff": 2, "dunk": 4}),
     ("dunk_athletic", dunk_athletic_frames, 11, False, {"gather": 0, "takeoff": 2, "dunk": 5}),
+    ("screen_set", screen_set_frames, 12, False, {"set": 3}),
+    ("screen_hold", screen_hold_frames, 5, True, {}),
+    ("screen_contact", screen_contact_frames, 14, False, {"contact": 1}),
     ("dunk_hang", dunk_hang_frames, 10, False,
      {"gather": 0, "takeoff": 2, "dunk": 4, "hangStart": 5, "hangEnd": 6}),
 ]

@@ -110,3 +110,23 @@ describe('PlayerAnimator', () => {
     }
   });
 });
+
+describe('PlayerAnimator screens', () => {
+  it('sets a screen, holds it through movement noise, absorbs contact, then releases', () => {
+    const a = new PlayerAnimator('right');
+    run(a, 0.5, 10);
+    a.hold('screen_hold', 'screen_set');
+    const setting = run(a, 1, (t) => (Math.floor(t / DT) % 2 ? 8 : -8));
+    expect(setting[0].anim).toBe('screen_set');
+    expect(setting[setting.length - 1].anim).toBe('screen_hold');
+    expect(new Set(setting.map((o) => o.flip)).size).toBe(1);
+    a.play('screen_contact');
+    const hit = run(a, 1, 0);
+    expect(hit[0].anim).toBe('screen_contact');
+    expect(hit[hit.length - 1].anim).toBe('screen_hold');
+    a.release();
+    const after = run(a, 0.6, 10).map((o) => o.anim);
+    expect(after).toContain('run_start');
+    expect(after[after.length - 1]).toBe('run');
+  });
+});

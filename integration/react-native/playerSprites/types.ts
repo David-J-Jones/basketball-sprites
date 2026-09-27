@@ -22,6 +22,9 @@ export type AnimName =
   | 'steal'
   | 'block'
   | 'rebound'
+  | 'screen_set'
+  | 'screen_hold'
+  | 'screen_contact'
   | 'dunk_basic'
   | 'dunk_athletic'
   | 'dunk_hang';
