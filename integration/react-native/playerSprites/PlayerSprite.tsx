@@ -3,6 +3,7 @@ import { Image, View } from 'react-native';
 
 import { hairColor, skinColor } from './appearance';
 import type { BodyKey } from './features';
+import { frameData, headOverlay } from './frames';
 import { PAGES, SPRITES } from './spriteData';
 import type { AnimName, JerseyColors, PieceRef, PlayerLook } from './types';
 
@@ -74,10 +75,9 @@ export const PlayerSprite = memo(function PlayerSprite({
   flip = false,
   bakedLift = true,
 }: PlayerSpriteProps) {
-  const frames = SPRITES.frames[look.body][anim];
-  const f = frames[((frame % frames.length) + frames.length) % frames.length];
-  const facial = look.facialHair ? f.facial[look.facialHair] : null;
-  const hair = look.hairStyle ? f.hair[look.hairStyle] : null;
+  const f = frameData(look.body, anim, frame);
+  const facial = look.facialHair ? headOverlay(f, look.facialHair) : null;
+  const hair = look.hairStyle ? headOverlay(f, look.hairStyle) : null;
   const hairTint = hairColor(look);
   const drop = bakedLift ? 0 : f.lift * scale;
   return (
