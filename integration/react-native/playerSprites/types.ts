@@ -16,7 +16,8 @@ export type AnimName =
   | 'pass' | 'steal' | 'block' | 'rebound'
   | 'screen_set' | 'screen_hold' | 'screen_contact'
   | 'defense_stance' | 'defense_slide' | 'defense_hands_up' | 'guard_on_ball'
-  | 'celebrate' | 'point_up' | 'frustrated';
+  | 'celebrate' | 'point_up' | 'frustrated'
+  | 'post_up' | 'post_hook' | 'post_fadeaway' | 'post_fade_one_leg' | 'spin_move';
 
 /** The four run cycles; each player keeps one for good (see runStyleFor). */
 export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce';

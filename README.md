@@ -28,7 +28,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
 - **4 run styles:** `run`, `run_upright` (long smooth strides), `run_power` (heavy, hunched, choppy), `run_bounce` (springy, high knees). Each player keeps one for good: `runStyleFor(player.id, look.body)` leans bigs toward power and small guards toward bounce. Pass it to `new PlayerAnimator(facing, { runStyle })`.
 - **Always the same:** black shorts, grey shoes.
-- **53 animations:** `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **58 animations:** `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -178,6 +178,13 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 - **The mismatch is fixed.** The sprite look now comes from `faceFromSeed(player.id)`, the same numeric seed as the headshot. The old `generateLook()` (hash of the id string) is gone.
 - **Jumps:** shoot, layup, block, rebound and the dunks have a small hop drawn in. Pass `bakedLift={false}` if the sim raises players with `z`.
+- **Post moves:** `animator.postUp(basketSide)` turns the player's back to the basket and loops `post_up` (backing down: low dribble, arm bar, bump steps). From there `play()` one of:
+  - `post_hook`: steps back toward the basket and hooks it over his shoulder. Stays facing away.
+  - `post_fadeaway`: the turnaround fader. Pivots to face the basket at `flipAt`, then rises leaning back.
+  - `spin_move`: spins toward the basket at `flipAt` and comes out on a dribble (ends on the `dribble_run` pose).
+  - `post_fade_one_leg`: the one-legged fade, off the far foot with the near knee up. It doesn't turn, so play it facing the basket: `play('post_fade_one_leg', basketSide)`.
+
+  Any of these ends the post-up. `release()` ends it without a move. The shots drift up to 5 art pixels (toward the basket for the hook and spin, away for the fades), so move the player there in the sim as they play.
 - **Guarding:** pass `onBall: true` in the animator input for the defender on the ball handler. When he is defending and not moving he plays `guard_on_ball` (a low, active stance with hand jabs) instead of `defense_stance`.
 - **Faces changed:** new hair and beard options were added to the seeded face generator, so an existing player id may now get a different headshot (and matching sprite) than before this update.
 - **Dunks and the rim:** position the jump so `nearHand`/`farHand` at the `dunk` frame land on the rim. For `dunk_hang`, loop frames `hangStart`–`hangEnd` while he hangs, then play the rest.
@@ -186,6 +193,11 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 |---|---|---|---|---|
 | `idle` | 4 | 6 | yes | |
 | `run` | 12 | 18 | yes | |
+| `post_up` | 8 | 9 | yes | Back to the basket; `bounce: 2`, `bounce2: 6` |
+| `post_hook` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4` |
+| `post_fadeaway` | 11 | 12 | no | `flipAt: 3`, `rise: 5`, `release: 7` |
+| `post_fade_one_leg` | 9 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
+| `spin_move` | 8 | 14 | no | `flipAt: 4`, `bounce: 5` |
 | `run_upright` / `run_power` / `run_bounce` | 12 | 17 / 19 / 18 | yes | Run-style variants; the animator uses `runStyle` in place of `run` |
 | `guard_on_ball` | 6 | 10 | yes | Defending the ball handler (`onBall: true`) |
 | `celebrate` / `point_up` / `frustrated` | 8 / 6 / 6 | 12 / 8 / 6 | no | Reactions; `point_up` has `hold: 3` |
@@ -233,7 +245,8 @@ Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail laye
   | `moves`: crossovers, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
   | `finish`: shots, layups, dunks, block, rebound | ~4.9 | one of them plays |
   | `extras`: celebrate, point_up, frustrated | ~0.6 | one of them plays |
-  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–8 each | a player with that style is on court (locs ≈ 8, long beard ≈ 5, afro ≈ 4, most < 2) |
+  | `post`: post_up, hook, fadeaways, spin | ~3.0 | one of them plays |
+  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–10 each | a player with that style is on court (locs ≈ 10, long beard ≈ 6, afro ≈ 5, most < 2.5) |
 
   A typical game with ~7 distinct bodies starts around 60 MB and grows toward ~120 MB as moves and finishes get used.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.

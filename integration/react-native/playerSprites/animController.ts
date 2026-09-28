@@ -106,6 +106,13 @@ const LOCOMOTION: AnimName[] = [
   'walk_dribble', 'walk_dribble_far', 'backpedal', 'defense_stance', 'defense_slide',
 ];
 
+/** Moves out of a post-up; playing one ends the post_up hold. */
+export const POST_MOVES: AnimName[] = ['post_hook', 'post_fadeaway', 'post_fade_one_leg', 'spin_move'];
+
+export function opposite(face: Facing): Facing {
+  return face === 'right' ? 'left' : 'right';
+}
+
 export class PlayerAnimator {
   facing: Facing;
   hand: BallHand = 'near';
@@ -133,12 +140,26 @@ export class PlayerAnimator {
   /**
    * Play an animation once (shoot, pass, steal, crossover_up, dunk_hang...).
    * `face` turns the player instantly first, e.g. toward the basket.
-   * Movement resumes when it finishes.
+   * Animations with a flipAt event (post_fadeaway, spin_move) turn him
+   * around partway through. Movement resumes when it finishes; a post move
+   * also ends a post-up.
    */
   play(anim: AnimName, face?: Facing): void {
     if (face) this.facing = face;
     this.pendingTurn = 0;
-    this.shot = { anim, t: 0, from: this.facing, to: this.facing };
+    if (POST_MOVES.includes(anim)) this.holding = null;
+    const turns = ANIMS[anim].events.flipAt !== undefined;
+    this.shot = { anim, t: 0, from: this.facing, to: turns ? opposite(this.facing) : this.facing };
+  }
+
+  /**
+   * Back down in the post: faces away from `basket` and loops post_up until
+   * release() or a post move (post_hook, post_fadeaway, post_fade_one_leg,
+   * spin_move), which play() starts from here.
+   */
+  postUp(basket: Facing): void {
+    this.setFacing(opposite(basket));
+    this.hold('post_up');
   }
 
   /**

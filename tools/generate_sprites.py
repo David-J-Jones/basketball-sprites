@@ -1471,12 +1471,126 @@ def frustrated_frames():
     ]
 
 
+
+# ---------------------------------------------------------------- post moves
+# Post-ups are drawn with the player's back to the basket: the art faces
+# right and the basket is behind him (to the left). Play them facing away
+# from the basket. Moves with events.flipAt turn him around to face it.
+POST_LEGS = dict(near_leg=(30, -8, 0), far_leg=(-24, -34, 12))
+POST_BAR = (-58, -40)             # far arm: arm bar back into the defender
+CHIN = dict(near_arm=(38, 150), far_arm=(48, 140))   # ball chinned at the chest
+
+
+def post_up_frames():
+    """Backing down: low and wide, pounding a low dribble on the near side,
+    arm bar back, and a bump step into the defender every other bounce."""
+    arm = [(22, 40), (18, 22), (20, 20), (22, 34), (22, 40), (18, 22), (20, 20), (22, 34)]
+    ball = [("near", 1.0, 4.5, 1), ("hip", 9, 9, 1), ("ground", 8, 0, 1), ("hip", 9, 9, 1)] * 2
+    legs = [((30, -8, 0), (-24, -34, 12)), ((30, -8, 0), (-30, -44, 18)),     # far foot slides back
+            ((26, -10, 0), (-32, -40, 14)), ((26, -10, 0), (-28, -36, 12)),   # bump
+            ((30, -8, 0), (-24, -34, 12)), ((18, -26, 8), (-24, -34, 12)),    # near foot gathers
+            ((22, -14, 0), (-24, -34, 12)), ((28, -8, 0), (-24, -34, 12))]
+    bar = [POST_BAR, POST_BAR, (-66, -50), (-62, -46)] * 2
+    dx = [0, 0, -1, -1, 0, 0, 0, 0]
+    bob = [2, 2, 3, 3, 2, 2, 2, 2]
+    return [P(legs[i][0], legs[i][1], arm[i], bar[i], lean=14 + (2 if dx[i] else 0), bob=bob[i], dx=dx[i],
+              ball=ball[i]) for i in range(8)]
+
+
+def post_hook_frames():
+    """Hook shot over the shoulder: step back toward the basket with the far
+    foot, drive the near knee, sweep the near arm up and over the head."""
+    return [
+        P(**POST_LEGS, **CHIN, lean=14, bob=2, ball=("near", 2.5, -1.5)),                        # 0 gather
+        P((34, -4, 0), (-36, -40, 10), (40, 130), (-20, 20), lean=2, bob=1, dx=-2,
+          ball=("near", 2.5, -2.0)),                                                             # 1 step back
+        P((70, -10, 10), (-12, -22, 35), (120, 170), (-50, -30), lean=-6, dx=-3, lift=3,
+          ball=("near", 1.0, -4.0)),                                                             # 2 take-off
+        P((84, 0, 10), (-6, -24, 35), (172, 190), (-70, -50), lean=-12, dx=-4, lift=8,
+          ball=("near", 0.0, -4.5), arms_behind_head=True),                                                             # 3 rising, arm up
+        P((80, -4, 10), (-4, -24, 35), (204, 214), (-72, -52), lean=-16, dx=-4, lift=10,
+          ball=("near", -2.0, -4.0)),                                                            # 4 release over the head
+        P((60, -12, 10), (-4, -20, 30), (214, 236), (-60, -40), lean=-14, dx=-4, lift=9),       # 5 wrist flick
+        P((30, -10, 15), (0, -14, 20), (176, 200), (-30, -10), lean=-6, dx=-4, lift=4,
+          arms_behind_head=True),         # 6 dropping
+        P((34, -10, 0), (-20, -26, 8), (40, 80), (10, 40), lean=8, dx=-4),                       # 7 land
+    ]
+
+
+def post_fadeaway_frames():
+    """Turnaround fadeaway ("the fader"): chin the ball, pivot to face the
+    basket (flipAt), then rise leaning well back and drifting away."""
+    square = dict(near_leg=(6, -6, 0), far_leg=(2, -8, 0), near_arm=(44, 132), far_arm=(40, 128))
+    base = shoot_frames()
+    frames = [
+        P(**POST_LEGS, **CHIN, lean=14, bob=2, ball=("near", 2.5, -1.5)),                        # 0 chin it
+        P((24, -10, 0), (-14, -28, 10), (40, 145), (46, 136), lean=8, bob=2, dx=-1,
+          ball=("near", 2.5, -1.5)),                                                             # 1 start the pivot
+        P(**square, lean=-1, bob=2, dx=-1, ball=("between", 0.0, -1.5, 0)),                     # 2 square (back to basket)
+        P(**square, lean=1, bob=2, dx=1, ball=("between", 0.0, -1.5, 0)),                       # 3 square (facing it)
+        dict(base[1], dx=0),                                                                     # 4 dip
+    ]
+    for i, (lean, dx) in enumerate(zip((-10, -18, -24, -20, -10, -2), (-1, -2, -3, -4, -5, -5))):
+        p = dict(base[2 + i], lean=lean, dx=dx)
+        if i in (2, 3):                              # near leg kicks out for balance
+            p["near_leg"] = (46, 26, 0)
+        if i == 4:
+            p["near_leg"], p["far_leg"] = (26, 10, 10), (14, 2, 15)
+        frames.append(p)
+    return frames                                    # rise 5, release 7
+
+
+def post_fade_one_leg_frames():
+    """One-legged fadeaway: face up, hop onto the far foot, near knee up
+    toward the defender, rise and fall back on the one leg."""
+    return [
+        P((24, -10, 0), (-14, -26, 10), (20, 140), (30, 120), lean=6, bob=2,
+          ball=("near", 3.0, -1.5)),                                                             # 0 gather
+        P((52, 10, 0), (-6, -20, 10), (14, 132), (24, 116), lean=-6, bob=2,
+          ball=("near", 3.2, -1.5)),                                                             # 1 near knee lifts
+        P((82, 10, 10), (-2, -6, 38), (75, 165), (60, 150), lean=-12, head_dx=-2, dx=-1,
+          ball=("near", 1.0, -4.5)),                                                             # 2 rise off the far foot
+        P((88, 20, 10), (0, -6, 35), (90, 180), (80, 170), lean=-18, lift=6, head_dx=-2, dx=-2,
+          ball=("near", 0.5, -4.5)),                                                             # 3 set point
+        P((80, 34, 10), (2, -8, 35), (118, 148), (95, 150), lean=-22, lift=8, head_dx=-1, dx=-3,
+          ball=("near", 2.0, -4.0)),                                                             # 4 release
+        P((74, 30, 10), (2, -8, 35), (122, 140), (100, 130), lean=-20, lift=7, head_dx=-2, dx=-4),  # 5 follow-through
+        P((66, 20, 10), (4, -6, 25), (108, 112), (80, 100), lean=-14, lift=3, dx=-5),           # 6 falling back
+        P((50, 6, 10), (6, -14, 5), (60, 80), (30, 60), lean=-6, bob=1, dx=-5),                 # 7 land on the far foot
+        P((30, -12, 0), (8, -18, 5), (40, 70), (20, 50), lean=2, dx=-5),                        # 8 settle
+    ]
+
+
+def spin_move_frames():
+    """Spin out of the post: plant, spin toward the basket (flipAt) and
+    come out of it on a dribble going to the rim, ending on dribble_run."""
+    square = dict(near_leg=(12, -12, 0), far_leg=(0, -18, 0))
+    return [
+        post_up_frames()[0],                                                                     # 0 backing down
+        P((34, -6, 0), (-20, -36, 12), (26, 40), (-30, 10), lean=20, bob=2, dx=-1,
+          ball=("hip", 8, 6, 1)),                                                                # 1 plant, drop the shoulder
+        P((18, -22, 6), (-30, -44, 16), (40, 90), (70, 110), lean=10, bob=2, dx=-3,
+          ball=("near", 1.5, 3.0, 0.6), smear=[(26, 40)]),                                       # 2 spinning
+        P(**square, near_arm=(40, 100), far_arm=(60, 120), lean=2, bob=1, dx=-4,
+          ball=("hip", 9, 4, 0.2), smear=[(40, 90)]),                                            # 3 square (back to basket)
+        P(**square, near_arm=(40, 100), far_arm=(60, 120), lean=6, bob=1, dx=4,
+          ball=("hip", 9, 4, 0.2), smear=[(60, 120)]),                                           # 4 square (facing it)
+        P((44, 10, -8), (-30, -60, 30), (30, 40), (-20, 60), lean=22, bob=1, dx=5,
+          ball=("ground", 13, 0, 1)),                                                            # 5 long step through, bounce
+        P((30, -2, -4), (-26, -70, 34), (30, 50), (-24, 56), lean=20, dx=5,
+          ball=("hip", 13, 8, 1)),                                                               # 6
+        P(RUN_LEG[0], RUN_LEG[4], (32, 72), RUN_ARM[0], lean=16, dx=5,
+          ball=("near", 1.5, 4.5, 1)),                                                           # 7 = dribble_run
+    ]
+
 # Which atlas page group each animation lives in. The app only decodes the
 # pages of groups that are actually drawn, so rarely used animations don't
 # cost memory until they play.
 ANIM_GROUP = {
     "run_upright": "run_upright", "run_power": "run_power", "run_bounce": "run_bounce",
     "celebrate": "extras", "point_up": "extras", "frustrated": "extras",
+    "post_up": "post", "post_hook": "post", "post_fadeaway": "post", "post_fade_one_leg": "post",
+    "spin_move": "post",
 }
 for _n in ("crossover_up", "crossover_down", "behind_back_up", "behind_back_down", "between_legs_up",
            "between_legs_down", "hesitation", "hesitation_far", "screen_set", "screen_hold",
@@ -1524,6 +1638,11 @@ ANIMS = [
     ("celebrate", celebrate_frames, 12, False, {}),
     ("point_up", point_up_frames, 8, False, {"hold": 3}),
     ("frustrated", frustrated_frames, 6, False, {}),
+    ("post_up", post_up_frames, 9, True, {"bounce": 2, "bounce2": 6}),
+    ("post_hook", post_hook_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
+    ("post_fadeaway", post_fadeaway_frames, 12, False, {"flipAt": 3, "rise": 5, "release": 7}),
+    ("post_fade_one_leg", post_fade_one_leg_frames, 12, False, {"gather": 0, "rise": 2, "release": 4}),
+    ("spin_move", spin_move_frames, 14, False, {"flipAt": 4, "bounce": 5}),
     ("walk", walk_frames, 12, True, {}),
     ("walk_dribble", walk_dribble_frames, round(RUN_FRAMES / 1.05, 2), True, {"bounce": 2, "bounce2": 6, "bounce3": 10}),
     ("walk_dribble_far", walk_dribble_far_frames, round(RUN_FRAMES / 1.05, 2), True,

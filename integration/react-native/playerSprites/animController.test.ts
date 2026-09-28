@@ -194,3 +194,38 @@ describe('PlayerAnimator run styles and guarding', () => {
     expect(a.update(DT, { vx: 0, defending: true }).anim).toBe('defense_stance');
   });
 });
+
+describe('PlayerAnimator post moves', () => {
+  it('backs down facing away from the basket, through movement noise', () => {
+    const a = new PlayerAnimator('left');
+    a.postUp('left');
+    let o = a.update(DT, { vx: 0, hasBall: true });
+    expect(o).toMatchObject({ anim: 'post_up', facing: 'right', flip: false });
+    for (let i = 0; i < 30; i++) o = a.update(DT, { vx: -3, hasBall: true });
+    expect(o).toMatchObject({ anim: 'post_up', facing: 'right' });
+  });
+
+  it('turns around at flipAt on the fadeaway and the spin, then leaves the post', () => {
+    for (const move of ['post_fadeaway', 'spin_move'] as const) {
+      const a = new PlayerAnimator('right');
+      a.postUp('left');
+      a.play(move);
+      const out = run(a, 2, 0, true);
+      const flipAt = SPRITES.anims[move].events.flipAt!;
+      expect(out.find((f) => f.anim === move && f.frame === flipAt - 1)?.facing).toBe('right');
+      expect(out.find((f) => f.anim === move && f.frame === flipAt)?.facing).toBe('left');
+      expect(out[out.length - 1]).toMatchObject({ anim: 'dribble', facing: 'left' });
+      expect(a.isHolding).toBe(false);
+    }
+  });
+
+  it('shoots the hook and the one-legged fade without turning around', () => {
+    for (const move of ['post_hook', 'post_fade_one_leg'] as const) {
+      const a = new PlayerAnimator('right');
+      a.postUp('left');
+      a.play(move);
+      expect(run(a, 2, 0).every((f) => f.facing === 'right')).toBe(true);
+      expect(a.isHolding).toBe(false);
+    }
+  });
+});
