@@ -1,8 +1,6 @@
 import { PlayerAnimator } from './animController';
-import raw from './spriteData.json';
-import type { AnimName, SpriteData } from './types';
-
-const SPRITES = raw as unknown as SpriteData;
+import { SPRITE_DATA as SPRITES } from './frames';
+import type { AnimName } from './types';
 const DT = 1 / 60;
 
 function run(a: PlayerAnimator, seconds: number, vx: number | ((t: number) => number), hasBall = false) {
@@ -179,5 +177,20 @@ describe('PlayerAnimator walking, defense and idles', () => {
     expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble_far', hand: 'far' });
     a.play('between_legs_down');
     expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble', hand: 'near' });
+  });
+});
+
+describe('PlayerAnimator run styles and guarding', () => {
+  it('runs in the player\'s own style, on the same stride clock', () => {
+    const a = new PlayerAnimator('right', { runStyle: 'run_power' });
+    const out = run(a, 1.5, 12);
+    expect(out[out.length - 1].anim).toBe('run_power');
+    expect(a.update(DT, { vx: 12, hasBall: true }).anim).toBe('dribble_run');
+  });
+
+  it('pressures the ball handler when guarding on the ball', () => {
+    const a = new PlayerAnimator('left');
+    expect(a.update(DT, { vx: 0, defending: true, onBall: true }).anim).toBe('guard_on_ball');
+    expect(a.update(DT, { vx: 0, defending: true }).anim).toBe('defense_stance');
   });
 });

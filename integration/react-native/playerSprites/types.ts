@@ -3,57 +3,29 @@ import type { BodyKey, HairColorId, SkinToneId } from './features';
 export type { BodyKey } from './features';
 
 export type AnimName =
-  | 'idle'
-  | 'run'
-  | 'run_start'
-  | 'run_stop'
-  | 'turn'
-  | 'turn_run'
-  | 'turn_dribble'
-  | 'dribble'
-  | 'dribble_run'
-  | 'dribble_far'
-  | 'dribble_run_far'
-  | 'crossover_up'
-  | 'crossover_down'
-  | 'shoot'
-  | 'layup'
-  | 'pass'
-  | 'steal'
-  | 'block'
-  | 'rebound'
-  | 'screen_set'
-  | 'screen_hold'
-  | 'screen_contact'
-  | 'walk'
-  | 'walk_dribble'
-  | 'walk_dribble_far'
-  | 'backpedal'
-  | 'idle_hips'
-  | 'idle_knees'
-  | 'defense_stance'
-  | 'defense_slide'
-  | 'defense_hands_up'
-  | 'shoot_pullup'
-  | 'shoot_fade'
-  | 'layup_finger_roll'
-  | 'layup_euro'
-  | 'dunk_windmill'
-  | 'dunk_tomahawk'
-  | 'behind_back_up'
-  | 'behind_back_down'
-  | 'between_legs_up'
-  | 'between_legs_down'
-  | 'hesitation'
-  | 'hesitation_far'
-  | 'dunk_basic'
-  | 'dunk_athletic'
-  | 'dunk_hang';
+  | 'idle' | 'idle_hips' | 'idle_knees'
+  | 'walk' | 'walk_dribble' | 'walk_dribble_far' | 'backpedal'
+  | 'run' | 'run_upright' | 'run_power' | 'run_bounce' | 'run_start' | 'run_stop'
+  | 'turn' | 'turn_run' | 'turn_dribble'
+  | 'dribble' | 'dribble_run' | 'dribble_far' | 'dribble_run_far'
+  | 'crossover_up' | 'crossover_down' | 'behind_back_up' | 'behind_back_down'
+  | 'between_legs_up' | 'between_legs_down' | 'hesitation' | 'hesitation_far'
+  | 'shoot' | 'shoot_pullup' | 'shoot_fade'
+  | 'layup' | 'layup_finger_roll' | 'layup_euro'
+  | 'dunk_basic' | 'dunk_athletic' | 'dunk_hang' | 'dunk_windmill' | 'dunk_tomahawk'
+  | 'pass' | 'steal' | 'block' | 'rebound'
+  | 'screen_set' | 'screen_hold' | 'screen_contact'
+  | 'defense_stance' | 'defense_slide' | 'defense_hands_up' | 'guard_on_ball'
+  | 'celebrate' | 'point_up' | 'frustrated';
+
+/** The four run cycles; each player keeps one for good (see runStyleFor). */
+export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce';
 
 /** Hair styles drawn on the sprite (bald = no hair overlay). */
-export type SpriteHairStyle = 'buzz' | 'fade' | 'crew' | 'cornrows' | 'afro' | 'locs';
+export type SpriteHairStyle =
+  | 'buzz' | 'fade' | 'crew' | 'cornrows' | 'afro' | 'locs' | 'mohawk' | 'high_top' | 'twists' | 'curly' | 'flow';
 /** Facial hair drawn on the sprite (none = no overlay). */
-export type SpriteFacialHair = 'stubble' | 'mustache' | 'goatee' | 'beard';
+export type SpriteFacialHair = 'stubble' | 'mustache' | 'goatee' | 'beard' | 'chinstrap' | 'long_beard';
 
 /** [pieceIndex, x, y]: which atlas piece, and where its top-left sits in the frame. */
 export type PieceRef = [piece: number, dx: number, dy: number];
@@ -66,10 +38,8 @@ export type FrameData = {
   jersey: PieceRef | null;
   trim: PieceRef | null;
   detail: PieceRef | null;
-  /** per facial-hair type: [mask (tinted hair color), detail (untinted)] */
-  facial: Record<SpriteFacialHair, [PieceRef | null, PieceRef | null]>;
-  /** per hair style: [mask (tinted hair color), detail (untinted)] */
-  hair: Record<SpriteHairStyle, [PieceRef | null, PieceRef | null]>;
+  /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
+  head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
   farHand: [number, number];
   /** where a held/dribbled ball should be drawn (ball centre), or null */
@@ -84,10 +54,19 @@ export type FrameData = {
   lift: number;
 };
 
+/** How a frame is stored in spriteData.json; expand with frameData(). */
+export type CompactFrame = [
+  skin: PieceRef | null, jersey: PieceRef | null, trim: PieceRef | null, detail: PieceRef | null,
+  head: [number, number, number], nearHand: [number, number], farHand: [number, number],
+  ball: [number, number] | null, ballDepth: number | null, lift: number,
+];
+
 export type AnimInfo = {
   fps: number;
   loop: boolean;
   frameCount: number;
+  /** atlas page group: core, moves, finish, extras, or a run style */
+  group: string;
   /** named frame indices, e.g. { release: 4 } */
   events: Record<string, number>;
 };
@@ -107,10 +86,18 @@ export type SpriteData = {
   /** frame pixels per page pixel (1 for detail pages, >1 for tint-mask pages) */
   pageScale: number[];
   pieces: PieceRect[];
+  /** hair styles, then facial-hair types: the column order of each overlay set */
+  hairStyles: SpriteHairStyle[];
+  facialHair: SpriteFacialHair[];
+  /** unique [mask, detail] overlay pieces, positioned relative to the head */
+  overlayPairs: [PieceRef | null, PieceRef | null][];
+  /** overlay sets: one overlayPairs index per style (-1 = nothing drawn) */
+  overlays: number[][];
+  frameFields: string[];
   /** idle height, sole to top of the head, per body */
   standingHeight: Record<BodyKey, number>;
   anims: Record<AnimName, AnimInfo>;
-  frames: Record<BodyKey, Record<AnimName, FrameData[]>>;
+  frames: Record<BodyKey, Record<AnimName, CompactFrame[]>>;
 };
 
 /** What a player looks like on court. Derive it with lookFromFace() / playerLook(). */

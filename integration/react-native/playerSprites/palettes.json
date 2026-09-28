@@ -261,35 +261,62 @@
   "heightClasses": [
     {
       "class": 1,
-      "maxInches": 74,
-      "label": "6'2\" and under"
+      "maxInches": 73,
+      "label": "6'1\" and under"
     },
     {
       "class": 2,
-      "maxInches": 77,
-      "label": "6'3\"-6'5\""
+      "maxInches": 75,
+      "label": "6'2\"-6'3\""
     },
     {
       "class": 3,
-      "maxInches": 80,
-      "label": "6'6\"-6'8\""
+      "maxInches": 77,
+      "label": "6'4\"-6'5\""
     },
     {
       "class": 4,
-      "maxInches": 83,
-      "label": "6'9\"-6'11\""
+      "maxInches": 79,
+      "label": "6'6\"-6'7\""
     },
     {
       "class": 5,
+      "maxInches": 81,
+      "label": "6'8\"-6'9\""
+    },
+    {
+      "class": 6,
+      "maxInches": 83,
+      "label": "6'10\"-6'11\""
+    },
+    {
+      "class": 7,
       "maxInches": null,
       "label": "7'0\" and up"
     }
   ],
-  "weightClasses": {
-    "_comment": "By BMI (703 x lbs / inches^2). Typical NBA BMI is 23-27.",
-    "slimBelowBmi": 23.5,
-    "heavyFromBmi": 26.5
-  },
+  "weightClasses": [
+    {
+      "id": "slim",
+      "maxBmi": 22.5
+    },
+    {
+      "id": "lean",
+      "maxBmi": 24
+    },
+    {
+      "id": "average",
+      "maxBmi": 25.5
+    },
+    {
+      "id": "solid",
+      "maxBmi": 27
+    },
+    {
+      "id": "heavy",
+      "maxBmi": null
+    }
+  ],
   "neutralJersey": {
     "jersey": "#1F2A44",
     "trim": "#9AA0AE"

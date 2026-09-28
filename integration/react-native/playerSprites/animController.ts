@@ -18,7 +18,7 @@
  */
 import raw from './spriteData.json';
 import { handAfter, type BallHand } from './moves';
-import type { AnimName, SpriteData } from './types';
+import type { AnimName, RunStyle, SpriteData } from './types';
 
 const ANIMS = (raw as unknown as SpriteData).anims;
 
@@ -39,6 +39,8 @@ export type AnimatorInput = {
   defending?: boolean;
   /** tired: idles bent over, hands on knees */
   tired?: boolean;
+  /** guarding the ball handler: pressure stance (guard_on_ball) instead of defense_stance */
+  onBall?: boolean;
 };
 
 export type AnimatorOutput = {
@@ -72,6 +74,8 @@ export type AnimatorOptions = {
   walkRefSpeed: number;
   /** seconds standing before a waiting pose (hands on hips) */
   idleVariantAfter: number;
+  /** this player's run cycle (see runStyleFor); all share one stride clock */
+  runStyle: RunStyle;
 };
 
 /** Defaults assume the sim works in feet per second. */
@@ -86,6 +90,7 @@ export const DEFAULT_ANIMATOR_OPTIONS: AnimatorOptions = {
   sprintOff: 6,
   walkRefSpeed: 4,
   idleVariantAfter: 5,
+  runStyle: 'run',
 };
 
 type OneShot = {
@@ -97,7 +102,7 @@ type OneShot = {
 };
 
 const LOCOMOTION: AnimName[] = [
-  'idle', 'run', 'walk', 'dribble', 'dribble_run', 'dribble_far', 'dribble_run_far',
+  'idle', 'run', 'run_upright', 'run_power', 'run_bounce', 'guard_on_ball', 'walk', 'dribble', 'dribble_run', 'dribble_far', 'dribble_run_far',
   'walk_dribble', 'walk_dribble_far', 'backpedal', 'defense_stance', 'defense_slide',
 ];
 
@@ -263,13 +268,13 @@ export class PlayerAnimator {
       const base = this.running ? ANIMS.run.fps : ANIMS.walk.fps;
       this.stride = (this.stride + dt * base * Math.min(1.5, Math.max(0.7, speed / ref))) % ANIMS.run.frameCount;
       const far = this.hand === 'far' ? '_far' : '';
-      const anim = (!hasBall ? (this.running ? 'run' : 'walk')
+      const anim = (!hasBall ? (this.running ? o.runStyle : 'walk')
         : `${this.running ? 'dribble_run' : 'walk_dribble'}${far}`) as AnimName;
       return this.out(anim, Math.floor(this.stride) % ANIMS[anim].frameCount, this.facing);
     }
     let anim: AnimName;
     if (hasBall) anim = this.hand === 'far' ? 'dribble_far' : 'dribble';
-    else if (input.defending) anim = 'defense_stance';
+    else if (input.defending) anim = input.onBall ? 'guard_on_ball' : 'defense_stance';
     else if (input.tired) anim = 'idle_knees';
     else anim = this.idleT > o.idleVariantAfter ? 'idle_hips' : 'idle';
     const info = ANIMS[anim];

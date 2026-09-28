@@ -27,6 +27,8 @@ Run:  python3 tools/generate_sprites.py
 """
 import hashlib
 import json
+import multiprocessing
+import zlib
 import math
 import os
 import random
@@ -96,8 +98,8 @@ WHITE = (255, 255, 255, 255)
 # look lankier, not just bigger.
 BASE_BODY = dict(thigh=8.0, shin=8.0, upper=6.0, fore=6.0, shoulder=10.0, neck=12.0,
                  torso_r=4.7, hip_r=4.5, thigh_r=2.1, shin_r=1.6, arm_r=1.5, neck_r=1.6)
-HEIGHT_CLASSES = {1: 0.90, 2: 0.95, 3: 1.0, 4: 1.07, 5: 1.14}
-WEIGHT_CLASSES = {"slim": 0.8, "average": 1.0, "heavy": 1.3}
+HEIGHT_CLASSES = {1: 0.84, 2: 0.89, 3: 0.945, 4: 1.0, 5: 1.055, 6: 1.11, 7: 1.17}
+WEIGHT_CLASSES = {"slim": 0.8, "lean": 0.9, "average": 1.0, "solid": 1.15, "heavy": 1.3}
 LENGTHS = ("thigh", "shin", "upper", "fore", "shoulder", "neck")
 
 
@@ -110,7 +112,8 @@ def _make_body(h, w):
 
 
 BODIES = {"h%d-%s" % (h, w): _make_body(h, w) for h in HEIGHT_CLASSES for w in WEIGHT_CLASSES}
-B = BODIES["h3-average"]
+MID_BODY = "h4-average"
+B = BODIES[MID_BODY]
 
 
 def use_body(name):
@@ -297,6 +300,75 @@ CROWN_VOLUME_SRC = [
     ".h.........",
 ]
 
+MOHAWK_SRC = [
+    "...HHHHH...",
+    ".ffHHHHHhf.",
+    "fff......f.",
+    "ff.........",
+    "f..........",
+]
+FLOW_SRC = [
+    "...hhhhh...",
+    ".hhHHHHHhh.",
+    "hHHHhHHHHHh",
+    "hHHHHHHHHHH",
+    "hhHHHHH...h",
+    "hhHH.......",
+    "hhh........",
+    "hhh........",
+    ".hh........",
+]
+
+
+def _mohawk():
+    m = _from_src(MOHAWK_SRC)
+    for r, c0, c1 in [(1, 6, 9), (2, 5, 10), (3, 4, 11)]:          # the fin above the skull
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "hair1" if (c + r) % 3 == 0 else "hair0"
+    return m
+
+
+def _high_top():
+    m = _from_src(CREW_SRC)
+    for r in range(0, 4):                                        # tall flat box on top
+        for c in range(4, 12):
+            m[(c, r)] = "hair1" if c in (4, 11) or r == 0 else ("hair0" if (c + r) % 4 else "hair1")
+    return m
+
+
+def _twists():
+    m = _from_src(CREW_SRC)
+    for c in range(4, 12):                                       # short twists poke up
+        if c % 2 == 0:
+            m[(c, 3)] = "hair1"
+    for (c, r), tag in list(m.items()):
+        if tag == "hair0" and c % 2 == 1:
+            m[(c, r)] = "hair1"
+    return m
+
+
+def _curly():
+    m = {}
+    cx, cy, rx, ry = 7.0, 6.6, 5.6, 4.4
+    for r in range(HEAD_GRID_H):
+        for c in range(HEAD_GRID_W):
+            dx, dy = (c + 0.5 - cx) / rx, (r + 0.5 - cy) / ry
+            if dx * dx + dy * dy > 1 or (c >= 8 and r >= 8):
+                continue
+            m[(c, r)] = "hair1" if lit(dx, dy) < -0.25 or (c * 5 + r * 3) % 4 == 0 else "hair0"
+    for (c, r), tag in _from_src(CREW_SRC).items():             # keep the back and sideburns
+        m.setdefault((c, r), tag)
+    return m
+
+
+def _flow():
+    m = _from_src(FLOW_SRC)
+    for r, c0, c1 in [(8, 1, 2), (9, 1, 2), (10, 1, 3), (11, 1, 3), (12, 2, 4), (13, 2, 4), (14, 3, 4)]:
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "hair1" if c == c1 or r >= 13 else "hair0"
+    return m
+
+
 HAIR_STYLES = {
     "buzz": _from_src(BUZZ_SRC),
     "fade": _from_src(FADE_SRC, extra=[(c, 3, "hair1") for c in range(5, 10)]),
@@ -304,6 +376,11 @@ HAIR_STYLES = {
     "cornrows": _from_src(CORNROWS_SRC, extra=[(1, 12, "hair1"), (1, 13, "hair0"), (2, 14, "hair1")]),
     "afro": _afro(),
     "locs": _locs(),
+    "mohawk": _mohawk(),
+    "high_top": _high_top(),
+    "twists": _twists(),
+    "curly": _curly(),
+    "flow": _flow(),
 }
 
 # facial hair, in skull coordinates (face on the right, mouth at row 9 col 8)
@@ -341,11 +418,36 @@ BEARD_SRC = [
     "...bbbb....",
     "....bb.....",
 ]
+CHINSTRAP_SRC = [
+    "", "", "", "", "", "",
+    "....b......",
+    "...bb......",
+    "..bb.......",
+    "..b........",
+    "..bb....b..",
+    "...bbbbb...",
+]
+LONG_BEARD_SRC = [
+    "", "", "", "", "",
+    "....b......",
+    "....B......",
+    "...bB......",
+    "...BBBBBBB.",
+    "..bBBBBB.b.",
+    "..bBBBBBB..",
+    "..bBBBBBb..",
+    "...BBBBB...",
+    "...bBBBb...",
+    "....bBb....",
+    ".....b.....",
+]
 FACIAL_HAIR = {
     "stubble": _from_src(STUBBLE_SRC, FACIAL_CHARS),
     "mustache": _from_src(MUSTACHE_SRC, FACIAL_CHARS),
     "goatee": _from_src(GOATEE_SRC, FACIAL_CHARS),
     "beard": _from_src(BEARD_SRC, FACIAL_CHARS),
+    "chinstrap": _from_src(CHINSTRAP_SRC, FACIAL_CHARS),
+    "long_beard": _from_src(LONG_BEARD_SRC, FACIAL_CHARS),
 }
 
 
@@ -505,11 +607,17 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
                  B["hip_r"], shorts_fn)
     body.capsule(shoulder, add(shoulder, (tdir[0] * 1.2, tdir[1] * 1.2)), 2.0,
                  lambda t, ox, oy: "jersey0")
-    # neck + head
-    head.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, B["neck_r"], shaded("skin0", "skin1", 0.1))
+    # neck + head (rebuilt cheaply for each hair / facial-hair variant)
     hx = int(round(neck[0])) - HEAD_ANCHOR[0] + pose.get("head_dx", 0)
     hy = int(round(neck[1])) - HEAD_ANCHOR[1] + pose.get("head_dy", 0)
-    blit_head(head, (hx, hy), style, facial)
+    neck_r = B["neck_r"]
+
+    def make_head(st, fac):
+        h = Layer()
+        h.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, neck_r, shaded("skin0", "skin1", 0.1))
+        blit_head(h, (hx, hy), st, fac)
+        return h
+    head = make_head(style, facial)
 
     reach = pose.get("reach", 1.0)
     fa, na = pose["far_arm"], pose["near_arm"]
@@ -547,32 +655,46 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     else:
         order = [far_arm, far_leg, near_leg, body, head, near_arm]
 
-    grid = {}
-    clipped = False
+    # outlines of everything but the head are computed once and reused
+    cached = {id(l): (l.outline(), l.px) for l in order if l is not head}
+    behind = pose.get("arms_behind_head")
+    skull_top = hy + SKULL_OFF[1] + 1
 
-    def put(x, y, tag, shift):
-        nonlocal clipped
-        y2 = y + shift
-        if 0 <= x < FRAME_W and 0 <= y2 < FRAME_H:
-            grid[(x, y2)] = tag
-        else:
-            clipped = True
-
-    for (x, y), tag in smear.items():
-        put(x, y, tag, dy)
-    for layer in order:
-        shift = dy_legs if layer in (far_leg, near_leg) else dy
-        for src in (layer.outline(), layer.px):
-            for (x, y), tag in src.items():
-                put(x, y, tag, shift)
-    if pose.get("arms_behind_head"):
-        # hands raised above the skull stay in front of big hair (afro etc.)
-        skull_top = hy + SKULL_OFF[1] + 1
-        for layer in (far_arm, near_arm):
-            for src in (layer.outline(), layer.px):
+    def paint(grid, layers, head_layer):
+        clipped = False
+        for layer in layers:
+            shift = dy_legs if layer in (far_leg, near_leg) else dy
+            srcs = (head_layer.outline(), head_layer.px) if layer is head else cached[id(layer)]
+            for src in srcs:
                 for (x, y), tag in src.items():
-                    if y < skull_top:
-                        put(x, y, tag, dy)
+                    y2 = y + shift
+                    if 0 <= x < FRAME_W and 0 <= y2 < FRAME_H:
+                        grid[(x, y2)] = tag
+                    else:
+                        clipped = True
+        return clipped
+
+    # everything drawn before the head is stacked once
+    split = order.index(head)
+    under = {}
+    for (x, y), tag in smear.items():
+        if 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+            under[(x, y + dy)] = tag
+    under_clipped = paint(under, order[:split], None)
+
+    def compose(head_layer):
+        grid = dict(under)
+        clipped = paint(grid, order[split:], head_layer) or under_clipped
+        if behind:
+            # hands raised above the skull stay in front of big hair (afro etc.)
+            for layer in (far_arm, near_arm):
+                for src in cached[id(layer)]:
+                    for (x, y), tag in src.items():
+                        if y < skull_top and 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+                            grid[(x, y + dy)] = tag
+        return grid, clipped
+
+    grid, clipped = compose(head)
 
     def ball_spot(spec):
         """Ball centre (before the vertical shift) and depth for a ball spec.
@@ -611,6 +733,9 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "ball_depth": depth,
         "lift": max(0, GROUND - (legs_bottom + dy_legs)),
         "clipped": clipped,
+        "head_origin": (hx, hy + dy),
+        # same pose with a different hair style / facial hair, without redrawing the body
+        "restyle": lambda st, fac: compose(make_head(st, fac))[0],
     }
     return grid, info
 
@@ -1261,6 +1386,111 @@ def shoot_fade_frames():
     return frames
 
 
+# ---------------------------------------------------------------- run styles
+def _run_style(lean, stride, shin_bias, knee_drive, arm_swing, arm_bend, bob):
+    """A run cycle in the same 12-frame rhythm as `run`, so styles can swap
+    without breaking the stride."""
+    keys = []
+    for i in range(8):
+        def leg(k):
+            th, sh, fr = RUN_LEG[k]
+            th = th * stride + (knee_drive if k in (6, 7) else 0)
+            return (th, sh * stride + shin_bias, fr)
+
+        def arm(k):
+            up, fo = RUN_ARM[k]
+            return (up * arm_swing, up * arm_swing + arm_bend)
+        keys.append(P(leg(i), leg((i + 4) % 8), arm((i + 4) % 8), arm(i), lean=lean, bob=bob[i]))
+    return resample(keys, RUN_FRAMES)
+
+
+def run_upright_frames():
+    # tall, smooth, long strides
+    return _run_style(lean=4, stride=1.2, shin_bias=6, knee_drive=0, arm_swing=1.35, arm_bend=60,
+                      bob=[0, 0, 0, -1, -1, 0, 0, -1])
+
+
+def run_power_frames():
+    # heavy, forward-leaning, short choppy strides (big men)
+    return _run_style(lean=23, stride=0.75, shin_bias=-14, knee_drive=0, arm_swing=0.8, arm_bend=100,
+                      bob=[0, 2, 1, 0, 0, 2, 1, 0])
+
+
+def run_bounce_frames():
+    # springy guard run with a high knee drive
+    return _run_style(lean=10, stride=1.0, shin_bias=-6, knee_drive=26, arm_swing=1.2, arm_bend=85,
+                      bob=[0, 1, -1, -2, -1, 1, -1, -3])
+
+
+# ---------------------------------------------------------------- guarding
+def guard_on_ball_frames():
+    """Pressure defense on the ball handler: low, active hands, chopping feet."""
+    near = [(50, 70), (62, 84), (44, 58), (60, 80), (48, 66), (58, 78)]
+    far = [(162, 176), (156, 170), (164, 178), (158, 172), (162, 176), (156, 170)]
+    legs = [((32, -10, 0), (-28, -30, 10)), ((32, -10, 6), (-28, -30, 10)), ((32, -10, 0), (-28, -30, 16))] * 2
+    return [P(legs[i][0], legs[i][1], near[i], far[i], lean=20, reach=1.2, bob=(2 if i % 2 else 3))
+            for i in range(6)]
+
+
+# ---------------------------------------------------------------- extras
+def celebrate_frames():
+    # fist pumps after a big play
+    return [
+        dict(IDLE_POSE),
+        P((20, -8, 0), (-10, -16, 5), (30, 60), (10, 40), lean=10, bob=1),
+        P((6, -2, 20), (-4, -6, 25), (120, 165), (20, 50), lean=0, lift=3),        # pump up
+        P((20, -8, 0), (-10, -16, 5), (40, 100), (20, 45), lean=8, bob=1),         # pull down
+        P((6, -2, 20), (-4, -6, 25), (122, 168), (25, 55), lean=-2, lift=3),
+        P((20, -8, 0), (-10, -16, 5), (40, 100), (20, 45), lean=8, bob=1),
+        P((10, -4, 0), (-6, -4, 0), (30, 70), (-10, 25), lean=4),
+        dict(IDLE_POSE),
+    ]
+
+
+def point_up_frames():
+    # points up and out toward the crowd / sky, arm in front of the face
+    return [
+        dict(IDLE_POSE),
+        P((8, -4, 0), (-6, -2, 0), (100, 140), (-10, 20), lean=0),
+        P((8, -4, 0), (-6, -2, 0), (148, 162), (-12, 18), lean=-4, head_dy=-1),
+        P((8, -4, 0), (-6, -2, 0), (150, 164), (-12, 18), lean=-5, head_dy=-1),
+        P((8, -4, 0), (-6, -2, 0), (100, 140), (-10, 20), lean=-1),
+        dict(IDLE_POSE),
+    ]
+
+
+def frustrated_frames():
+    # hands on top of the head
+    return [
+        dict(IDLE_POSE),
+        P((8, -4, 0), (-6, -2, 0), (140, 225), (150, 230), lean=-2),
+        P((8, -4, 0), (-6, -2, 0), (145, 238), (155, 242), lean=-4, head_dx=-1),
+        P((8, -4, 0), (-6, -2, 0), (145, 238), (155, 242), lean=-4),
+        P((8, -4, 0), (-6, -2, 0), (140, 225), (150, 230), lean=-2),
+        dict(IDLE_POSE),
+    ]
+
+
+# Which atlas page group each animation lives in. The app only decodes the
+# pages of groups that are actually drawn, so rarely used animations don't
+# cost memory until they play.
+ANIM_GROUP = {
+    "run_upright": "run_upright", "run_power": "run_power", "run_bounce": "run_bounce",
+    "celebrate": "extras", "point_up": "extras", "frustrated": "extras",
+}
+for _n in ("crossover_up", "crossover_down", "behind_back_up", "behind_back_down", "between_legs_up",
+           "between_legs_down", "hesitation", "hesitation_far", "screen_set", "screen_hold",
+           "screen_contact", "pass", "steal"):
+    ANIM_GROUP[_n] = "moves"
+for _n in ("shoot", "shoot_pullup", "shoot_fade", "layup", "layup_finger_roll", "layup_euro", "block",
+           "rebound", "dunk_basic", "dunk_athletic", "dunk_hang", "dunk_windmill", "dunk_tomahawk"):
+    ANIM_GROUP[_n] = "finish"
+
+
+def anim_group(name):
+    return ANIM_GROUP.get(name, "core")
+
+
 ANIMS = [
     # name, frames-fn, fps, loop, events (name -> frame index)
     ("idle", idle_frames, 6, True, {}),
@@ -1287,6 +1517,13 @@ ANIMS = [
     ("screen_set", screen_set_frames, 12, False, {"set": 3}),
     ("screen_hold", screen_hold_frames, 5, True, {}),
     ("screen_contact", screen_contact_frames, 14, False, {"contact": 1}),
+    ("run_upright", run_upright_frames, 17, True, {}),
+    ("run_power", run_power_frames, 19, True, {}),
+    ("run_bounce", run_bounce_frames, 18, True, {}),
+    ("guard_on_ball", guard_on_ball_frames, 10, True, {}),
+    ("celebrate", celebrate_frames, 12, False, {}),
+    ("point_up", point_up_frames, 8, False, {"hold": 3}),
+    ("frustrated", frustrated_frames, 6, False, {}),
     ("walk", walk_frames, 12, True, {}),
     ("walk_dribble", walk_dribble_frames, round(RUN_FRAMES / 1.05, 2), True, {"bounce": 2, "bounce2": 6, "bounce3": 10}),
     ("walk_dribble_far", walk_dribble_far_frames, round(RUN_FRAMES / 1.05, 2), True,
@@ -1381,11 +1618,29 @@ def overlay_layers(bald, styled, slot, where):
 
 
 # ---------------------------------------------------------------- atlas
+def cut_piece(pixels, kind):
+    """Trim a layer to its bounding box. Returns (key, size, x0, y0, zbytes)
+    or None. Runs in the worker processes; zbytes keeps the transfer small."""
+    if not pixels:
+        return None
+    xs = [x for x, _ in pixels]
+    ys = [y for _, y in pixels]
+    x0, y0 = min(xs), min(ys)
+    img = Image.new("RGBA", (max(xs) - x0 + 1, max(ys) - y0 + 1), (0, 0, 0, 0))
+    pix = img.load()
+    for (x, y), c in pixels.items():
+        pix[x - x0, y - y0] = c
+    raw = img.tobytes()
+    key = hashlib.sha1(kind.encode() + raw + bytes(str(img.size), "ascii")).hexdigest()
+    return key, img.size, x0, y0, zlib.compress(raw, 1)
+
+
 class Atlas:
     """Detail pieces are stored at 1x and upscaled to SCALE (nearest) when
     packed; mask pieces are stored at MASK_RES and drawn scaled up by the
-    app. Pages are packed per (group, kind) so each body's pages load only
-    when that body is on screen."""
+    app. Pages are packed per (group, kind), where a group is a body's
+    animation group ("h4-average/core") or one hair / facial-hair style
+    ("hair/afro"), so the app only decodes pages that are actually drawn."""
 
     UPSCALE = {"detail": SCALE, "mask": 1}        # stored units -> page pixels
     PER_UNIT = {"detail": 1, "mask": MASK_RES}    # stored units per art pixel
@@ -1395,25 +1650,13 @@ class Atlas:
         self.keys = []      # (group, kind)
         self.index = {}
 
-    def add(self, pixels, group, kind):
-        """pixels: {(x, y): rgba} in stored units -> [piece, dx, dy] with the
-        offset in frame pixels (SCALE per art pixel), or None."""
-        if not pixels:
-            return None
-        xs = [x for x, _ in pixels]
-        ys = [y for _, y in pixels]
-        x0, y0 = min(xs), min(ys)
-        img = Image.new("RGBA", (max(xs) - x0 + 1, max(ys) - y0 + 1), (0, 0, 0, 0))
-        pix = img.load()
-        for (x, y), c in pixels.items():
-            pix[x - x0, y - y0] = c
-        key = hashlib.sha1((group + kind).encode() + img.tobytes() + bytes(str(img.size), "ascii")).hexdigest()
-        if key not in self.index:
-            self.index[key] = len(self.images)
-            self.images.append(img)
+    def put(self, group, kind, key, size, zbytes):
+        k = (group, kind, key)
+        if k not in self.index:
+            self.index[k] = len(self.images)
+            self.images.append(Image.frombytes("RGBA", size, zlib.decompress(zbytes)))
             self.keys.append((group, kind))
-        k = SCALE / self.PER_UNIT[kind]
-        return [self.index[key], round(x0 * k, 2), round(y0 * k, 2)]
+        return self.index[k]
 
     def pack(self):
         """Shelf-pack pieces into pages. Returns (page images, page groups,
@@ -1482,20 +1725,28 @@ class Compositor:
         return self.cache[key]
 
     def frame(self, body, anim, i, look, colors):
-        f = self.data["frames"][body][anim][i]
+        f = frame_obj(self.data, body, anim, i)
         canvas = Image.new("RGBA", (self.data["frameWidth"], self.data["frameHeight"]), (0, 0, 0, 0))
         layers = [(f["skin"], look["skin"]), (f["jersey"], colors["jersey"]),
                   (f["trim"], colors["trim"]), (f["detail"], None)]
-        if look.get("facial"):
-            m, d = f["facial"][look["facial"]]
-            layers += [(m, look["hairColor"]), (d, None)]
-        if look.get("hair"):
-            m, d = f["hair"][look["hair"]]
-            layers += [(m, look["hairColor"]), (d, None)]
+        oset, hx, hy = f["head"]
+        ids = self.data["overlays"][oset]
+        styles = self.data["hairStyles"] + self.data["facialHair"]
+        head_layers = []
+        for key in ("facial", "hair"):
+            if look.get(key):
+                pid = ids[styles.index(look[key])]
+                if pid >= 0:
+                    m, d = self.data["overlayPairs"][pid]
+                    head_layers += [(m, look["hairColor"]), (d, None)]
         for ref, tint in layers:
             if ref:
                 canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None),
                                        (round(ref[1]), round(ref[2])))
+        for ref, tint in head_layers:
+            if ref:
+                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None),
+                                       (round(ref[1] + hx), round(ref[2] + hy)))
         return canvas
 
 
@@ -1539,46 +1790,112 @@ def _pt(p):
     return None if p is None else [round(p[0] * SCALE, 1), round(p[1] * SCALE, 1)]
 
 
-def build_all():
-    atlas = Atlas()
+STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
+FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift"]
+
+
+def frame_obj(data, body, anim, i):
+    """Expand a compact frame record into a dict (same as frameData() in TS)."""
+    return dict(zip(FRAME_FIELDS, data["frames"][body][anim][i]))
+UNIT = {"detail": 1, "mask": MASK_RES}
+
+
+def build_body(body):
+    """Everything for one body (runs in a worker process). Returns the cut
+    pieces and per-frame references to them."""
+    use_body(body)
+    stand_grid, stand = render(STAND_POSE, "crew")
+    standing = (FRAME_H - min(y for _, y in stand_grid)) * SCALE
+    pieces = {}
     frames = {}
-    standing = {}
-    for body in BODIES:
-        use_body(body)
-        stand_grid, stand = render(P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0), "crew")
-        standing[body] = (FRAME_H - min(y for _, y in stand_grid)) * SCALE
+
+    def ref(pixels, kind, group, origin=(0, 0)):
+        cut = cut_piece(pixels, kind)
+        if cut is None:
+            return None
+        key, size, x0, y0, z = cut
+        pieces.setdefault((group, kind, key), (size, z))
+        u = UNIT[kind]
+        return (group, kind, key, x0 - origin[0] * u, y0 - origin[1] * u)
+
+    for name, fn, _, _, _ in ANIMS:
+        group = "%s/%s" % (body, anim_group(name))
+        out = []
+        for i, pose in enumerate(fn()):
+            where = "%s/%s/%d" % (body, name, i)
+            bald, info = render(pose, None, stand["hip"][1])
+            if info["clipped"]:
+                print("WARNING: %s clipped" % where)
+            masks, detail = body_layers(bald)
+            rec = {s_: ref(masks[s_], "mask", group) for s_ in BODY_SLOTS}
+            rec["detail"] = ref(detail, "detail", group)
+            head = info["head_origin"]
+            overlays = []
+            for style in HAIR_STYLES:
+                m, d = overlay_layers(bald, info["restyle"](style, None), "hair", where + "/" + style)
+                overlays.append((ref(m, "mask", "hair/" + style, head), ref(d, "detail", "hair/" + style, head)))
+            for kind in FACIAL_HAIR:
+                m, d = overlay_layers(bald, info["restyle"](None, kind), "facial", where + "/" + kind)
+                overlays.append((ref(m, "mask", "facial/" + kind, head), ref(d, "detail", "facial/" + kind, head)))
+            rec["overlays"] = overlays
+            rec["headOrigin"] = head
+            rec["nearHand"] = _pt(info["near_hand"])
+            rec["farHand"] = _pt(info["far_hand"])
+            rec["ball"] = _pt(info["ball"])
+            rec["ballDepth"] = info["ball_depth"]
+            rec["lift"] = info["lift"] * SCALE
+            out.append(rec)
+        frames[name] = out
+    return body, standing, pieces, frames
+
+
+def build_all():
+    with multiprocessing.Pool() as pool:
+        results = []
+        for r in pool.imap(build_body, BODIES):
+            print("built", r[0], flush=True)
+            results.append(r)
+    atlas = Atlas()
+    idx = {}
+    for _, _, pieces, _ in results:
+        for (group, kind, key), (size, z) in pieces.items():
+            idx[(group, kind, key)] = atlas.put(group, kind, key, size, z)
+
+    def conv(r):
+        if r is None:
+            return None
+        group, kind, key, x0, y0 = r
+        k = SCALE / UNIT[kind]
+        return [idx[(group, kind, key)], round(x0 * k, 2), round(y0 * k, 2)]
+
+    # hair / facial overlays: each unique [mask, detail] pair is stored once,
+    # and an overlay set lists one pair index per style (-1 = nothing drawn)
+    pairs, overlay_sets = {}, {}
+    frames, standing = {}, {}
+
+    def rnd(pt):
+        return None if pt is None else [round(pt[0]), round(pt[1])]
+
+    for body, stand_h, _, fr in results:
+        standing[body] = stand_h
         frames[body] = {}
-        for name, fn, _, _, _ in ANIMS:
+        for name, recs in fr.items():
             out = []
-            for i, pose in enumerate(fn()):
-                where = "%s/%s/%d" % (body, name, i)
-                bald, info = render(pose, None, stand["hip"][1])
-                if info["clipped"]:
-                    print("WARNING: %s clipped" % where)
-                masks, detail = body_layers(bald)
-                rec = {s: atlas.add(masks[s], body, "mask") for s in BODY_SLOTS}
-                rec["detail"] = atlas.add(detail, body, "detail")
-                rec["facial"] = {}
-                for kind in FACIAL_HAIR:
-                    styled, _ = render(pose, None, stand["hip"][1], kind)
-                    m, d = overlay_layers(bald, styled, "facial", where + "/" + kind)
-                    rec["facial"][kind] = [atlas.add(m, "heads", "mask"), atlas.add(d, "heads", "detail")]
-                rec["hair"] = {}
-                for style in HAIR_STYLES:
-                    styled, _ = render(pose, style, stand["hip"][1])
-                    m, d = overlay_layers(bald, styled, "hair", where + "/" + style)
-                    rec["hair"][style] = [atlas.add(m, "heads", "mask"), atlas.add(d, "heads", "detail")]
-                rec["nearHand"] = _pt(info["near_hand"])
-                rec["farHand"] = _pt(info["far_hand"])
-                rec["ball"] = _pt(info["ball"])
-                rec["ballDepth"] = info["ball_depth"]
-                rec["lift"] = info["lift"] * SCALE
-                out.append(rec)
+            for rec in recs:
+                ids = []
+                for pair in rec["overlays"]:
+                    pair = tuple(tuple(conv(r)) if r else None for r in pair)
+                    ids.append(-1 if pair == (None, None) else pairs.setdefault(pair, len(pairs)))
+                oi = overlay_sets.setdefault(tuple(ids), len(overlay_sets))
+                hx, hy = rec["headOrigin"]
+                # compact record; see FRAME_FIELDS for the order
+                out.append([conv(rec["skin"]), conv(rec["jersey"]), conv(rec["trim"]), conv(rec["detail"]),
+                            [oi, hx * SCALE, hy * SCALE], rnd(rec["nearHand"]), rnd(rec["farHand"]),
+                            rnd(rec["ball"]), rec["ballDepth"], rec["lift"]])
             frames[body][name] = out
-        print("built", body)
     pages, page_groups, page_scales, rects = atlas.pack()
     data = {
-        "_comment": "AUTO-GENERATED by tools/generate_sprites.py. All positions are atlas pixels.",
+        "_comment": "AUTO-GENERATED by tools/generate_sprites.py. All positions are frame pixels.",
         "scale": SCALE,
         "frameWidth": FRAME_W * SCALE,
         "frameHeight": FRAME_H * SCALE,
@@ -1588,9 +1905,14 @@ def build_all():
         "pageGroups": page_groups,
         "pageScale": page_scales,
         "pieces": rects,
+        "hairStyles": list(HAIR_STYLES),
+        "facialHair": list(FACIAL_HAIR),
+        "frameFields": FRAME_FIELDS,
+        "overlayPairs": [[list(r) if r else None for r in pair] for pair in pairs],
+        "overlays": [list(o) for o in overlay_sets],
         "standingHeight": standing,
-        "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames["h3-average"][name]),
-                         "events": ev}
+        "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames[MID_BODY][name]),
+                         "group": anim_group(name), "events": ev}
                   for name, _, fps, loop, ev in ANIMS},
         "frames": frames,
     }
@@ -1626,8 +1948,7 @@ def body_for(palettes, inches, lbs):
     h = next(c["class"] for c in palettes["heightClasses"]
              if c["maxInches"] is None or inches <= c["maxInches"])
     bmi = 703.0 * lbs / (inches * inches)
-    wc = palettes["weightClasses"]
-    w = "slim" if bmi < wc["slimBelowBmi"] else "heavy" if bmi >= wc["heavyFromBmi"] else "average"
+    w = next(c["id"] for c in palettes["weightClasses"] if c["maxBmi"] is None or bmi < c["maxBmi"])
     return "h%d-%s" % (h, w)
 
 
@@ -1640,7 +1961,7 @@ def write_previews(data, pages, palettes):
     skins = [s["color"] for s in palettes["skinTones"]]
     hair_c = {h["id"]: h["color"] for h in palettes["hairColors"]}
     base = {"skin": skins[1], "hair": "crew", "hairColor": hair_c["black"]}
-    mid = "h3-average"
+    mid = MID_BODY
 
     def small(img):
         return img.resize((fw, fh), Image.NEAREST)
@@ -1679,7 +2000,7 @@ def write_previews(data, pages, palettes):
                 label(d, (4, 16 + r * ch + 40), sk["id"])
     y = 16 + len(skins) * ch + 14
     for c, fac in enumerate([None] + list(FACIAL_HAIR)):
-        look = dict(base, facial=fac, skin=skins[c % 5], hairColor=hair_c[hcols[c]])
+        look = dict(base, facial=fac, skin=skins[c % 5], hairColor=hair_c[hcols[c % 6]])
         sheet.alpha_composite(cell(mid, look, team), (60 + c * fw, y))
         label(d, (60 + c * fw + 4, y - 12), fac or "clean")
     label(d, (4, y + 40), "facial")
@@ -1709,7 +2030,7 @@ def write_previews(data, pages, palettes):
         lbs = int(inches * inches * rng.uniform(21.5, 29) / 703)
         body = body_for(palettes, inches, lbs)
         look = {"skin": rng.choice(skins), "hair": rng.choice(styles),
-                "facial": rng.choice([None, None, "stubble", "mustache", "goatee", "beard"]),
+                "facial": rng.choice([None, None] + list(FACIAL_HAIR)),
                 "hairColor": hair_c[rng.choice(["black", "black", "darkBrown", "brown", "blond", "auburn"])]}
         img = comp.frame(body, "idle", 0, look, home if i < 5 else away)
         s = (inches * 1.6) / data["standingHeight"][body]      # ~in-game size
@@ -1751,7 +2072,7 @@ def write_previews(data, pages, palettes):
         n = data["anims"][name]["frameCount"]
         imgs = []
         for c in range(n):
-            img = with_ball(small(comp.frame(mid, name, c, look, team)), data["frames"][mid][name][c])
+            img = with_ball(small(comp.frame(mid, name, c, look, team)), frame_obj(data, mid, name, c))
             sheet.alpha_composite(img, (c * fw, r * fh))
             f = Image.new("RGBA", img.size, bg)
             f.alpha_composite(img)
@@ -1780,7 +2101,12 @@ def main():
     for (w, h), g in zip(data["pages"], data["pageGroups"]):
         per[g] = per.get(g, 0) + w * h * 4 / 1e6
     print("pieces: %d  pages: %d  total ~%.0f MB decoded" % (len(data["pieces"]), len(pages), sum(per.values())))
-    print("per group MB:", {g: round(v, 1) for g, v in per.items()})
+    body_all = {}
+    for g, v in per.items():
+        b_, grp = g.split("/")
+        body_all.setdefault(b_, {})[grp] = round(v, 1)
+    print("MB per group for", MID_BODY, body_all[MID_BODY])
+    print("hair/facial MB:", {g: v for g, v in body_all.items() if g in ("hair", "facial")})
     print("standing height (atlas px):", data["standingHeight"])
 
 

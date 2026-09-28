@@ -14,22 +14,27 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 ## What's included
 
 **Court sprites** (side view, facing right)
-- **15 bodies:** 5 height classes × 3 weight classes.
+- **35 bodies:** 7 height classes × 5 weight classes (`h1-slim` … `h7-heavy`).
 
-  | Height class | 1 | 2 | 3 | 4 | 5 |
+  | Height class | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+  |---|---|---|---|---|---|---|---|
+  | Height | ≤ 6'1" | 6'2"–6'3" | 6'4"–6'5" | 6'6"–6'7" | 6'8"–6'9" | 6'10"–6'11" | 7'0"+ |
+
+  | Weight class | slim | lean | average | solid | heavy |
   |---|---|---|---|---|---|
-  | Height | 6'2" and under | 6'3"–6'5" | 6'6"–6'8" | 6'9"–6'11" | 7'0"+ |
+  | BMI (703 × lbs / in²) | < 22.5 | < 24 | < 25.5 | < 27 | 27+ |
 
-  The weight class comes from BMI: slim < 23.5 ≤ average < 26.5 ≤ heavy. The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height.
-- **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 7 hair styles (bald, buzz, fade, crew, cornrows, afro, locs), 6 hair colors, 5 facial-hair options (none, stubble, mustache, goatee, beard).
+  The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height. Cutoffs are in `palettes.json`.
+- **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
+- **4 run styles:** `run`, `run_upright` (long smooth strides), `run_power` (heavy, hunched, choppy), `run_bounce` (springy, high knees). Each player keeps one for good: `runStyleFor(player.id, look.body)` leans bigs toward power and small guards toward bounce. Pass it to `new PlayerAnimator(facing, { runStyle })`.
 - **Always the same:** black shorts, grey shoes.
-- **46 animations:** `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **53 animations:** `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
 - `faceFromSeed(playerId)` → `FaceSpec`, then `faceSvg(face, id, jersey)` → one self-contained SVG, on the same 200×240 grid and square crop (`viewBox="12 24 176 176"`) as before.
 - Drawn as 50×60 pixel art in the same style as the sprites. Every pixel is a crisp square, grouped into one `<path>` per color with `shape-rendering="crispEdges"`, so it stays sharp at any size.
-- **Features:** 4 head shapes, 5 eye shapes, 5 noses, 4 mouths, 5 eye colors, brow weight, plus the same skin, hair and facial-hair options as the sprite. The jersey uses the team color (navy if none) and can show a number.
+- **Features:** 4 head shapes, 5 eye shapes, 5 noses, 4 mouths, 5 eye colors, brow weight, plus the same skin, hair and facial-hair options as the sprite. Shading follows the original face generator: brow and eye sockets, nose bridge, cheekbones, jawline and neck shadow, with strand highlights in the hair. The jersey uses the team color (navy if none) and can show a number.
 
 ## Team logos
 
@@ -148,14 +153,15 @@ Every frame has a `ballDepth` value from +1 (near side, toward the camera) throu
 ## Using it
 
 ```tsx
-import { Headshot, PlayerSprite, playerLook, teamById, jerseysForGame,
-         scaleForHeight, frameAt } from './playerSprites';
+import { Headshot, PlayerSprite, PlayerAnimator, playerLook, runStyleFor, teamById,
+         jerseysForGame, scaleForHeight, frameAt } from './playerSprites';
 
 // roster screens
 <Headshot playerId={player.id} size={64} jersey={{ jersey: team.jersey, trim: team.trim, number: player.number }} />
 
 // game setup: look is cheap to recompute, or cache it per player
 const look = playerLook(player.id, player.heightInches, player.weightLbs);
+const animator = new PlayerAnimator(facing, { runStyle: runStyleFor(player.id, look.body) });
 const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 // every frame
@@ -172,12 +178,17 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 - **The mismatch is fixed.** The sprite look now comes from `faceFromSeed(player.id)`, the same numeric seed as the headshot. The old `generateLook()` (hash of the id string) is gone.
 - **Jumps:** shoot, layup, block, rebound and the dunks have a small hop drawn in. Pass `bakedLift={false}` if the sim raises players with `z`.
+- **Guarding:** pass `onBall: true` in the animator input for the defender on the ball handler. When he is defending and not moving he plays `guard_on_ball` (a low, active stance with hand jabs) instead of `defense_stance`.
+- **Faces changed:** new hair and beard options were added to the seeded face generator, so an existing player id may now get a different headshot (and matching sprite) than before this update.
 - **Dunks and the rim:** position the jump so `nearHand`/`farHand` at the `dunk` frame land on the rim. For `dunk_hang`, loop frames `hangStart`–`hangEnd` while he hangs, then play the rest.
 
 | Animation | Frames | FPS | Loop | Events |
 |---|---|---|---|---|
 | `idle` | 4 | 6 | yes | |
 | `run` | 12 | 18 | yes | |
+| `run_upright` / `run_power` / `run_bounce` | 12 | 17 / 19 / 18 | yes | Run-style variants; the animator uses `runStyle` in place of `run` |
+| `guard_on_ball` | 6 | 10 | yes | Defending the ball handler (`onBall: true`) |
+| `celebrate` / `point_up` / `frustrated` | 8 / 6 / 6 | 12 / 8 / 6 | no | Reactions; `point_up` has `hold: 3` |
 | `run_start` / `run_stop` | 3 / 5 | 14 | no | Standing ↔ running |
 | `turn` / `turn_run` / `turn_dribble` | 6 | 16 | no | `flipAt: 3`: draw frames from 3 on facing the new way |
 | `dribble` | 6 | 17.14 | yes | `bounce: 3` (0.35 s per bounce) |
@@ -213,9 +224,21 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail layer, then facial hair and hair. There are up to 8 small `View`+`Image` pairs per player.
 
 - **Masks** (the tinted parts) are stored at 2× and **detail** at 3×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
-- **Per-body pages:** each body's atlas pages are only decoded when a player with that body is on screen. That's about 12–17 MB per body, plus about 10 MB shared for hair and facial hair. A typical game with ~7 distinct bodies uses roughly 110 MB.
+- **Pages are split by body *and* animation group**, and hair / facial hair by style. React Native only decodes an image once something from it is drawn, so memory follows what's on court:
+
+  | Page group (per body, mid-size body) | MB | Loaded when |
+  |---|---|---|
+  | `core`: idle, walk, run, dribbles, turns, defense, guarding | ~7.4 | always |
+  | `run_upright` / `run_power` / `run_bounce` | ~0.8 each | a player with that run style runs |
+  | `moves`: crossovers, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
+  | `finish`: shots, layups, dunks, block, rebound | ~4.9 | one of them plays |
+  | `extras`: celebrate, point_up, frustrated | ~0.6 | one of them plays |
+  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–8 each | a player with that style is on court (locs ≈ 8, long beard ≈ 5, afro ≈ 4, most < 2) |
+
+  A typical game with ~7 distinct bodies starts around 60 MB and grows toward ~120 MB as moves and finishes get used.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
-- **Data size:** `spriteData.json` is about 3 MB and is bundled into the JS. It works, but it could be slimmed down if app startup time matters.
+- **Data size:** `spriteData.json` is about 3 MB, bundled into the JS. Frames are stored as compact arrays and each hair / beard placement is stored once. Read frames through `frameData(body, anim, i)` / `framesOf(body, anim)`, and hair through `headOverlay(frame, style)`, all from `frames.ts`.
+- **Build:** the generator uses every CPU core. All 35 bodies take about 70 s on 4 cores.
 
 ## Tests
 

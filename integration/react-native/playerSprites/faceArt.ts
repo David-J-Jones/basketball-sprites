@@ -89,10 +89,11 @@ export const BY_SKIN: SkinTable[] = [
 ];
 
 // bald, buzz, fade, crew, cornrows, afro, locs
-const HAIR_WEIGHTS_COILY = [1.2, 2, 2.5, 1, 1.2, 1, 1.3];
-const HAIR_WEIGHTS_STRAIGHT = [0.8, 2, 2, 3, 0.1, 0, 0.15];
+// bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow
+const HAIR_WEIGHTS_COILY = [1.2, 2, 2.5, 1, 1.2, 1, 1.3, 0.4, 0.6, 1.2, 0.8, 0.05];
+const HAIR_WEIGHTS_STRAIGHT = [0.8, 2, 2, 3, 0.1, 0, 0.15, 0.4, 0.1, 0.1, 0.8, 1.5];
 // none, stubble, mustache, goatee, beard
-const FACIAL_WEIGHTS = [6, 2, 0.8, 1.3, 1.6];
+const FACIAL_WEIGHTS = [6, 2, 0.8, 1.3, 1.6, 0.6, 0.4];
 
 /** The same seed (the league player's numeric id) always gives the same face. */
 export function faceFromSeed(seed: number): FaceSpec {
@@ -371,6 +372,15 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
     // bumpy silhouette: decide on the original edge first, then trim
     const trim = [...backHair].filter((k) => edge(backHair, kx(k), ky(k)) && noise(kx(k), ky(k), seed) < 0.4);
     trim.forEach((k) => backHair.delete(k));
+  } else if (hairStyle === 'flow') {
+    const w = Math.round(maxHw) + 2;
+    for (let x = CX - w; x < CX + w; x++) {
+      const bottom = chin + 3 + Math.floor(noise(x, 1, seed) * 2);
+      for (let y = top - 1; y <= bottom; y++) {
+        const hw = y < top + 4 ? Math.round(hwAt(y + 1)) + 1 : w;
+        if (Math.abs(x + 0.5 - CX) <= hw) backHair.add(key(x, y));
+      }
+    }
   } else if (hairStyle === 'locs') {
     const w = Math.round(maxHw) + 3;
     for (let x = CX - w; x < CX + w; x++) {
@@ -387,6 +397,8 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
     let c = hr.base;
     if (hairStyle === 'locs') {
       c = x % 3 === 2 ? hr.s2 : (y + 2 * x) % 4 === 0 ? hr.hi : x % 2 ? hr.s1 : hr.base;
+    } else if (hairStyle === 'flow') {
+      c = x % 4 === 0 ? hr.hi : x % 4 === 2 || nx > 0.45 ? hr.s1 : hr.base;   // long strands
     } else {
       if (n < 0.2 || nx > 0.45) c = hr.s1;
       if (n > 0.86 && nx < 0.2) c = hr.hi;
@@ -481,6 +493,15 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
     g.set(x, y, c);
   });
 
+  // sockets under the brow, shadow down the side of the nose bridge, jawline
+  for (const x0 of [18, 27]) {
+    for (let x = x0; x < x0 + 5; x++) g.set(x, eyeY - 1, mix(g.get(x, eyeY - 1) ?? sk.base, sk.s1, 0.45));
+  }
+  for (let y = eyeY; y <= noseY - 3; y++) g.set(CX, y, mix(g.get(CX, y) ?? sk.base, sk.s1, 0.5));
+  each(head, (x, y) => {
+    if (y >= mouthY && nxOf(x, y) < -0.8) g.set(x, y, sk.s1);
+  });
+
   // ---- 6. beard, goatee, stubble (mustache comes after the mouth)
   const facial = FACIAL_HAIR[f.facialHair];
   const hairTexture = (x: number, y: number, dark: boolean) => {
@@ -498,9 +519,16 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
         g.set(x, y, mix(cur, hr.s1, n < 0.45 ? 0.34 : n < 0.8 ? 0.22 : 0.12));
       }
     });
-  } else if (facial === 'beard' || facial === 'goatee') {
+  } else if (facial === 'chinstrap') {
+    // a thin line of beard along the jaw, ear to ear
+    each(head, (x, y) => {
+      if (y < eyeY + 1) return;
+      const onEdge = Math.abs(nxOf(x, y)) > 0.8 || y >= chin - 1;
+      if (onEdge) g.set(x, y, hairTexture(x, y, nxOf(x, y) > 0.3));
+    });
+  } else if (facial === 'beard' || facial === 'goatee' || facial === 'long_beard') {
     const beard: Mask = new Set();
-    if (facial === 'beard') {
+    if (facial === 'beard' || facial === 'long_beard') {
       each(head, (x, y) => {
         const nx = Math.abs(nxOf(x, y));
         const line = noseY + 1 - Math.min(1, nx / 0.9) * (noseY + 1 - (eyeY + 2));
@@ -509,6 +537,12 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
       const cw = Math.round(hwAt(chin));
       for (let x = CX - cw - 1; x < CX + cw + 1; x++) beard.add(key(x, chin + 1));
       for (let x = CX - cw + 1; x < CX + cw - 1; x++) beard.add(key(x, chin + 2));
+      if (facial === 'long_beard') {
+        for (let i = 3; i <= 7; i++) {                       // hangs well below the chin
+          const w = Math.max(1, cw - Math.floor(i / 2));
+          for (let x = CX - w; x < CX + w; x++) beard.add(key(x, chin + i));
+        }
+      }
     } else {
       for (let y = mouthY - 1; y <= chin + 1; y++) {
         for (let x = CX - 5; x < CX + 5; x++) {
@@ -582,7 +616,7 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
   });
 
   // ---- 10. mustache
-  if (facial === 'mustache' || facial === 'beard' || facial === 'goatee') {
+  if (facial === 'mustache' || facial === 'beard' || facial === 'goatee' || facial === 'long_beard') {
     // sits on the upper lip, never over the nostrils
     const my = Math.max(noseY + 1, mouthY - mouth.at - 1);
     for (let x = CX - 4; x < CX + 4; x++) g.set(x, my, hairTexture(x, my, x >= CX + 2));
@@ -598,8 +632,8 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
   const front: Mask = new Set();
   const scalp = (x: number, y: number) => head.has(key(x, y)) && y < hairline(x, y);
   if (hairStyle !== 'bald') {
-    const volume = hairStyle === 'crew' || hairStyle === 'fade' || hairStyle === 'locs' ? 2
-      : hairStyle === 'afro' ? 0 : 0;
+    const volumes: Partial<Record<string, number>> = { crew: 2, fade: 2, locs: 2, twists: 2, curly: 3, flow: 2 };
+    const volume = volumes[hairStyle] ?? 0;
     for (let y = top - volume; y < eyeY + 2; y++) {
       for (let x = 0; x < GW; x++) {
         let inside = scalp(x, y);
@@ -620,6 +654,29 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
           if (head.has(key(x, y)) || y < top) front.add(key(x, y));
         }
       });
+    }
+    if (hairStyle === 'high_top') {
+      // tall flat box on top of the head
+      const [x0, x1] = span(hwAt(top + 4));
+      for (let y = top - 7; y <= top + 1; y++) for (let x = x0 + 1; x <= x1 - 1; x++) front.add(key(x, y));
+    }
+    if (hairStyle === 'mohawk') {
+      // the fin: a narrow strip standing up along the middle
+      for (let y = top - 4; y < top; y++) {
+        const w = y === top - 4 ? 1.5 : 2.5;
+        for (let x = 0; x < GW; x++) if (Math.abs(x + 0.5 - CX) <= w) front.add(key(x, y));
+      }
+    }
+    if (hairStyle === 'curly') {
+      const trim = [...front].filter((k) => ky(k) < top && edge(front, kx(k), ky(k)) && noise(kx(k), ky(k), seed) < 0.35);
+      trim.forEach((k) => front.delete(k));
+    }
+    if (hairStyle === 'flow') {
+      // side-swept fringe, lower on the left
+      for (let x = CX - 8; x <= CX + 3; x++) {
+        const bottom = top + 8 - Math.floor((x - (CX - 8)) / 3);
+        for (let y = top; y <= bottom; y++) if (head.has(key(x, y))) front.add(key(x, y));
+      }
     }
     if (hairStyle === 'locs') {
       // locs falling in front of the ears on both sides
@@ -671,10 +728,29 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
         c = n < 0.2 || nx > 0.45 ? hr.s1 : n > 0.86 && nx < 0.2 ? hr.hi : hr.base;
         break;
       }
+      case 'mohawk':
+        if (Math.abs(x + 0.5 - CX) > 3 && y >= top) c = mix(cur, hr.s1, (x + y) % 2 ? 0.55 : 0.4);   // shaved sides
+        else c = nx > 0.3 ? hr.s1 : (x + y) % 3 === 0 && nx < 0 ? hr.hi : hr.base;
+        break;
+      case 'high_top':
+        c = nx > 0.45 || y === top - 7 ? hr.s1 : (x * 3 + y) % 5 === 0 ? hr.hi : hr.base;
+        break;
+      case 'twists':
+        c = x % 2 ? hr.s1 : y % 3 === 0 ? hr.hi : hr.base;
+        break;
+      case 'curly': {
+        const n = noise(x, y, seed + 11);
+        c = n < 0.25 || nx > 0.5 ? hr.s1 : n > 0.8 ? hr.hi : hr.base;
+        break;
+      }
+      case 'flow':
+        c = (x - Math.floor(y / 2)) % 4 === 0 ? hr.hi : nx > 0.45 ? hr.s1 : hr.base;   // swept strands
+        break;
       default: // crew
         c = nx > 0.5 ? hr.s1 : (x + y) % 3 === 0 && nx < 0 && y < top + 3 ? hr.hi : hr.base;
     }
-    if (bottom && hairStyle !== 'buzz') c = hr.s2;
+    const shaved = hairStyle === 'mohawk' && Math.abs(x + 0.5 - CX) > 3 && y >= top;
+    if (bottom && hairStyle !== 'buzz' && !shaved) c = hr.s2;
     g.set(x, y, c);
   });
   if (hairStyle === 'bald') {

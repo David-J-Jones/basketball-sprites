@@ -12,3 +12,4 @@ export type { BallHand, HandSwitchMove } from './moves';
 export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS } from './animController';
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';
+export { frameData, framesOf, headOverlay, SPRITE_DATA } from './frames';

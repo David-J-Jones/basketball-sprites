@@ -9,7 +9,7 @@ import {
   type WeightClass,
 } from './features';
 import palettes from './palettes.json';
-import type { JerseyColors, PlayerLook, SpriteFacialHair, SpriteHairStyle } from './types';
+import type { JerseyColors, PlayerLook, RunStyle, SpriteFacialHair, SpriteHairStyle } from './types';
 
 export type Team = { id: string; name: string; jersey: string; trim: string };
 
@@ -28,15 +28,16 @@ export function heightClass(inches: number): HeightClass {
   for (const c of palettes.heightClasses) {
     if (c.maxInches === null || inches <= c.maxInches) return c.class as HeightClass;
   }
-  return 5;
+  return 7;
 }
 
 /** Weight class from BMI (703 x lbs / inches^2); cutoffs live in palettes.json. */
 export function weightClass(inches: number, lbs: number): WeightClass {
   const bmi = (703 * lbs) / (inches * inches);
-  if (bmi < palettes.weightClasses.slimBelowBmi) return 'slim';
-  if (bmi >= palettes.weightClasses.heavyFromBmi) return 'heavy';
-  return 'average';
+  for (const c of palettes.weightClasses) {
+    if (c.maxBmi === null || bmi < c.maxBmi) return c.id as WeightClass;
+  }
+  return 'heavy';
 }
 
 export function bodyFor(heightInches: number, weightLbs: number): BodyKey {
@@ -69,6 +70,28 @@ export function skinColor(look: PlayerLook): string {
 
 export function hairColor(look: PlayerLook): string {
   return (palettes.hairColors.find((h) => h.id === look.hairColor) ?? palettes.hairColors[0]).color;
+}
+
+/**
+ * The run cycle a player keeps for good, picked from his id and body: big
+ * and heavy players lean to the power run, small guards to the bouncy one.
+ */
+export function runStyleFor(playerId: number, body: BodyKey): RunStyle {
+  const h = Number(body[1]);
+  const heavy = body.endsWith('solid') || body.endsWith('heavy');
+  const styles: [RunStyle, number][] = [
+    ['run', 1.5],
+    ['run_upright', 1.5],
+    ['run_power', h >= 6 || heavy ? 3 : 0.4],
+    ['run_bounce', h <= 3 && !heavy ? 3 : 0.6],
+  ];
+  let x = (Math.imul(playerId | 0, 2654435761 | 0) >>> 0) / 4294967296;   // stable per player
+  x *= styles.reduce((a, [, w]) => a + w, 0);
+  for (const [s, w] of styles) {
+    x -= w;
+    if (x < 0) return s;
+  }
+  return 'run';
 }
 
 // ------------------------------------------------------------------ jerseys
