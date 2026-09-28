@@ -26,9 +26,9 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 
   The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height. Cutoffs are in `palettes.json`.
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
-- **4 run styles:** `run`, `run_upright` (long smooth strides), `run_power` (heavy, hunched, choppy), `run_bounce` (springy, high knees). Each player keeps one for good: `runStyleFor(player.id, look.body)` leans bigs toward power and small guards toward bounce. Pass it to `new PlayerAnimator(facing, { runStyle })`.
+- **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
 - **Always the same:** black shorts, grey shoes.
-- **58 animations:** `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **94 animations:** the signature styles above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -125,6 +125,30 @@ animator.release();                    // roll or pop out: movement resumes
 
 If you drive animations yourself instead, keep the same rules: never flip `facing` directly from the sign of `vx`, and don't reset the frame counter when switching between run and dribble_run.
 
+## Signature animations
+
+Players can have their own run, dribble and jumper, and their own bag of layups and dunks. `animStyles.ts` holds the whole catalog with names for a selection screen:
+
+| Kind | Options (`STYLE_OPTIONS`) | Animations |
+|---|---|---|
+| Run | `run` Classic, `run_upright` Upright, `run_power` Power, `run_bounce` Bouncy, `run_glide` Glide, `run_loose` Loose | the id itself |
+| Dribble | `classic`, `low`, `high`, `rhythm`, `protect` | `dribble_<style>`, `dribble_<style>_far`, `dribble_run_<style>`, `dribble_run_<style>_far` (classic = `dribble`, `dribble_run`…) |
+| Jump shot | `classic`, `quick`, `high` (high release), `kick` (leg kick), `push` | `shoot_<style>`, `shoot_<style>_pullup`, `shoot_<style>_fade` (classic = `shoot`…) |
+| Layups | `layup`, `layup_finger_roll`, `layup_euro`, `layup_reverse`, `layup_scoop`, `layup_floater` | the id itself |
+| Dunks | `dunk_basic`, `dunk_athletic`, `dunk_hang`, `dunk_windmill`, `dunk_tomahawk`, `dunk_reverse`, `dunk_two_hand`, `dunk_cradle` | the id itself |
+
+```ts
+// what the player picked, or body-suited defaults for everyone else (stable per id)
+const styles: AnimStyles = saved ?? defaultAnimStyles(player.id, look.body);
+
+const animator = new PlayerAnimator(facing, animatorOptions(styles)); // run + dribble styles automatic
+animator.play(jumperFor(styles, speedTowardBasket), basketSide);      // set / pull-up / fade in his shot style
+animator.play(pickLayup(styles), basketSide);                         // random from his layup bag
+animator.play(pickDunk(styles), basketSide);
+```
+
+Every style keeps its classic version's frame count and event frames, so sim timing doesn't depend on the style. Examples: every jumper releases on frame 4, every running dribble bounces on frames 3 and 9, and every run is 12 frames on the shared stride clock. Layups and dunks list their own events in the table below. The one exception is `layup_floater`, which releases early, on frame 3. Walking with the ball uses `walk_dribble` for every style. Hand-switch moves (crossovers etc.) are drawn once and hand back to whatever dribble style the player uses.
+
 ## Directions: up/down, near/far
 
 The camera sits on the near sideline, so moving **up the screen** means moving away from the camera and **down** means toward it. For a player facing right, his **left** side is up (the far side) and his **right** side is down (the camera side).
@@ -198,7 +222,13 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `post_fadeaway` | 11 | 12 | no | `flipAt: 3`, `rise: 5`, `release: 7` |
 | `post_fade_one_leg` | 9 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
 | `spin_move` | 8 | 14 | no | `flipAt: 4`, `bounce: 5` |
-| `run_upright` / `run_power` / `run_bounce` | 12 | 17 / 19 / 18 | yes | Run-style variants; the animator uses `runStyle` in place of `run` |
+| `run_upright` / `run_power` / `run_bounce` / `run_glide` / `run_loose` | 12 | 17 / 19 / 18 / 17 / 17 | yes | Run-style variants; the animator uses `runStyle` in place of `run` |
+| `dribble_<style>` / `_far` | 6 | 24 low, 13.33 high, 17.14 others | yes | `bounce: 3` |
+| `dribble_run_<style>` / `_far` | 12 | 17.14 | yes | `bounce: 3`, `bounce2: 9` |
+| `shoot_<style>` / `_pullup` / `_fade` | 8 | 15 quick, 12 others | no | `gather: 0`, `rise: 2`, `release: 4` |
+| `layup_reverse` / `layup_scoop` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4` |
+| `layup_floater` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 3` |
+| `dunk_reverse` / `dunk_two_hand` / `dunk_cradle` | 8 | 11 / 12 / 11 | no | `takeoff: 2`; `dunk: 5` / `4` / `6` |
 | `guard_on_ball` | 6 | 10 | yes | Defending the ball handler (`onBall: true`) |
 | `celebrate` / `point_up` / `frustrated` | 8 / 6 / 6 | 12 / 8 / 6 | no | Reactions; `point_up` has `hold: 3` |
 | `run_start` / `run_stop` | 3 / 5 | 14 | no | Standing ↔ running |
@@ -241,17 +271,20 @@ Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail laye
   | Page group (per body, mid-size body) | MB | Loaded when |
   |---|---|---|
   | `core`: idle, walk, run, dribbles, turns, defense, guarding | ~7.4 | always |
-  | `run_upright` / `run_power` / `run_bounce` | ~0.8 each | a player with that run style runs |
+  | `run_upright` / `run_power` / `run_bounce` / `run_glide` / `run_loose` | ~0.8 each | a player with that run style runs |
+  | `dribble_<style>` | ~2.7 each | a player with that dribble style has the ball |
+  | `shot_<style>` | ~1.2 each | a player with that shot style shoots |
+  | `layups` / `dunks` (all styles) | ~1.7 / ~3.3 | any layup / dunk plays |
   | `moves`: crossovers, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
-  | `finish`: shots, layups, dunks, block, rebound | ~4.9 | one of them plays |
+  | `finish`: classic jumpers, block, rebound | ~3.1 | one of them plays |
   | `extras`: celebrate, point_up, frustrated | ~0.6 | one of them plays |
   | `post`: post_up, hook, fadeaways, spin | ~3.0 | one of them plays |
-  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–10 each | a player with that style is on court (locs ≈ 10, long beard ≈ 6, afro ≈ 5, most < 2.5) |
+  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–13 each | a player with that style is on court (locs ≈ 13, long beard ≈ 7, afro ≈ 7, most < 3) |
 
   A typical game with ~7 distinct bodies starts around 60 MB and grows toward ~120 MB as moves and finishes get used.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
-- **Data size:** `spriteData.json` is about 3 MB, bundled into the JS. Frames are stored as compact arrays and each hair / beard placement is stored once. Read frames through `frameData(body, anim, i)` / `framesOf(body, anim)`, and hair through `headOverlay(frame, style)`, all from `frames.ts`.
-- **Build:** the generator uses every CPU core. All 35 bodies take about 70 s on 4 cores.
+- **Data size:** `spriteData.json` is about 5.5 MB, bundled into the JS (the atlas PNGs are ~15 MB on disk, 1,433 pages). If startup parse time becomes a problem, the frames can be split into one JSON per body and loaded on demand. Frames are stored as compact arrays and each hair / beard placement is stored once. Read frames through `frameData(body, anim, i)` / `framesOf(body, anim)`, and hair through `headOverlay(frame, style)`, all from `frames.ts`.
+- **Build:** the generator uses every CPU core. All 35 bodies take about 2 ¼ minutes on 4 cores.
 
 ## Tests
 

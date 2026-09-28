@@ -1,4 +1,4 @@
-import type { AnimName } from './types';
+import type { AnimName, DribbleStyle, ShotAnim, ShotStyle } from './types';
 
 /** Which hand has the ball, in screen terms (see README "Directions"). */
 export type BallHand = 'near' | 'far';
@@ -31,11 +31,16 @@ export function hesitationFor(hand: BallHand): 'hesitation' | 'hesitation_far' {
   return hand === 'far' ? 'hesitation_far' : 'hesitation';
 }
 
-/** Dribble animation for the ball hand: standing, walking, or running. */
-export function dribbleAnim(hand: BallHand, moving: boolean, walking = false): AnimName {
+/**
+ * Dribble animation for the ball hand: standing, walking, or running, in the
+ * player's dribble style (walking uses the one walk_dribble for every style).
+ */
+export function dribbleAnim(hand: BallHand, moving: boolean, walking = false, style: DribbleStyle = 'classic'): AnimName {
   const far = hand === 'far' ? '_far' : '';
-  if (!moving) return `dribble${far}` as AnimName;
-  return `${walking ? 'walk_dribble' : 'dribble_run'}${far}` as AnimName;
+  const st = style === 'classic' ? '' : `_${style}`;
+  if (!moving) return `dribble${st}${far}` as AnimName;
+  if (walking) return `walk_dribble${far}` as AnimName;
+  return `dribble_run${st}${far}` as AnimName;
 }
 
 /**
@@ -43,8 +48,9 @@ export function dribbleAnim(hand: BallHand, moving: boolean, walking = false): A
  * basket). Faster than `threshold` toward the basket: pull-up; away from it:
  * fadeaway; otherwise the set shot.
  */
-export function shotFor(speedTowardBasket: number, threshold = 3): 'shoot' | 'shoot_pullup' | 'shoot_fade' {
-  if (speedTowardBasket > threshold) return 'shoot_pullup';
-  if (speedTowardBasket < -threshold) return 'shoot_fade';
-  return 'shoot';
+export function shotFor(speedTowardBasket: number, threshold = 3, style: ShotStyle = 'classic'): ShotAnim {
+  const base = style === 'classic' ? 'shoot' : `shoot_${style}`;
+  if (speedTowardBasket > threshold) return `${base}_pullup` as ShotAnim;
+  if (speedTowardBasket < -threshold) return `${base}_fade` as ShotAnim;
+  return base as ShotAnim;
 }

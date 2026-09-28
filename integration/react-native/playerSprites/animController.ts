@@ -17,8 +17,8 @@
  * <PlayerSprite anim frame flip />.
  */
 import raw from './spriteData.json';
-import { handAfter, type BallHand } from './moves';
-import type { AnimName, RunStyle, SpriteData } from './types';
+import { dribbleAnim, handAfter, type BallHand } from './moves';
+import type { AnimName, DribbleStyle, RunStyle, SpriteData } from './types';
 
 const ANIMS = (raw as unknown as SpriteData).anims;
 
@@ -76,6 +76,8 @@ export type AnimatorOptions = {
   idleVariantAfter: number;
   /** this player's run cycle (see runStyleFor); all share one stride clock */
   runStyle: RunStyle;
+  /** this player's dribble style (see animStyles.ts) */
+  dribbleStyle: DribbleStyle;
 };
 
 /** Defaults assume the sim works in feet per second. */
@@ -91,6 +93,7 @@ export const DEFAULT_ANIMATOR_OPTIONS: AnimatorOptions = {
   walkRefSpeed: 4,
   idleVariantAfter: 5,
   runStyle: 'run',
+  dribbleStyle: 'classic',
 };
 
 type OneShot = {
@@ -101,10 +104,11 @@ type OneShot = {
   to: Facing;
 };
 
-const LOCOMOTION: AnimName[] = [
-  'idle', 'run', 'run_upright', 'run_power', 'run_bounce', 'guard_on_ball', 'walk', 'dribble', 'dribble_run', 'dribble_far', 'dribble_run_far',
-  'walk_dribble', 'walk_dribble_far', 'backpedal', 'defense_stance', 'defense_slide',
-];
+const LOCOMOTION = new Set<string>([
+  'idle', 'run', 'guard_on_ball', 'walk', 'walk_dribble', 'walk_dribble_far', 'backpedal', 'defense_stance',
+  'defense_slide',
+]);
+const isLocomotion = (a: AnimName) => LOCOMOTION.has(a) || /^(run_(upright|power|bounce|glide|loose)|dribble(_run)?(_(low|high|rhythm|protect))?(_far)?)$/.test(a);
 
 /** Moves out of a post-up; playing one ends the post_up hold. */
 export const POST_MOVES: AnimName[] = ['post_hook', 'post_fadeaway', 'post_fade_one_leg', 'spin_move'];
@@ -288,13 +292,12 @@ export class PlayerAnimator {
       const ref = this.running ? o.refSpeed : o.walkRefSpeed;
       const base = this.running ? ANIMS.run.fps : ANIMS.walk.fps;
       this.stride = (this.stride + dt * base * Math.min(1.5, Math.max(0.7, speed / ref))) % ANIMS.run.frameCount;
-      const far = this.hand === 'far' ? '_far' : '';
-      const anim = (!hasBall ? (this.running ? o.runStyle : 'walk')
-        : `${this.running ? 'dribble_run' : 'walk_dribble'}${far}`) as AnimName;
+      const anim: AnimName = !hasBall ? (this.running ? o.runStyle : 'walk')
+        : dribbleAnim(this.hand, true, !this.running, o.dribbleStyle);
       return this.out(anim, Math.floor(this.stride) % ANIMS[anim].frameCount, this.facing);
     }
     let anim: AnimName;
-    if (hasBall) anim = this.hand === 'far' ? 'dribble_far' : 'dribble';
+    if (hasBall) anim = dribbleAnim(this.hand, false, false, o.dribbleStyle);
     else if (input.defending) anim = input.onBall ? 'guard_on_ball' : 'defense_stance';
     else if (input.tired) anim = 'idle_knees';
     else anim = this.idleT > o.idleVariantAfter ? 'idle_hips' : 'idle';
@@ -309,7 +312,7 @@ export class PlayerAnimator {
     // run_start ends just before run frame 0; turn_run ends on it
     if (s.anim === 'run_start') this.stride = 0;
     if (s.anim === 'turn_run') this.stride = 1;
-    if (!LOCOMOTION.includes(s.anim)) this.idleT = 0;
+    if (!isLocomotion(s.anim)) this.idleT = 0;
   }
 
   private out(anim: AnimName, frame: number, face: Facing): AnimatorOutput {

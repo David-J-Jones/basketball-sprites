@@ -17,10 +17,30 @@ export type AnimName =
   | 'screen_set' | 'screen_hold' | 'screen_contact'
   | 'defense_stance' | 'defense_slide' | 'defense_hands_up' | 'guard_on_ball'
   | 'celebrate' | 'point_up' | 'frustrated'
-  | 'post_up' | 'post_hook' | 'post_fadeaway' | 'post_fade_one_leg' | 'spin_move';
+  | 'post_up' | 'post_hook' | 'post_fadeaway' | 'post_fade_one_leg' | 'spin_move'
+  | 'run_glide' | 'run_loose'
+  | `dribble_${StyledDribble}` | `dribble_${StyledDribble}_far`
+  | `dribble_run_${StyledDribble}` | `dribble_run_${StyledDribble}_far`
+  | `shoot_${StyledShot}` | `shoot_${StyledShot}_pullup` | `shoot_${StyledShot}_fade`
+  | 'layup_reverse' | 'layup_scoop' | 'layup_floater'
+  | 'dunk_reverse' | 'dunk_two_hand' | 'dunk_cradle';
 
-/** The four run cycles; each player keeps one for good (see runStyleFor). */
-export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce';
+/** The six run cycles; they all share one stride clock (see runStyleFor). */
+export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce' | 'run_glide' | 'run_loose';
+
+/** Dribble styles. 'classic' is dribble / dribble_run; the rest are dribble_<style>, dribble_run_<style>. */
+export type DribbleStyle = 'classic' | 'low' | 'high' | 'rhythm' | 'protect';
+type StyledDribble = Exclude<DribbleStyle, 'classic'>;
+
+/** Jump-shot styles. 'classic' is shoot / shoot_pullup / shoot_fade; the rest are shoot_<style>[_pullup|_fade]. */
+export type ShotStyle = 'classic' | 'quick' | 'high' | 'kick' | 'push';
+type StyledShot = Exclude<ShotStyle, 'classic'>;
+
+export type ShotAnim = 'shoot' | 'shoot_pullup' | 'shoot_fade'
+  | `shoot_${StyledShot}` | `shoot_${StyledShot}_pullup` | `shoot_${StyledShot}_fade`;
+export type LayupAnim = 'layup' | 'layup_finger_roll' | 'layup_euro' | 'layup_reverse' | 'layup_scoop' | 'layup_floater';
+export type DunkAnim = 'dunk_basic' | 'dunk_athletic' | 'dunk_hang' | 'dunk_windmill' | 'dunk_tomahawk'
+  | 'dunk_reverse' | 'dunk_two_hand' | 'dunk_cradle';
 
 /** Hair styles drawn on the sprite (bald = no hair overlay). */
 export type SpriteHairStyle =

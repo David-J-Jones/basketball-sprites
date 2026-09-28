@@ -97,7 +97,8 @@ describe('sprite data', () => {
     expect(groups.has('h4-average/core')).toBe(true);
     expect(groups.has('h4-average/run_power')).toBe(true);
     expect(groups.has('hair/afro')).toBe(true);
-    expect(SPRITES.anims.dunk_windmill.group).toBe('finish');
+    expect(SPRITES.anims.dunk_windmill.group).toBe('dunks');
+    expect(SPRITES.anims.shoot_kick_fade.group).toBe('shot_kick');
     expect(SPRITES.anims.walk.group).toBe('core');
   });
 

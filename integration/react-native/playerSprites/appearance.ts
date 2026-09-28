@@ -84,6 +84,8 @@ export function runStyleFor(playerId: number, body: BodyKey): RunStyle {
     ['run_upright', 1.5],
     ['run_power', h >= 6 || heavy ? 3 : 0.4],
     ['run_bounce', h <= 3 && !heavy ? 3 : 0.6],
+    ['run_glide', h >= 4 && !heavy ? 1.5 : 0.6],
+    ['run_loose', 1],
   ];
   let x = (Math.imul(playerId | 0, 2654435761 | 0) >>> 0) / 4294967296;   // stable per player
   x *= styles.reduce((a, [, w]) => a + w, 0);

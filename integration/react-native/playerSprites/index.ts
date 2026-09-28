@@ -13,3 +13,7 @@ export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from '
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';
 export { frameData, framesOf, headOverlay, SPRITE_DATA } from './frames';
+export {
+  STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickLayup, pickDunk,
+} from './animStyles';
+export type { AnimStyles, StyleOption } from './animStyles';
