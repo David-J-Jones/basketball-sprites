@@ -11,6 +11,7 @@ import {
 import { faceFromSeed } from './faceArt';
 import { crossoverFor, dribbleAnim, handAfter, handSwitch, hesitationFor, shotFor } from './moves';
 import { BODY_KEYS, FACIAL_HAIR, HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from './features';
+import { BODY_LOADERS } from './bodyData';
 import { framesOf, headOverlay, SPRITE_DATA as SPRITES } from './frames';
 import type { AnimName } from './types';
 
@@ -51,11 +52,12 @@ describe('sprite data', () => {
   const anims = Object.keys(SPRITES.anims) as AnimName[];
 
   it('has every body, animation, hair style and facial hair', () => {
-    expect(Object.keys(SPRITES.frames).sort()).toEqual([...BODY_KEYS].sort());
+    expect(Object.keys(BODY_LOADERS).sort()).toEqual([...BODY_KEYS].sort());
+    expect(SPRITES.headwear).toEqual(['headband', 'wide_headband', 'tied_headband']);
     expect(SPRITES.hairStyles).toEqual(HAIR_STYLES.filter((h) => h !== 'bald'));
     expect(SPRITES.facialHair).toEqual(FACIAL_HAIR.filter((h) => h !== 'none'));
     expect(anims).toEqual(expect.arrayContaining(['dunk_basic', 'run_power', 'guard_on_ball', 'celebrate']));
-    const styles = SPRITES.hairStyles.length + SPRITES.facialHair.length;
+    const styles = SPRITES.hairStyles.length + SPRITES.facialHair.length + SPRITES.headwear.length;
     for (const body of BODY_KEYS) {
       for (const anim of anims) {
         const frames = framesOf(body, anim);
@@ -63,6 +65,8 @@ describe('sprite data', () => {
         for (const f of frames) {
           expect(f.skin).not.toBeNull();
           expect(f.detail).not.toBeNull();
+          expect(f.shorts).not.toBeNull();
+          if (f.wear) expect(f.wear).toHaveLength(SPRITES.wearRegions.length);
           expect(SPRITES.overlays[f.head[0]]).toHaveLength(styles);
         }
       }
@@ -74,6 +78,7 @@ describe('sprite data', () => {
       for (const f of framesOf('h4-average', anim)) {
         expect(headOverlay(f, 'afro')[0]).not.toBeNull();
         expect(headOverlay(f, 'crew')[1]).not.toBeNull();
+        expect(headOverlay(f, 'headband')[0]).not.toBeNull();
       }
     }
   });
@@ -86,7 +91,13 @@ describe('sprite data', () => {
     for (const body of BODY_KEYS) {
       for (const anim of anims) {
         for (const f of framesOf(body, anim)) {
-          for (const r of [f.skin, f.jersey, f.trim, f.detail]) if (r) expect(r[0]).toBeLessThan(n);
+          for (const r of [f.skin, f.jersey, f.trim, f.detail, f.shorts, f.sock, f.shoe, f.sole, ...(f.wear ?? [])]) {
+            if (!r) continue;
+            const [page, , , w, h] = r;
+            expect(page).toBeLessThan(SPRITES.pages.length);
+            expect(SPRITES.pageGroups[page].startsWith(body + '/')).toBe(true);
+            expect(w * h).toBeGreaterThan(0);
+          }
         }
       }
     }

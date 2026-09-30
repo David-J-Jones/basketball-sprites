@@ -4,7 +4,7 @@ import {
   type AnimStyles,
 } from './animStyles';
 import { BODY_KEYS } from './features';
-import { SPRITE_DATA as SPRITES } from './frames';
+import { framesOf, SPRITE_DATA as SPRITES } from './frames';
 import { dribbleAnim, shotFor } from './moves';
 import type { AnimName } from './types';
 
@@ -29,7 +29,7 @@ describe('animation styles', () => {
     for (const d of STYLE_OPTIONS.dunk) names.push(d.id);
     for (const n of names) {
       expect(has(n)).toBe(true);
-      for (const body of BODY_KEYS) expect(SPRITES.frames[body][n as AnimName].length).toBe(SPRITES.anims[n as AnimName].frameCount);
+      for (const body of BODY_KEYS) expect(framesOf(body, n as AnimName).length).toBe(SPRITES.anims[n as AnimName].frameCount);
     }
   });
 

@@ -23,7 +23,9 @@ export type AnimName =
   | `dribble_run_${StyledDribble}` | `dribble_run_${StyledDribble}_far`
   | `shoot_${StyledShot}` | `shoot_${StyledShot}_pullup` | `shoot_${StyledShot}_fade`
   | 'layup_reverse' | 'layup_scoop' | 'layup_floater'
-  | 'dunk_reverse' | 'dunk_two_hand' | 'dunk_cradle';
+  | 'dunk_reverse' | 'dunk_two_hand' | 'dunk_cradle'
+  | 'dance_two_step' | 'dance_shimmy' | 'dance_robot'
+  | 'victory_flex' | 'victory_arms_up' | 'victory_bow' | 'victory_cool' | 'victory_roar';
 
 /** The six run cycles; they all share one stride clock (see runStyleFor). */
 export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce' | 'run_glide' | 'run_loose';
@@ -54,11 +56,27 @@ export type PieceRef = [piece: number, dx: number, dy: number];
 /** [page, sx, sy, w, h]: where a piece lives on its atlas page (page pixels). */
 export type PieceRect = [page: number, sx: number, sy: number, w: number, h: number];
 
+/** A piece ready to draw: its atlas rect plus where its top-left sits in the frame. */
+export type PlacedPiece = [page: number, sx: number, sy: number, w: number, h: number, dx: number, dy: number];
+
+/** Headbands, drawn over the hair (see Outfit). */
+export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
+
+/** Skin areas an outfit can cover, in the order of FrameData.wear. */
+export type WearRegion =
+  | 'sleeveShort' | 'sleeveLong' | 'armSleeveNear' | 'armSleeveFar' | 'wristband' | 'shortsLong' | 'sockTall';
+
 export type FrameData = {
-  skin: PieceRef | null;
-  jersey: PieceRef | null;
-  trim: PieceRef | null;
-  detail: PieceRef | null;
+  skin: PlacedPiece | null;
+  jersey: PlacedPiece | null;
+  trim: PlacedPiece | null;
+  detail: PlacedPiece | null;
+  shorts: PlacedPiece | null;
+  sock: PlacedPiece | null;
+  shoe: PlacedPiece | null;
+  sole: PlacedPiece | null;
+  /** one mask per WearRegion (drawn over the skin only when the outfit covers it), or null */
+  wear: (PlacedPiece | null)[] | null;
   /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
   head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
@@ -80,7 +98,15 @@ export type CompactFrame = [
   skin: PieceRef | null, jersey: PieceRef | null, trim: PieceRef | null, detail: PieceRef | null,
   head: [number, number, number], nearHand: [number, number], farHand: [number, number],
   ball: [number, number] | null, ballDepth: number | null, lift: number,
+  shorts: PieceRef | null, sock: PieceRef | null, shoe: PieceRef | null, sole: PieceRef | null,
+  wear: (PieceRef | null)[] | null,
 ];
+
+/** One body's own pieces and frames (bodies/<body>.json, loaded on first use). */
+export type BodyData = {
+  pieces: PieceRect[];
+  frames: Record<AnimName, CompactFrame[]>;
+};
 
 export type AnimInfo = {
   fps: number;
@@ -106,10 +132,15 @@ export type SpriteData = {
   pageGroups: string[];
   /** frame pixels per page pixel (1 for detail pages, >1 for tint-mask pages) */
   pageScale: number[];
+  /** shared pieces (hair, facial hair, headwear); body pieces are in BodyData */
   pieces: PieceRect[];
-  /** hair styles, then facial-hair types: the column order of each overlay set */
+  /** hair styles, then facial-hair types, then headwear: the column order of each overlay set */
   hairStyles: SpriteHairStyle[];
   facialHair: SpriteFacialHair[];
+  headwear: HeadwearStyle[];
+  wearRegions: WearRegion[];
+  /** league colors for shorts, socks, shoes and soles */
+  defaultOutfit: { shorts: string; sock: string; shoe: string; sole: string };
   /** unique [mask, detail] overlay pieces, positioned relative to the head */
   overlayPairs: [PieceRef | null, PieceRef | null][];
   /** overlay sets: one overlayPairs index per style (-1 = nothing drawn) */
@@ -118,7 +149,6 @@ export type SpriteData = {
   /** idle height, sole to top of the head, per body */
   standingHeight: Record<BodyKey, number>;
   anims: Record<AnimName, AnimInfo>;
-  frames: Record<BodyKey, Record<AnimName, CompactFrame[]>>;
 };
 
 /** What a player looks like on court. Derive it with lookFromFace() / playerLook(). */
@@ -131,3 +161,24 @@ export type PlayerLook = {
 };
 
 export type JerseyColors = { jersey: string; trim: string };
+
+/**
+ * Park-mode cosmetics. Everything is optional; left out, a player wears the
+ * league look (tank top, black shorts, white socks, grey shoes). The shirt's
+ * colors are the `colors` (jersey / trim) passed to PlayerSprite.
+ */
+export type Outfit = {
+  shirt?: {
+    /** 'none' = tank top */
+    sleeves?: 'none' | 'short' | 'long';
+    /** defaults to the shirt color; a different color reads as a compression shirt under the top */
+    sleeveColor?: string;
+  };
+  shorts?: { color?: string; length?: 'standard' | 'long' };
+  socks?: { color?: string; tall?: boolean };
+  shoes?: { color?: string; sole?: string };
+  headband?: { style: HeadwearStyle; color: string } | null;
+  wristbands?: { color: string } | null;
+  /** shooting sleeve on one arm (stays on that arm whichever way the player faces) */
+  armSleeve?: { color: string; arm: 'right' | 'left' } | null;
+};
