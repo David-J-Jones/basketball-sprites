@@ -12,7 +12,9 @@ export type { BallHand, HandSwitchMove } from './moves';
 export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from './animController';
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';
-export { frameData, framesOf, headOverlay, SPRITE_DATA } from './frames';
+export { frameData, framesOf, headOverlay, loadBody, SPRITE_DATA } from './frames';
+export { outfitTints, LEAGUE_OUTFIT, COSMETICS } from './outfit';
+export type { OutfitTints, CosmeticOption } from './outfit';
 export {
   STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickLayup, pickDunk,
 } from './animStyles';

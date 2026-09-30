@@ -27,8 +27,11 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
   The head is the same size on every body, so tall players look lanky and heavy players carry a gut. The game still scales each sprite by the player's real height. Cutoffs are in `palettes.json`.
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
 - **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
-- **Always the same:** black shorts, grey shoes.
-- **94 animations:** the signature styles above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **League look:** tank top in team colors, black shorts, white socks, grey shoes.
+- **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression), shorts (any color, standard or long), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
+- **Celebrations:** 3 dances and 5 victory poses.
+- **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
+- **102 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -60,7 +63,7 @@ Three teams are placeholders because your list didn't cover them: **Cleveland Pi
 
 ## Files
 
-Everything the app needs is in **`integration/react-native/playerSprites/`**.
+Everything the app needs is in **`integration/react-native/playerSprites/`**, plus **`integration/react-native/ballTrails/`** for the ball effects.
 
 | File | What it is |
 |---|---|
@@ -72,8 +75,12 @@ Everything the app needs is in **`integration/react-native/playerSprites/`**.
 | `PlayerSprite.tsx` | `<PlayerSprite>` plus `frameAt`, `scaleForHeight`, `frameToScreen`. |
 | `moves.ts` | `crossoverFor(dy)`, `handAfter()`, `dribbleAnim(hand, moving)`. |
 | `animController.ts` | `PlayerAnimator`: picks animation, frame and facing from velocity, with smooth turns and transitions (see below). |
-| `faceArt.test.ts`, `appearance.test.ts` | Jest tests (see below). |
-| `spriteData.*`, `atlas/*.png` | Generated. Don't edit by hand. |
+| `animStyles.ts` | Signature run / dribble / shot styles and layup / dunk bags (`STYLE_OPTIONS`, `defaultAnimStyles`). |
+| `outfit.ts` | Park-mode outfits: `outfitTints()`, `COSMETICS` (lists for a locker screen). |
+| `frames.ts` | `frameData`, `framesOf`, `headOverlay`, `loadBody`: read the compact frame data. |
+| `*.test.ts` | Jest tests (see below). |
+| `spriteData.*`, `bodyData.ts`, `bodies/*.json`, `atlas/*.png` | Generated. Don't edit by hand. |
+| `ballTrails/` | `<BallTrail>`, `trailFrame`, `TRAILS`; one PNG strip per trail (generated). |
 
 ## How a face is generated
 
@@ -148,6 +155,87 @@ animator.play(pickDunk(styles), basketSide);
 ```
 
 Every style keeps its classic version's frame count and event frames, so sim timing doesn't depend on the style. Examples: every jumper releases on frame 4, every running dribble bounces on frames 3 and 9, and every run is 12 frames on the shared stride clock. Layups and dunks list their own events in the table below. The one exception is `layup_floater`, which releases early, on frame 3. Walking with the ball uses `walk_dribble` for every style. Hand-switch moves (crossovers etc.) are drawn once and hand back to whatever dribble style the player uses.
+
+## Park mode: outfits, celebrations, ball trails
+
+### Outfits
+
+Pass an `outfit` to `<PlayerSprite>`; anything left out keeps the league look. The shirt's colors are still `colors` (`jersey` / `trim`).
+
+```tsx
+const outfit: Outfit = {
+  shirt: { sleeves: 'long', sleeveColor: '#26262c' },   // 'none' (tank) | 'short' (tee) | 'long'; other color = compression shirt
+  shorts: { color: '#2c5fd6', length: 'long' },         // 'standard' | 'long'
+  socks: { color: '#f2f2f4', tall: true },              // tall = retro tube socks
+  shoes: { color: '#26262c', sole: '#f2f2f4' },
+  headband: { style: 'tied_headband', color: '#d62b2b' }, // 'headband' | 'wide_headband' | 'tied_headband'
+  wristbands: { color: '#f2c230' },
+  armSleeve: { color: '#f2f2f4', arm: 'right' },        // stays on that arm when the player turns around
+};
+<PlayerSprite look={look} colors={{ jersey: '#f2f2f4', trim: '#2c5fd6' }} outfit={outfit} ... />
+```
+
+Every color is a tint, so any hex works; `COSMETICS` has option lists and a starter palette for a locker screen. How it works:
+- **Shorts, socks, shoes and soles** are tint layers on every frame, like the jersey. The league defaults (`SPRITES.defaultOutfit`) reproduce the old fixed colors.
+- **Sleeves, long shorts, tall socks, wristbands and the shooting sleeve** are small masks over skin areas (`FrameData.wear`, in `SPRITES.wearRegions` order), drawn only when worn. So they cost nothing to draw for players who don't wear them.
+- **Headbands** are head overlays like hair, drawn on top of the hair. They're shared by every body and cost almost no memory.
+- `outfitTints(outfit, shirtColor, flip)` resolves an outfit to the layer tints if you need them outside `PlayerSprite`.
+
+### Celebrations
+
+| Animation | Frames | FPS | Loop | Notes |
+|---|---|---|---|---|
+| `dance_two_step` | 8 | 8 | yes | Side-to-side two-step, arms swinging |
+| `dance_shimmy` | 8 | 10 | yes | Fists at the chest, shoulder shimmy, knee bounce |
+| `dance_robot` | 8 | 8 | yes | Stiff, snapping arm positions |
+| `victory_flex` | 5 | 8 | no | Biceps flex; `hold: 4` |
+| `victory_arms_up` | 5 | 8 | no | Arms up in a V; `hold: 4` |
+| `victory_bow` | 5 | 6 | no | Bow to the crowd; `hold: 4` |
+| `victory_cool` | 4 | 7 | no | Arms folded, leaning back; `hold: 3` |
+| `victory_roar` | 5 | 8 | no | Wide stance, fists down, roar; `hold: 4` |
+
+Victory poses end on their pose: play them with `animator.hold('victory_flex')` (or `hold('dance_robot')` for a dance) and `release()` when the celebration is over. They live in their own `celebrations` page group (~2 MB per body), loaded only when one plays.
+
+### Ball trails
+
+```tsx
+import { BallTrail } from './ballTrails';
+
+// while the ball is in the air, draw this instead of the ball (the ball is part of the image)
+<BallTrail trail="fire" x={ballScreenX} y={ballScreenY} vx={ballScreenVx} vy={ballScreenVy}
+           size={ballDiameterPx} seconds={secondsInAir} />
+```
+
+Each trail is an 8-frame loop with the ball spinning at the front and the effect streaming out behind. `BallTrail` rotates it to the velocity, around the ball's centre. Trails: `fire`, `laser`, `bubbles`, `money`, `lightning`, `rainbow`, `ice`, `smoke`, `stars`, `confetti`, `afterimage`, plus `none` (just the spinning ball). `TRAILS[id].label` is the display name. Each strip is one small PNG (~0.1 MB decoded), required only when that trail is used. Redraw them with `python3 tools/generate_trails.py`.
+
+## App icon
+
+`integration/react-native/appIcon/` has the app icon, drawn from the same sprite: a player with an afro and a headband throwing down a one-hand dunk, with a sunburst behind the rim. Copy the files into the app's `assets/` and point `app.json` at them:
+
+```json
+{
+  "expo": {
+    "icon": "./assets/icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-foreground.png",
+        "backgroundImage": "./assets/adaptive-background.png"
+      }
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "splash": { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#18143a" }
+  }
+}
+```
+
+| File | Size | Use |
+|---|---|---|
+| `icon.png` | 1024 × 1024, opaque | iOS and default icon (the OS rounds the corners) |
+| `adaptive-foreground.png` / `adaptive-background.png` | 1024 × 1024 | Android adaptive icon; the player and hoop sit inside the safe zone |
+| `splash-icon.png` | 1024 × 1024, transparent | Splash screen |
+| `favicon.png` | 48 × 48 | Web |
+
+`previews/app_icon.png` shows it square, rounded, in Android's circle mask, and at home-screen sizes. Colors and the pose are at the top of `tools/generate_app_icon.py`; rerun it to redraw.
 
 ## Directions: up/down, near/far
 
@@ -263,14 +351,14 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 
 ## Memory
 
-Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail layer, then facial hair and hair. There are up to 8 small `View`+`Image` pairs per player.
+Each player is drawn from tinted layers: skin, any worn wear masks, jersey, trim, shorts, socks, shoes, soles, a crisp detail layer, then facial hair, hair and headband. That's 9 small `View`+`Image` pairs per player in the league look, and up to 20 with a full park outfit.
 
 - **Masks** (the tinted parts) are stored at 2× and **detail** at 3×. A mask's soft edge always sits under the crisp outline, so it isn't visible.
 - **Pages are split by body *and* animation group**, and hair / facial hair by style. React Native only decodes an image once something from it is drawn, so memory follows what's on court:
 
   | Page group (per body, mid-size body) | MB | Loaded when |
   |---|---|---|
-  | `core`: idle, walk, run, dribbles, turns, defense, guarding | ~7.4 | always |
+  | `core`: idle, walk, run, dribbles, turns, defense, guarding | ~8.1 | always |
   | `run_upright` / `run_power` / `run_bounce` / `run_glide` / `run_loose` | ~0.8 each | a player with that run style runs |
   | `dribble_<style>` | ~2.7 each | a player with that dribble style has the ball |
   | `shot_<style>` | ~1.2 each | a player with that shot style shoots |
@@ -278,13 +366,14 @@ Each player is drawn from tinted layers: skin, jersey, trim, a crisp detail laye
   | `moves`: crossovers, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
   | `finish`: classic jumpers, block, rebound | ~3.1 | one of them plays |
   | `extras`: celebrate, point_up, frustrated | ~0.6 | one of them plays |
-  | `post`: post_up, hook, fadeaways, spin | ~3.0 | one of them plays |
-  | `hair/<style>`, `facial/<type>` (shared by all bodies) | 0.1–13 each | a player with that style is on court (locs ≈ 13, long beard ≈ 7, afro ≈ 7, most < 3) |
+  | `post`: post_up, hook, fadeaways, spin | ~3.4 | one of them plays |
+  | `celebrations`: dances, victory poses | ~2.1 | one of them plays |
+  | `hair/<style>`, `facial/<type>`, `headwear/<style>` (shared by all bodies) | 0.1–15 each | a player with that style is on court (locs ≈ 15, long beard ≈ 8, afro ≈ 8, most < 3.5, headbands < 0.3) |
 
-  A typical game with ~7 distinct bodies starts around 60 MB and grows toward ~120 MB as moves and finishes get used.
+  A typical game with ~7 distinct bodies starts around 65 MB and grows toward ~130 MB as moves and finishes get used. The outfit layers added about 10% to each group.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
-- **Data size:** `spriteData.json` is about 5.5 MB, bundled into the JS (the atlas PNGs are ~15 MB on disk, 1,433 pages). If startup parse time becomes a problem, the frames can be split into one JSON per body and loaded on demand. Frames are stored as compact arrays and each hair / beard placement is stored once. Read frames through `frameData(body, anim, i)` / `framesOf(body, anim)`, and hair through `headOverlay(frame, style)`, all from `frames.ts`.
-- **Build:** the generator uses every CPU core. All 35 bodies take about 2 ¼ minutes on 4 cores.
+- **Data size:** the frame data is split. `spriteData.json` (~1.2 MB) holds what every body shares, and `bodies/<body>.json` (~0.35 MB each) holds one body's frames. Body files are required lazily, so only bodies actually drawn are parsed. Frames are stored as compact arrays and each hair / beard placement is stored once. Read them through `frameData(body, anim, i)` / `framesOf(body, anim)` and `headOverlay(frame, style)` from `frames.ts`. These return pieces ready to draw (`[page, sx, sy, w, h, dx, dy]`). The atlas PNGs are ~17 MB on disk, 1,509 pages.
+- **Build:** the generator uses every CPU core. All 35 bodies take about 4 minutes on 4 cores.
 
 ## Tests
 
@@ -303,17 +392,25 @@ The tests cover:
 - the sprite data covers every body × animation × hair × facial hair;
 - crossovers move the ball across the body, and the direction helpers pick the right animation;
 - `PlayerAnimator`: walk ↔ run keeps the stride, backpedal and defensive slides, idle variety, hand switches after every hand-switch move; jittery velocity never flips the sprite, real direction changes turn at `flipAt`, start/stop transitions play, the stride survives run ↔ dribble_run, and the run never skips a frame at 60 fps;
-- jersey clashes switch the away team to white.
+- jersey clashes switch the away team to white;
+- signature styles resolve to real animations with the classic version's timing;
+- outfits cover the right skin areas, a shooting sleeve stays on its arm through a flip, and every frame has the outfit layers and headbands;
+- there are 3 dances and 5 victory poses, each ending on its hold frame;
+- ball trails have labels, loop at their fps, and keep the ball centre at the front of the strip.
 
 ## Regenerating the sprite art
 
 ```bash
 pip install pillow
-python3 tools/generate_sprites.py      # ~30 s
+python3 tools/generate_sprites.py      # ~4 min
+python3 tools/generate_trails.py       # ball trails, a few seconds
+python3 tools/generate_app_icon.py     # app icon, a second
 ```
 
-This rewrites the atlas, `spriteData.*`, and the sprite previews in `previews/`.
+The first rewrites the atlas, `spriteData.*`, `bodyData.ts`, `bodies/`, and the sprite previews in `previews/` (including `outfits.png` and `headbands.png`). The second rewrites `ballTrails/` and `previews/trails.png` / `previews/trails/*.gif`.
 - **Poses:** joint-angle tables such as `dunk_hang_frames()`, where 0° points down, 90° forward and 180° up.
 - **Bodies:** `BASE_BODY` × `HEIGHT_CLASSES` / `WEIGHT_CLASSES`.
-- **Side-view hair and facial hair:** pixel templates in `HAIR_STYLES` / `FACIAL_HAIR`.
+- **Side-view hair and facial hair:** pixel templates in `HAIR_STYLES` / `FACIAL_HAIR`; headbands in `HEADWEAR`.
+- **Outfit areas:** skin tags carry wear regions (`skin0@sa.sb`, see `WEAR_REGIONS`) set in `draw_arm` / `draw_leg`.
+- **Trails:** one `fx_<name>` function per effect in `tools/generate_trails.py`, drawn with a small particle helper that loops seamlessly.
 - **Headshot art:** lives in `faceArt.ts`. There's nothing to regenerate there.

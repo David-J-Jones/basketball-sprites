@@ -61,16 +61,6 @@ BALL_CELL = 11
 FIXED = {
     "outline": (28, 22, 32, 255),
     "eye": (22, 16, 24, 255),
-    "shorts0": (62, 62, 70, 255),
-    "shorts1": (44, 44, 50, 255),
-    "shorts2": (36, 36, 42, 255),
-    "sock0": (242, 242, 246, 255),
-    "sock1": (196, 198, 208, 255),
-    "shoe0": (170, 172, 180, 255),
-    "shoe1": (128, 130, 140, 255),
-    "sole": (72, 72, 82, 255),
-    "band0": (246, 246, 246, 255),
-    "band1": (196, 198, 206, 255),
     "smear": (255, 255, 255, 150),
 }
 TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
@@ -88,8 +78,43 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "fh0": ("facial", None, 255),
     "fh1": ("facial", (0, 0, 0, 95), 255),
     "stub": ("facial", None, 105),       # stubble: see-through hair color
+    # outfit: always tinted, so park-mode cosmetics can recolor them. The
+    # league defaults (DEFAULT_OUTFIT) reproduce black shorts, white socks
+    # and grey shoes.
+    "shorts0": ("shorts", None, 255),
+    "shorts1": ("shorts", (0, 0, 0, 74), 255),
+    "shorts2": ("shorts", (0, 0, 0, 107), 255),
+    "sock0": ("sock", None, 255),
+    "sock1": ("sock", (16, 18, 44, 58), 255),
+    "shoe0": ("shoe", None, 255),
+    "shoe1": ("shoe", (0, 0, 0, 64), 255),
+    "sole": ("sole", None, 255),
+    "hw0": ("headwear", None, 255),
+    "hw1": ("headwear", (0, 0, 0, 80), 255),
 }
-BODY_SLOTS = ["skin", "jersey", "trim"]
+BODY_SLOTS = ["skin", "jersey", "trim", "shorts", "sock", "shoe", "sole"]
+DEFAULT_OUTFIT = {"shorts": "#3E3E46", "sock": "#F2F2F6", "shoe": "#AAACB4", "sole": "#484852"}
+
+# Wear regions: skin areas an outfit can cover. A skin tag carries them as a
+# suffix ("skin0@sa.sb"); each region becomes an extra mask the app draws
+# over the skin, tinted with the item's color, only when it's worn.
+WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh"]
+WEAR_NAMES = {"sa": "sleeveShort", "sb": "sleeveLong", "sn": "armSleeveNear", "sf": "armSleeveFar",
+              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall"}
+_SPLIT = {}
+
+
+def split_tag(tag):
+    """'skin0@sa.sb' -> ('skin0', ('sa', 'sb'))."""
+    r = _SPLIT.get(tag)
+    if r is None:
+        base, _, regs = tag.partition("@")
+        r = _SPLIT[tag] = (base, tuple(regs.split(".")) if regs else ())
+    return r
+
+
+def wear(tag, *regions):
+    return tag + "@" + ".".join(regions) if regions else tag
 WHITE = (255, 255, 255, 255)
 
 # ---------------------------------------------------------------- builds
@@ -451,7 +476,28 @@ FACIAL_HAIR = {
 }
 
 
-def blit_head(layer, origin, style=None, facial=None):
+def _headwear(rows, tails=()):
+    """Headbands sit across the forehead just above the eyes, from one pixel
+    behind the skull (so they wrap over hair) to the brow."""
+    skull = _skull_pixels()
+    m = {}
+    for r in rows:
+        for c in range(1, HEAD_GRID_W):
+            if (c, r) in skull or c == 1:
+                m[(c, r)] = "hw1" if c <= 4 else "hw0"
+    for c, r in tails:
+        m[(c, r)] = "hw1" if (c + r) % 2 else "hw0"
+    return m
+
+
+HEADWEAR = {
+    "headband": _headwear([8]),
+    "wide_headband": _headwear([7, 8]),
+    "tied_headband": _headwear([8], tails=[(0, 8), (0, 9), (1, 9), (0, 10), (0, 11), (1, 12)]),
+}
+
+
+def blit_head(layer, origin, style=None, facial=None, headwear=None):
     ox, oy = origin
     for r, row in enumerate(SKULL):
         for c, ch in enumerate(row):
@@ -462,6 +508,9 @@ def blit_head(layer, origin, style=None, facial=None):
             layer.px[(ox + c, oy + r)] = tag
     if style:
         for (c, r), tag in HAIR_STYLES[style].items():
+            layer.px[(ox + c, oy + r)] = tag
+    if headwear:
+        for (c, r), tag in HEADWEAR[headwear].items():
             layer.px[(ox + c, oy + r)] = tag
 
 # ---------------------------------------------------------------- ball (separate sheet)
@@ -517,13 +566,14 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
     def shin_fn(t, ox, oy):
         if t > 0.62:
             return sock_s if lit(ox, oy) < -0.4 else sock
-        return skin_s if lit(ox, oy) < -0.3 else skin
+        tag = skin_s if lit(ox, oy) < -0.3 else skin
+        return wear(tag, "sh") if t > 0.18 else tag      # tall socks
     layer.capsule(knee, ankle, B["shin_r"], shin_fn)
 
     def thigh_fn(t, ox, oy):
         if t < 0.55:
             return cloth_s if lit(ox, oy) < -0.2 else cloth
-        return skin_s if lit(ox, oy) < -0.3 else skin
+        return wear(skin_s if lit(ox, oy) < -0.3 else skin, "tl")     # long shorts
     layer.capsule(hip, knee, B["thigh_r"], thigh_fn)
     # shorts leg opening is a touch wider than the thigh
     layer.capsule(hip, add(hip, vec(thigh_deg, B["thigh"] * 0.5)), B["thigh_r"] + 0.6,
@@ -556,8 +606,17 @@ def arm_points(shoulder, upper_deg, fore_deg, reach=1.0):
 def draw_arm(layer, shoulder, upper_deg, fore_deg, far, reach=1.0):
     skin, skin_s = ("skin1", "skin2") if far else ("skin0", "skin1")
     elbow, hand = arm_points(shoulder, upper_deg, fore_deg, reach)
-    layer.capsule(shoulder, elbow, B["arm_r"], shaded(skin, skin_s, 0.3))
-    layer.capsule(elbow, hand, B["arm_r"] - 0.15, shaded(skin, skin_s, 0.3))
+    near = ("sf",) if far else ("sn",)          # one-arm shooting sleeve
+
+    def upper_fn(t, ox, oy):
+        tag = skin_s if lit(ox, oy) < -0.3 else skin
+        return wear(tag, "sa") if t < 0.5 else wear(tag, "sb", *near)
+
+    def fore_fn(t, ox, oy):
+        tag = skin_s if lit(ox, oy) < -0.3 else skin
+        return wear(tag, "sb", *near, "wr") if t > 0.72 else wear(tag, "sb", *near)
+    layer.capsule(shoulder, elbow, B["arm_r"], upper_fn)
+    layer.capsule(elbow, hand, B["arm_r"] - 0.15, fore_fn)
     layer.capsule(hand, hand, 1.7, shaded(skin, skin_s, 0.5))
     return hand
 
@@ -612,10 +671,10 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     hy = int(round(neck[1])) - HEAD_ANCHOR[1] + pose.get("head_dy", 0)
     neck_r = B["neck_r"]
 
-    def make_head(st, fac):
+    def make_head(st, fac, hw=None):
         h = Layer()
         h.capsule(add(neck, (tdir[0] * -1.5, tdir[1] * -1.5)), neck, neck_r, shaded("skin0", "skin1", 0.1))
-        blit_head(h, (hx, hy), st, fac)
+        blit_head(h, (hx, hy), st, fac, hw)
         return h
     head = make_head(style, facial)
 
@@ -735,7 +794,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "clipped": clipped,
         "head_origin": (hx, hy + dy),
         # same pose with a different hair style / facial hair, without redrawing the body
-        "restyle": lambda st, fac: compose(make_head(st, fac))[0],
+        "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
     }
     return grid, info
 
@@ -1835,6 +1894,105 @@ def dunk_cradle_frames():
     ]
 
 
+
+# ---------------------------------------------------------------- celebrations (park mode)
+# Dances loop; victory poses play once and end on the pose (events.hold is
+# the frame to freeze on).
+STAND_L = ((8, -4, 0), (-6, -2, 0))
+
+
+def dance_two_step_frames():
+    # side-to-side two-step with the arms swinging along
+    keys = [
+        P((6, -4, 0), (-4, -6, 4), (24, 100), (-14, 40), lean=4, bob=1),
+        P((26, 2, -6), (-8, -12, 8), (48, 120), (-26, 30), lean=0, dx=1, head_dx=1),
+        P((6, -4, 0), (-4, -6, 4), (24, 100), (-14, 40), lean=4, bob=1),
+        P((-8, -12, 8), (26, 2, -6), (-26, 30), (48, 120), lean=0, dx=-1, head_dx=-1),
+    ]
+    return resample(keys, 8)
+
+
+def dance_shimmy_frames():
+    # fists at the chest, shoulders shimmying, knees bouncing
+    keys = [
+        P((14, -6, 0), (-6, -10, 4), (40, 150), (54, 140), lean=6, bob=1, shrug=1, dx=1),
+        P((10, -8, 0), (-4, -12, 4), (48, 138), (44, 152), lean=2, bob=2, shrug=-1),
+        P((14, -6, 0), (-6, -10, 4), (40, 150), (54, 140), lean=6, bob=1, shrug=1, dx=-1),
+        P((10, -8, 0), (-4, -12, 4), (48, 138), (44, 152), lean=2, bob=2, shrug=-1),
+    ]
+    return resample(keys, 8)
+
+
+def dance_robot_frames():
+    # stiff, snapping arm positions, two frames each
+    legs = dict(near_leg=(4, 0, 0), far_leg=(-4, 0, 0))
+    poses = [
+        P(**dict(legs, near_arm=(90, 90), far_arm=(-10, -10)), lean=0, head_dx=1),
+        P(**dict(legs, near_arm=(0, 90), far_arm=(90, 90)), lean=0, head_dx=-1),
+        P(**dict(legs, near_arm=(90, 0), far_arm=(0, 90)), lean=0, dx=1),
+        P(**dict(legs, near_arm=(40, 130), far_arm=(90, 0)), lean=0, dx=-1, bob=1),
+    ]
+    return [dict(p) for p in poses for _ in range(2)]
+
+
+def victory_flex_frames():
+    # double-biceps flex
+    return [
+        dict(IDLE_POSE),
+        P(*STAND_L, (40, 90), (60, 120), lean=0),
+        P((14, -2, 0), (-12, -4, 0), (56, 108), (92, 178), lean=-4, shrug=1),
+        P((16, -2, 0), (-14, -4, 0), (60, 116), (94, 184), lean=-6, shrug=2, bob=1),
+        P((16, -2, 0), (-14, -4, 0), (60, 114), (94, 182), lean=-6, shrug=2),
+    ]
+
+
+def victory_arms_up_frames():
+    # both arms raised in a V, chest out
+    up = dict(arms_behind_head=True, reach=1.3, shrug=2)
+    return [
+        dict(IDLE_POSE),
+        P(*STAND_L, (100, 150), (110, 160), lean=0),
+        P((12, -2, 0), (-10, -4, 0), (146, 160), (190, 196), lean=-6, head_dy=-1, **up),
+        P((12, -2, 0), (-10, -4, 0), (150, 164), (196, 202), lean=-8, head_dy=-1, **up),
+        P((12, -2, 0), (-10, -4, 0), (148, 162), (194, 200), lean=-8, head_dy=-1, **up),
+    ]
+
+
+def victory_bow_frames():
+    # a slow bow to the crowd, one arm across the waist, one behind the back
+    return [
+        dict(IDLE_POSE),
+        P(*STAND_L, (30, 90), (-20, -30), lean=10),
+        P((10, -6, 0), (-6, -4, 0), (40, 110), (-40, -70), lean=26),
+        P((12, -8, 0), (-6, -6, 0), (50, 120), (-50, -80), lean=42),
+        P((12, -8, 0), (-6, -6, 0), (50, 120), (-50, -80), lean=44),
+    ]
+
+
+def victory_cool_frames():
+    # arms folded, leaning back, chin up
+    return [
+        dict(IDLE_POSE),
+        P(*STAND_L, (40, 180), (50, 190), lean=0),
+        P((10, -2, 0), (-12, -6, 0), (62, 262), (72, 272), lean=-4, head_dy=-1),
+        P((10, -2, 0), (-12, -6, 0), (62, 262), (72, 272), lean=-6, head_dy=-1),
+    ]
+
+
+def victory_roar_frames():
+    # wide stance, fists flexed down, head forward in a roar
+    return [
+        dict(IDLE_POSE),
+        P((22, -8, 0), (-18, -24, 8), (30, 90), (40, 100), lean=8, bob=1),
+        P((32, -12, 0), (-28, -40, 12), (40, 10), (50, 20), lean=14, bob=3, shrug=2, head_dx=1),
+        P((34, -12, 0), (-30, -42, 12), (46, 6), (56, 16), lean=16, bob=3, shrug=3, head_dx=1),
+        P((34, -12, 0), (-30, -42, 12), (44, 8), (54, 18), lean=16, bob=3, shrug=2, head_dx=1),
+    ]
+
+
+CELEBRATIONS = ["dance_two_step", "dance_shimmy", "dance_robot", "victory_flex", "victory_arms_up",
+                "victory_bow", "victory_cool", "victory_roar"]
+
 DRIBBLE_STYLES = ["low", "high", "rhythm", "protect"]
 SHOT_STYLES = ["quick", "high", "kick", "push"]
 SIGNATURE_ANIMS = [
@@ -1863,6 +2021,14 @@ for _s in SHOT_STYLES:
         ("shoot_%s_fade" % _s, (lambda b: lambda: shoot_fade_frames(b()))(_base), _fps, False, _ev),
     ]
 SIGNATURE_ANIMS += [
+    ("dance_two_step", dance_two_step_frames, 8, True, {}),
+    ("dance_shimmy", dance_shimmy_frames, 10, True, {}),
+    ("dance_robot", dance_robot_frames, 8, True, {}),
+    ("victory_flex", victory_flex_frames, 8, False, {"hold": 4}),
+    ("victory_arms_up", victory_arms_up_frames, 8, False, {"hold": 4}),
+    ("victory_bow", victory_bow_frames, 6, False, {"hold": 4}),
+    ("victory_cool", victory_cool_frames, 7, False, {"hold": 3}),
+    ("victory_roar", victory_roar_frames, 8, False, {"hold": 4}),
     ("layup_reverse", layup_reverse_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
     ("layup_scoop", layup_scoop_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
     ("layup_floater", layup_floater_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 3}),
@@ -1892,6 +2058,7 @@ for _n in ("dunk_basic", "dunk_athletic", "dunk_hang", "dunk_windmill", "dunk_to
            "dunk_two_hand", "dunk_cradle"):
     ANIM_GROUP[_n] = "dunks"
 ANIM_GROUP.update({"run_glide": "run_glide", "run_loose": "run_loose"})
+ANIM_GROUP.update({n: "celebrations" for n in CELEBRATIONS})
 for _s in DRIBBLE_STYLES:
     for _n in ("dribble_%s", "dribble_%s_far", "dribble_run_%s", "dribble_run_%s_far"):
         ANIM_GROUP[_n % _s] = "dribble_" + _s
@@ -1992,8 +2159,12 @@ def to_mask_res(mask, covered):
 
 def body_layers(grid):
     masks = {s: {} for s in BODY_SLOTS}
+    regions = {r: {} for r in WEAR_REGIONS}
     detail = {}
     for p, tag in grid.items():
+        tag, regs = split_tag(tag)
+        for r in regs:
+            regions[r][p] = WHITE
         if tag in TINTED:
             slot, over, alpha = TINTED[tag]
             masks[slot][p] = (255, 255, 255, alpha)
@@ -2008,6 +2179,8 @@ def body_layers(grid):
         for later in BODY_SLOTS[i + 1:]:
             covered |= set(masks[later])
         out[slot] = to_mask_res(masks[slot], covered)
+    for r in WEAR_REGIONS:
+        out[r] = to_mask_res(regions[r], opaque)
     return out, detail
 
 
@@ -2018,6 +2191,7 @@ def overlay_layers(bald, styled, slot, where):
     for p, tag in styled.items():
         if bald.get(p) == tag:
             continue
+        tag = split_tag(tag)[0]
         if tag in TINTED and TINTED[tag][0] == slot:
             _, over, alpha = TINTED[tag]
             mask[p] = (255, 255, 255, alpha)
@@ -2126,15 +2300,16 @@ def tinted(img, rgb):
 
 
 class Compositor:
-    def __init__(self, data, pages):
+    def __init__(self, data, bodies, pages):
         self.data = data
+        self.bodies = bodies
         self.pages = pages
         self.cache = {}
 
-    def piece(self, idx, tint):
-        key = (idx, tint)
+    def piece(self, table, idx, tint):
+        key = (id(table), idx, tint)
         if key not in self.cache:
-            p, sx, sy, w, h = self.data["pieces"][idx]
+            p, sx, sy, w, h = table[idx]
             img = self.pages[p].crop((sx, sy, sx + w, sy + h))
             k = self.data["pageScale"][p]
             if k != 1:
@@ -2143,27 +2318,42 @@ class Compositor:
         return self.cache[key]
 
     def frame(self, body, anim, i, look, colors):
-        f = frame_obj(self.data, body, anim, i)
+        """look: skin, hair, facial, hairColor, and optionally outfit (see
+        OUTFIT_KEYS: shorts/sock/shoe/sole colors, wear {region: color},
+        headwear (kind, color))."""
+        f = frame_obj(self.bodies, body, anim, i)
+        own = self.bodies[body]["pieces"]
+        shared = self.data["pieces"]
+        out = dict(DEFAULT_OUTFIT, **(look.get("outfit") or {}))
         canvas = Image.new("RGBA", (self.data["frameWidth"], self.data["frameHeight"]), (0, 0, 0, 0))
-        layers = [(f["skin"], look["skin"]), (f["jersey"], colors["jersey"]),
-                  (f["trim"], colors["trim"]), (f["detail"], None)]
+        layers = [(f["skin"], look["skin"])]
+        worn = out.get("wear") or {}
+        for ref, name in zip(f["wear"] or [], self.data["wearRegions"]):
+            if name in worn:
+                layers.append((ref, worn[name]))
+        layers += [(f["jersey"], colors["jersey"]), (f["trim"], colors["trim"])]
+        layers += [(f[k], out[k]) for k in ("shorts", "sock", "shoe", "sole")]
+        layers.append((f["detail"], None))
         oset, hx, hy = f["head"]
         ids = self.data["overlays"][oset]
-        styles = self.data["hairStyles"] + self.data["facialHair"]
+        styles = self.data["hairStyles"] + self.data["facialHair"] + self.data["headwear"]
         head_layers = []
-        for key in ("facial", "hair"):
-            if look.get(key):
-                pid = ids[styles.index(look[key])]
+        wanted = [(look.get("facial"), look.get("hairColor")), (look.get("hair"), look.get("hairColor"))]
+        if out.get("headwear"):
+            wanted.append(tuple(out["headwear"]))
+        for style, tint in wanted:
+            if style:
+                pid = ids[styles.index(style)]
                 if pid >= 0:
                     m, d = self.data["overlayPairs"][pid]
-                    head_layers += [(m, look["hairColor"]), (d, None)]
+                    head_layers += [(m, tint), (d, None)]
         for ref, tint in layers:
             if ref:
-                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None),
+                canvas.alpha_composite(self.piece(own, ref[0], hex_rgb(tint) if tint else None),
                                        (round(ref[1]), round(ref[2])))
         for ref, tint in head_layers:
             if ref:
-                canvas.alpha_composite(self.piece(ref[0], hex_rgb(tint) if tint else None),
+                canvas.alpha_composite(self.piece(shared, ref[0], hex_rgb(tint) if tint else None),
                                        (round(ref[1] + hx), round(ref[2] + hy)))
         return canvas
 
@@ -2209,12 +2399,13 @@ def _pt(p):
 
 
 STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
-FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift"]
+FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift",
+                "shorts", "sock", "shoe", "sole", "wear"]
 
 
-def frame_obj(data, body, anim, i):
+def frame_obj(bodies, body, anim, i):
     """Expand a compact frame record into a dict (same as frameData() in TS)."""
-    return dict(zip(FRAME_FIELDS, data["frames"][body][anim][i]))
+    return dict(zip(FRAME_FIELDS, bodies[body]["frames"][anim][i]))
 UNIT = {"detail": 1, "mask": MASK_RES}
 
 
@@ -2246,6 +2437,7 @@ def build_body(body):
                 print("WARNING: %s clipped" % where)
             masks, detail = body_layers(bald)
             rec = {s_: ref(masks[s_], "mask", group) for s_ in BODY_SLOTS}
+            rec["wear"] = [ref(masks[r], "mask", group) for r in WEAR_REGIONS]
             rec["detail"] = ref(detail, "detail", group)
             head = info["head_origin"]
             overlays = []
@@ -2255,6 +2447,9 @@ def build_body(body):
             for kind in FACIAL_HAIR:
                 m, d = overlay_layers(bald, info["restyle"](None, kind), "facial", where + "/" + kind)
                 overlays.append((ref(m, "mask", "facial/" + kind, head), ref(d, "detail", "facial/" + kind, head)))
+            for kind in HEADWEAR:
+                m, d = overlay_layers(bald, info["restyle"](None, None, kind), "headwear", where + "/" + kind)
+                overlays.append((ref(m, "mask", "headwear/" + kind, head), ref(d, "detail", "headwear/" + kind, head)))
             rec["overlays"] = overlays
             rec["headOrigin"] = head
             rec["nearHand"] = _pt(info["near_hand"])
@@ -2307,11 +2502,44 @@ def build_all():
                 oi = overlay_sets.setdefault(tuple(ids), len(overlay_sets))
                 hx, hy = rec["headOrigin"]
                 # compact record; see FRAME_FIELDS for the order
+                wear_refs = [conv(r) for r in rec["wear"]]
                 out.append([conv(rec["skin"]), conv(rec["jersey"]), conv(rec["trim"]), conv(rec["detail"]),
                             [oi, hx * SCALE, hy * SCALE], rnd(rec["nearHand"]), rnd(rec["farHand"]),
-                            rnd(rec["ball"]), rec["ballDepth"], rec["lift"]])
+                            rnd(rec["ball"]), rec["ballDepth"], rec["lift"],
+                            conv(rec["shorts"]), conv(rec["sock"]), conv(rec["shoe"]), conv(rec["sole"]),
+                            wear_refs if any(wear_refs) else None])
             frames[body][name] = out
     pages, page_groups, page_scales, rects = atlas.pack()
+
+    # Piece tables: overlay pieces (hair, facial hair, headwear) are shared by
+    # every body; each body's own pieces go in its own file, loaded only when
+    # a player with that body is drawn. Refs are indices into those tables.
+    shared = {}
+
+    def to_shared(r):
+        if r is None:
+            return None
+        return [shared.setdefault(r[0], len(shared)), r[1], r[2]]
+    pair_list = [[to_shared(list(r) if r else None) for r in pair] for pair in pairs]
+    bodies = {}
+    for body, fr in frames.items():
+        local = {}
+
+        def to_local(r):
+            if r is None:
+                return None
+            return [local.setdefault(r[0], len(local)), r[1], r[2]]
+        out = {}
+        for name, recs in fr.items():
+            out[name] = []
+            for rec in recs:
+                rec = list(rec)
+                for k in (0, 1, 2, 3, 10, 11, 12, 13):
+                    rec[k] = to_local(rec[k])
+                if rec[14]:
+                    rec[14] = [to_local(r) for r in rec[14]]
+                out[name].append(rec)
+        bodies[body] = {"pieces": [rects[g] for g in sorted(local, key=local.get)], "frames": out}
     data = {
         "_comment": "AUTO-GENERATED by tools/generate_sprites.py. All positions are frame pixels.",
         "scale": SCALE,
@@ -2322,22 +2550,24 @@ def build_all():
         "pages": [[p.width, p.height] for p in pages],
         "pageGroups": page_groups,
         "pageScale": page_scales,
-        "pieces": rects,
+        "pieces": [rects[g] for g in sorted(shared, key=shared.get)],
         "hairStyles": list(HAIR_STYLES),
         "facialHair": list(FACIAL_HAIR),
+        "headwear": list(HEADWEAR),
+        "wearRegions": [WEAR_NAMES[r] for r in WEAR_REGIONS],
+        "defaultOutfit": DEFAULT_OUTFIT,
         "frameFields": FRAME_FIELDS,
-        "overlayPairs": [[list(r) if r else None for r in pair] for pair in pairs],
+        "overlayPairs": pair_list,
         "overlays": [list(o) for o in overlay_sets],
         "standingHeight": standing,
         "anims": {name: {"fps": fps, "loop": loop, "frameCount": len(frames[MID_BODY][name]),
                          "group": anim_group(name), "events": ev}
                   for name, _, fps, loop, ev in ANIMS},
-        "frames": frames,
     }
-    return data, pages
+    return data, bodies, pages
 
 
-def write_rn(data, pages):
+def write_rn(data, bodies, pages):
     os.makedirs(RN_DIR, exist_ok=True)
     atlas_dir = os.path.join(RN_DIR, "atlas")
     shutil.rmtree(atlas_dir, ignore_errors=True)
@@ -2346,6 +2576,12 @@ def write_rn(data, pages):
         p.save(os.path.join(atlas_dir, "page%d.png" % i), optimize=True)
     with open(os.path.join(RN_DIR, "spriteData.json"), "w") as f:
         json.dump(data, f, separators=(",", ":"))
+    body_dir = os.path.join(RN_DIR, "bodies")
+    shutil.rmtree(body_dir, ignore_errors=True)
+    os.makedirs(body_dir)
+    for body, bd in bodies.items():
+        with open(os.path.join(body_dir, body + ".json"), "w") as f:
+            json.dump(bd, f, separators=(",", ":"))
     lines = [
         "// AUTO-GENERATED by tools/generate_sprites.py - do not edit by hand.",
         "import type { ImageSourcePropType } from 'react-native';",
@@ -2360,6 +2596,18 @@ def write_rn(data, pages):
     lines += ["];", ""]
     with open(os.path.join(RN_DIR, "spriteData.ts"), "w") as f:
         f.write("\n".join(lines))
+    lines = [
+        "// AUTO-GENERATED by tools/generate_sprites.py - do not edit by hand.",
+        "import type { BodyKey } from './features';",
+        "import type { BodyData } from './types';",
+        "",
+        "/** Per-body frame data, required lazily so only bodies on court are parsed. */",
+        "export const BODY_LOADERS: Record<BodyKey, () => BodyData> = {",
+    ]
+    lines += ["  '%s': () => require('./bodies/%s.json')," % (b, b) for b in bodies]
+    lines += ["};", ""]
+    with open(os.path.join(RN_DIR, "bodyData.ts"), "w") as f:
+        f.write("\n".join(lines))
 
 
 def body_for(palettes, inches, lbs):
@@ -2370,9 +2618,9 @@ def body_for(palettes, inches, lbs):
     return "h%d-%s" % (h, w)
 
 
-def write_previews(data, pages, palettes):
+def write_previews(data, bodies, pages, palettes):
     os.makedirs(PREVIEW_DIR, exist_ok=True)
-    comp = Compositor(data, pages)
+    comp = Compositor(data, bodies, pages)
     bg = (40, 70, 170, 255)
     fw, fh = FRAME_W * 2, FRAME_H * 2      # previews at 2 px per art pixel
     crop_top = fh // 3
@@ -2490,7 +2738,7 @@ def write_previews(data, pages, palettes):
         n = data["anims"][name]["frameCount"]
         imgs = []
         for c in range(n):
-            img = with_ball(small(comp.frame(mid, name, c, look, team)), frame_obj(data, mid, name, c))
+            img = with_ball(small(comp.frame(mid, name, c, look, team)), frame_obj(bodies, mid, name, c))
             sheet.alpha_composite(img, (c * fw, r * fh))
             f = Image.new("RGBA", img.size, bg)
             f.alpha_composite(img)
@@ -2505,26 +2753,85 @@ def write_previews(data, pages, palettes):
     sheet.save(os.path.join(PREVIEW_DIR, "animations.png"))
 
 
+def write_outfit_preview(data, bodies, pages, palettes):
+    """Park-mode outfits on a few bodies and poses."""
+    comp = Compositor(data, bodies, pages)
+    bg = (40, 70, 170, 255)
+    fw, fh = FRAME_W * 3, FRAME_H * 3
+    hair_c = {h["id"]: h["color"] for h in palettes["hairColors"]}
+    skins = [t["color"] for t in palettes["skinTones"]]
+    fits = [
+        ("league", {}, {"jersey": "#1d2a5c", "trim": "#f2c230"}, "crew", None),
+        ("tee + long shorts", {"wear": {"sleeveShort": "#d62b2b", "shortsLong": "#26262c"}, "shorts": "#26262c",
+                               "shoe": "#f2f2f4", "sole": "#d62b2b"}, {"jersey": "#d62b2b", "trim": "#f2f2f4"},
+         "fade", None),
+        ("compression + headband", {"wear": {"sleeveShort": "#26262c", "sleeveLong": "#26262c"},
+                                    "shorts": "#2c5fd6", "headwear": ("headband", "#f2f2f4"),
+                                    "shoe": "#26262c", "sole": "#f2f2f4"}, {"jersey": "#f2f2f4", "trim": "#2c5fd6"},
+         "afro", None),
+        ("retro tube socks", {"wear": {"sockTall": "#f2f2f4"}, "sock": "#f2f2f4", "shorts": "#f07a1a",
+                              "headwear": ("wide_headband", "#f07a1a"), "shoe": "#f2f2f4", "sole": "#26262c"},
+         {"jersey": "#1fa6a0", "trim": "#f07a1a"}, "high_top", "mustache"),
+        ("sleeve + wristbands", {"wear": {"armSleeveNear": "#f2f2f4", "wristband": "#f2c230"},
+                                 "shorts": "#7a3fc4", "shoe": "#f2c230", "sole": "#7a3fc4",
+                                 "headwear": ("tied_headband", "#d62b2b")},
+         {"jersey": "#7a3fc4", "trim": "#f2c230"}, "cornrows", "goatee"),
+        ("long sleeve tee", {"wear": {"sleeveShort": "#2f9e4f", "sleeveLong": "#2f9e4f", "shortsLong": "#9a9ca6",
+                                      "wristband": "#f2f2f4"},
+                             "shorts": "#9a9ca6", "shoe": "#2f9e4f", "sole": "#f2f2f4"},
+         {"jersey": "#2f9e4f", "trim": "#f2f2f4"}, "locs", "beard"),
+    ]
+    poses = [("idle", 0), ("run", 3), ("shoot", 4), ("dance_two_step", 1), ("victory_arms_up", 4)]
+    ch = fh - fh // 4
+    sheet = Image.new("RGBA", (len(poses) * fw + 150, len(fits) * ch + 8), bg)
+    d = ImageDraw.Draw(sheet)
+    for r, (name, outfit, colors, hair, facial) in enumerate(fits):
+        look = {"skin": skins[(r + 1) % len(skins)], "hair": hair, "facial": facial,
+                "hairColor": hair_c["black"], "outfit": outfit}
+        d.text((6, r * ch + ch // 2), name, fill=(255, 255, 255, 255))
+        for c, (anim, i) in enumerate(poses):
+            img = comp.frame(MID_BODY, anim, i, look, colors).resize((fw, fh), Image.NEAREST)
+            sheet.alpha_composite(img.crop((0, fh // 4, fw, fh)), (150 + c * fw, r * ch + 4))
+    sheet.save(os.path.join(PREVIEW_DIR, "outfits.png"))
+    # headbands on each hair style
+    styles = list(HAIR_STYLES)
+    sheet = Image.new("RGBA", (len(styles) * FRAME_W * 2, 3 * (FRAME_H * 2 // 2) + 10), bg)
+    for r, hw in enumerate(HEADWEAR):
+        for c, st in enumerate(styles):
+            look = {"skin": skins[c % len(skins)], "hair": st, "hairColor": hair_c["black"],
+                    "outfit": {"headwear": (hw, ["#d62b2b", "#f2f2f4", "#2c5fd6"][r])}}
+            img = comp.frame(MID_BODY, "idle", 0, look, {"jersey": "#26262c", "trim": "#f2f2f4"})
+            img = img.resize((FRAME_W * 2, FRAME_H * 2), Image.NEAREST).crop((0, 56, FRAME_W * 2, FRAME_H + 56))
+            sheet.alpha_composite(img, (c * FRAME_W * 2, r * FRAME_H + 4))
+    sheet.save(os.path.join(PREVIEW_DIR, "headbands.png"))
+
+
 def main():
     with open(os.path.join(RN_DIR, "palettes.json")) as f:
         palettes = json.load(f)
-    data, pages = build_all()
-    write_rn(data, pages)
+    data, bodies, pages = build_all()
+    write_rn(data, bodies, pages)
     ball, ball_meta = build_ball_sheet()
     ball.save(os.path.join(SPRITE_DIR, "ball.png"))
     with open(os.path.join(SPRITE_DIR, "ball.json"), "w") as f:
         json.dump(ball_meta, f, indent=2)
-    write_previews(data, pages, palettes)
+    write_previews(data, bodies, pages, palettes)
+    write_outfit_preview(data, bodies, pages, palettes)
     per = {}
     for (w, h), g in zip(data["pages"], data["pageGroups"]):
         per[g] = per.get(g, 0) + w * h * 4 / 1e6
-    print("pieces: %d  pages: %d  total ~%.0f MB decoded" % (len(data["pieces"]), len(pages), sum(per.values())))
+    npieces = len(data["pieces"]) + sum(len(b["pieces"]) for b in bodies.values())
+    print("pieces: %d  pages: %d  total ~%.0f MB decoded" % (npieces, len(pages), sum(per.values())))
     body_all = {}
     for g, v in per.items():
         b_, grp = g.split("/")
         body_all.setdefault(b_, {})[grp] = round(v, 1)
     print("MB per group for", MID_BODY, body_all[MID_BODY])
-    print("hair/facial MB:", {g: v for g, v in body_all.items() if g in ("hair", "facial")})
+    print("hair/facial/headwear MB:", {g: v for g, v in body_all.items() if g in ("hair", "facial", "headwear")})
+    sizes = {b: os.path.getsize(os.path.join(RN_DIR, "bodies", b + ".json")) for b in bodies}
+    print("data: meta %.1f MB, per body %.2f-%.2f MB" % (
+        os.path.getsize(os.path.join(RN_DIR, "spriteData.json")) / 1e6, min(sizes.values()) / 1e6,
+        max(sizes.values()) / 1e6))
     print("standing height (atlas px):", data["standingHeight"])
 
 

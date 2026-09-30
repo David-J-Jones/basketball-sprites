@@ -4,8 +4,9 @@ import { Image, View } from 'react-native';
 import { hairColor, skinColor } from './appearance';
 import type { BodyKey } from './features';
 import { frameData, headOverlay } from './frames';
+import { outfitTints } from './outfit';
 import { PAGES, SPRITES } from './spriteData';
-import type { AnimName, JerseyColors, PieceRef, PlayerLook } from './types';
+import type { AnimName, JerseyColors, Outfit, PlacedPiece, PlayerLook } from './types';
 
 export type PlayerSpriteProps = {
   look: PlayerLook;
@@ -25,15 +26,16 @@ export type PlayerSpriteProps = {
    * false so the hop isn't added twice.
    */
   bakedLift?: boolean;
+  /** park-mode cosmetics; leave out for the league look */
+  outfit?: Outfit;
 };
 
-type PieceProps = { piece: PieceRef | null; scale: number; tint?: string };
+type PieceProps = { piece: PlacedPiece | null; scale: number; tint?: string };
 
 /** One cropped piece of an atlas page, optionally tinted a flat color. */
 const Piece = ({ piece, scale, tint }: PieceProps) => {
   if (!piece) return null;
-  const [index, dx, dy] = piece;
-  const [page, sx, sy, w, h] = SPRITES.pieces[index];
+  const [page, sx, sy, w, h, dx, dy] = piece;
   const [pageW, pageH] = SPRITES.pages[page];
   // mask pages are stored at lower resolution; k converts page px to frame px
   const s = SPRITES.pageScale[page] * scale;
@@ -74,11 +76,14 @@ export const PlayerSprite = memo(function PlayerSprite({
   scale,
   flip = false,
   bakedLift = true,
+  outfit,
 }: PlayerSpriteProps) {
   const f = frameData(look.body, anim, frame);
   const facial = look.facialHair ? headOverlay(f, look.facialHair) : null;
   const hair = look.hairStyle ? headOverlay(f, look.hairStyle) : null;
   const hairTint = hairColor(look);
+  const wear = outfitTints(outfit, colors.jersey, flip);
+  const band = wear.headwear ? headOverlay(f, wear.headwear.style) : null;
   const drop = bakedLift ? 0 : f.lift * scale;
   return (
     <View
@@ -93,13 +98,22 @@ export const PlayerSprite = memo(function PlayerSprite({
       }}
     >
       <Piece piece={f.skin} scale={scale} tint={skinColor(look)} />
+      {f.wear?.map((piece, i) =>
+        wear.wear[i] ? <Piece key={i} piece={piece} scale={scale} tint={wear.wear[i]!} /> : null,
+      )}
       <Piece piece={f.jersey} scale={scale} tint={colors.jersey} />
       <Piece piece={f.trim} scale={scale} tint={colors.trim} />
+      <Piece piece={f.shorts} scale={scale} tint={wear.shorts} />
+      <Piece piece={f.sock} scale={scale} tint={wear.sock} />
+      <Piece piece={f.shoe} scale={scale} tint={wear.shoe} />
+      <Piece piece={f.sole} scale={scale} tint={wear.sole} />
       <Piece piece={f.detail} scale={scale} />
       {facial && <Piece piece={facial[0]} scale={scale} tint={hairTint} />}
       {facial && <Piece piece={facial[1]} scale={scale} />}
       {hair && <Piece piece={hair[0]} scale={scale} tint={hairTint} />}
       {hair && <Piece piece={hair[1]} scale={scale} />}
+      {band && <Piece piece={band[0]} scale={scale} tint={wear.headwear!.color} />}
+      {band && <Piece piece={band[1]} scale={scale} />}
     </View>
   );
 });
