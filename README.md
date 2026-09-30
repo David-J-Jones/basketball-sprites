@@ -210,7 +210,7 @@ Each trail is an 8-frame loop with the ball spinning at the front and the effect
 
 ## App icon
 
-`integration/react-native/appIcon/` has the app icon, drawn from the same sprite: a player in a headband throwing down a one-hand dunk, with a sunburst behind the rim. Copy the files into the app's `assets/` and point `app.json` at them:
+`integration/react-native/appIcon/` has the app icon, drawn from the same sprite: a player with an afro and a headband throwing down a one-hand dunk, with a sunburst behind the rim. Copy the files into the app's `assets/` and point `app.json` at them:
 
 ```json
 {

@@ -34,6 +34,7 @@ BOARD, BOARD_EDGE, POLE = (236, 240, 250), (40, 36, 60), (70, 72, 92)
 
 # the icon pose: flying at the rim, legs trailing, near arm reaching up and
 # over to stuff the ball; far arm swinging back for balance
+HAIR = os.environ.get("ICON_HAIR", "afro")      # any sprite hair style
 POSE = g.P((58, 10, 10), (-18, -70, 35), (132, 128), (-40, -20), lean=16, lift=14, reach=1.2, shrug=1,
            ball=("near", 2.5, -2.5))
 
@@ -53,8 +54,8 @@ def tag_color(tag):
 def render_player():
     g.use_body("h5-lean")
     _, stand = g.render(g.STAND_POSE, "crew")
-    grid, info = g.render(POSE, "high_top", stand["hip"][1], "goatee")
-    grid = info["restyle"]("high_top", "goatee", "headband")
+    grid, info = g.render(POSE, HAIR, stand["hip"][1], "goatee")
+    grid = info["restyle"](HAIR, "goatee", "headband")
     px = {p: tag_color(t) for p, t in grid.items()}
     ball = g.ball_layer((info["ball"][0], info["ball"][1]), 30)
     for src in (ball.outline(), ball.px):
