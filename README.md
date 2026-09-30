@@ -208,6 +208,35 @@ import { BallTrail } from './ballTrails';
 
 Each trail is an 8-frame loop with the ball spinning at the front and the effect streaming out behind. `BallTrail` rotates it to the velocity, around the ball's centre. Trails: `fire`, `laser`, `bubbles`, `money`, `lightning`, `rainbow`, `ice`, `smoke`, `stars`, `confetti`, `afterimage`, plus `none` (just the spinning ball). `TRAILS[id].label` is the display name. Each strip is one small PNG (~0.1 MB decoded), required only when that trail is used. Redraw them with `python3 tools/generate_trails.py`.
 
+## App icon
+
+`integration/react-native/appIcon/` has the app icon, drawn from the same sprite: a player in a headband throwing down a one-hand dunk, with a sunburst behind the rim. Copy the files into the app's `assets/` and point `app.json` at them:
+
+```json
+{
+  "expo": {
+    "icon": "./assets/icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-foreground.png",
+        "backgroundImage": "./assets/adaptive-background.png"
+      }
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "splash": { "image": "./assets/splash-icon.png", "resizeMode": "contain", "backgroundColor": "#18143a" }
+  }
+}
+```
+
+| File | Size | Use |
+|---|---|---|
+| `icon.png` | 1024 × 1024, opaque | iOS and default icon (the OS rounds the corners) |
+| `adaptive-foreground.png` / `adaptive-background.png` | 1024 × 1024 | Android adaptive icon; the player and hoop sit inside the safe zone |
+| `splash-icon.png` | 1024 × 1024, transparent | Splash screen |
+| `favicon.png` | 48 × 48 | Web |
+
+`previews/app_icon.png` shows it square, rounded, in Android's circle mask, and at home-screen sizes. Colors and the pose are at the top of `tools/generate_app_icon.py`; rerun it to redraw.
+
 ## Directions: up/down, near/far
 
 The camera sits on the near sideline, so moving **up the screen** means moving away from the camera and **down** means toward it. For a player facing right, his **left** side is up (the far side) and his **right** side is down (the camera side).
@@ -375,6 +404,7 @@ The tests cover:
 pip install pillow
 python3 tools/generate_sprites.py      # ~4 min
 python3 tools/generate_trails.py       # ball trails, a few seconds
+python3 tools/generate_app_icon.py     # app icon, a second
 ```
 
 The first rewrites the atlas, `spriteData.*`, `bodyData.ts`, `bodies/`, and the sprite previews in `previews/` (including `outfits.png` and `headbands.png`). The second rewrites `ballTrails/` and `previews/trails.png` / `previews/trails/*.gif`.
