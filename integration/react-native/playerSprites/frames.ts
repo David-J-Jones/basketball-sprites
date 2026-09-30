@@ -27,6 +27,7 @@ export function expandFrame(body: BodyData, r: CompactFrame): FrameData {
     nearHand: r[5], farHand: r[6], ball: r[7], ballDepth: r[8], lift: r[9],
     shorts: p(r[10]), sock: p(r[11]), shoe: p(r[12]), sole: p(r[13]),
     wear: r[14] ? r[14].map(p) : null,
+    prints: r[15] ? r[15].map(p) : null,
   };
 }
 

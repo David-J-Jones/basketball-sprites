@@ -166,6 +166,12 @@ class Layer:
 
     def __init__(self):
         self.px = {}
+        self.uv = {}      # shirt-print coordinates for cloth pixels (see PRINTS)
+
+    def mark_uv(self, u, v):
+        """Record print coordinates for the pixel a color function is filling."""
+        px, py = self.pos
+        self.uv[(int(math.floor(px)), int(math.floor(py)))] = (u, v)
 
     def capsule(self, a, b, r, color_fn):
         ax, ay = a
@@ -497,6 +503,129 @@ HEADWEAR = {
 }
 
 
+# ---------------------------------------------------------------- shirt prints
+# Full-color prints for park-mode tees, as functions of shirt coordinates:
+# u runs up the torso from the hip (about 2..10 art px), v across it
+# (about -4..4, + toward the chest). The sleeves continue the same space.
+def _h(a, b):
+    """Stable hash of an integer cell -> 0..1."""
+    n = (a * 374761393 + b * 668265263) & 0xFFFFFFFF
+    n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
+    return (n ^ (n >> 16)) / 0xFFFFFFFF
+
+
+def _hex(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def print_hawaiian(u, v):
+    base, petal, eye, leaf = _hex("#1f93c2"), _hex("#f25c8f"), _hex("#ffd84a"), _hex("#2fa35a")
+    row = math.floor(u / 4.0)
+    cu, cv = row * 4.0 + 2.0, (math.floor((v + row * 2.5) / 5.0) * 5.0 + 2.5) - row * 2.5
+    d = math.hypot(u - cu, v - cv)
+    if d < 0.8:
+        return eye
+    if d < 1.9 and (abs(u - cu) < 0.9 or abs(v - cv) < 0.9 or d < 1.4):
+        return petal
+    lu, lv = u - cu + 1.6, v - cv - 2.0
+    if abs(lu + lv * 0.5) < 0.7 and abs(lv) < 1.6:
+        return leaf
+    return base
+
+
+def print_tie_dye(u, v):
+    bands = ["#ff4d6d", "#ff9f1c", "#ffe14d", "#3bd16f", "#3a9bff", "#a35bff"]
+    a = math.atan2(v - 0.5, u - 6.0)
+    r = math.hypot(v - 0.5, u - 6.0)
+    k = (a / (2 * math.pi) * 2 + r * 0.32) % 1.0
+    return _hex(bands[int(k * len(bands)) % len(bands)])
+
+
+def print_wave(u, v):
+    navy, mid, crest, foam = _hex("#18307a"), _hex("#2c62b8"), _hex("#6fb6ee"), _hex("#f4f8ff")
+    w = (u - 1.4 * math.sin(v * 1.2 + u * 0.35)) % 4.0
+    if w < 0.9:
+        return foam if math.sin(v * 1.2 + u * 0.35) > 0.35 else crest
+    if w < 1.8:
+        return mid
+    return navy
+
+
+def print_us_flag(u, v):
+    red, white, blue = _hex("#c8213a"), _hex("#f5f5f5"), _hex("#1f3a8a")
+    if u > 6.5 and v > -0.5:
+        return white if (math.floor(u) * 2 + math.floor(v)) % 3 == 0 else blue
+    return red if math.floor(u) % 2 == 0 else white
+
+
+def print_camo(u, v):
+    cols = [_hex("#5a6b35"), _hex("#34462a"), _hex("#7a5a3a"), _hex("#b5aa78")]
+    n = math.sin(u * 0.9 + v * 0.4) + math.sin(v * 1.1 - u * 0.5 + 1.3) + 0.6 * math.sin(u * 1.7 + v * 1.9)
+    return cols[0 if n < -0.8 else 1 if n < 0.1 else 2 if n < 0.9 else 3]
+
+
+def print_flames(u, v):
+    black, red, orange, yellow = _hex("#1e1a1f"), _hex("#d8301f"), _hex("#f5841f"), _hex("#ffd23f")
+    h = 5.0 + 1.8 * math.sin(v * 1.4) + 1.0 * math.sin(v * 3.1 + 1.0)
+    return yellow if u < h - 2.2 else orange if u < h - 1.1 else red if u < h else black
+
+
+def print_checker(u, v):
+    return _hex("#141418") if (math.floor(u / 2) + math.floor(v / 2)) % 2 else _hex("#f2f2f2")
+
+
+def print_galaxy(u, v):
+    if _h(math.floor(u * 1.3), math.floor(v * 1.3)) > 0.9:
+        return _hex("#ffffff")
+    n = math.sin(u * 0.7 - v * 0.9) + 0.5 * math.sin(v * 1.7 + 1.0)
+    return _hex("#b04cc4") if n > 0.9 else _hex("#4b3fb8") if n > 0.1 else _hex("#261547")
+
+
+def print_plaid(u, v):
+    fu, fv = math.floor(u) % 4, math.floor(v) % 4
+    if fu == 0 and fv == 0:
+        return _hex("#2a0a0e")
+    if fu == 0 or fv == 0:
+        return _hex("#5e1116")
+    if fu == 2 or fv == 2:
+        return _hex("#d2544c")
+    return _hex("#b0242a")
+
+
+def print_retro_stripes(u, v):
+    band = math.floor(u)
+    return {5: _hex("#7a3f1d"), 6: _hex("#e8731f"), 7: _hex("#f4b631")}.get(band, _hex("#f1e2c0"))
+
+
+def print_polka_dots(u, v):
+    row = math.floor(u / 3)
+    cu, cv = row * 3 + 1.5, math.floor((v + row * 1.5) / 3) * 3 + 1.5 - row * 1.5
+    return _hex("#ffffff") if math.hypot(u - cu, v - cv) < 0.9 else _hex("#d8283a")
+
+
+def print_lightning(u, v):
+    zig = 1.8 * (1 - abs(((u * 0.55) % 2.0) - 1.0) * 2)      # zigzag bolt up the chest
+    d = abs(v - 0.5 - zig)
+    return _hex("#fff4a8") if d < 0.6 else _hex("#ffc61a") if d < 1.5 else _hex("#18181d")
+
+
+PRINTS = {
+    # id: (label, fn)
+    "hawaiian": ("Hawaiian", print_hawaiian),
+    "tie_dye": ("Tie-dye", print_tie_dye),
+    "wave": ("Wave", print_wave),
+    "us_flag": ("US flag", print_us_flag),
+    "camo": ("Camo", print_camo),
+    "flames": ("Flames", print_flames),
+    "checker": ("Checkerboard", print_checker),
+    "galaxy": ("Galaxy", print_galaxy),
+    "plaid": ("Plaid flannel", print_plaid),
+    "retro_stripes": ("70s stripes", print_retro_stripes),
+    "polka_dots": ("Polka dots", print_polka_dots),
+    "lightning": ("Lightning bolt", print_lightning),
+}
+
+
 def blit_head(layer, origin, style=None, facial=None, headwear=None):
     ox, oy = origin
     for r, row in enumerate(SKULL):
@@ -610,7 +739,11 @@ def draw_arm(layer, shoulder, upper_deg, fore_deg, far, reach=1.0):
 
     def upper_fn(t, ox, oy):
         tag = skin_s if lit(ox, oy) < -0.3 else skin
-        return wear(tag, "sa") if t < 0.5 else wear(tag, "sb", *near)
+        if t < 0.5:
+            # short sleeve: print coordinates continue from the shoulder
+            layer.mark_uv(B["shoulder"] - 1 - t * B["upper"], ox * B["arm_r"] + (3 if far else -1))
+            return wear(tag, "sa")
+        return wear(tag, "sb", *near)
 
     def fore_fn(t, ox, oy):
         tag = skin_s if lit(ox, oy) < -0.3 else skin
@@ -642,9 +775,18 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     chest_lo = add(hip, (tdir[0] * 2.0, tdir[1] * 2.0))
     chest_hi = add(hip, (tdir[0] * (B["shoulder"] - 1), tdir[1] * (B["shoulder"] - 1)))
 
+    fwd_dir = vec(90 - lean)
+
+    def torso_uv():
+        # u: up the torso from the hip; v: across it, + toward the chest
+        px, py = body.pos
+        rx, ry = px - hip[0], py - hip[1]
+        body.mark_uv(rx * tdir[0] + ry * tdir[1], rx * fwd_dir[0] + ry * fwd_dir[1])
+
     def jersey_fn(t, ox, oy):
         if t > 0.93 and abs(ox) < 0.45:
             return "trim0"          # collar / arm-hole trim
+        torso_uv()
         return "jersey1" if lit(ox, oy) < -0.35 else "jersey0"
     body.capsule(chest_lo, chest_hi, B["torso_r"], jersey_fn)
     if B["belly"]:
@@ -665,7 +807,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     body.capsule(add(hip, (tdir[0] * -1.0, tdir[1] * -1.0)), add(hip, (tdir[0] * 1.5, tdir[1] * 1.5)),
                  B["hip_r"], shorts_fn)
     body.capsule(shoulder, add(shoulder, (tdir[0] * 1.2, tdir[1] * 1.2)), 2.0,
-                 lambda t, ox, oy: "jersey0")
+                 lambda t, ox, oy: torso_uv() or "jersey0")
     # neck + head (rebuilt cheaply for each hair / facial-hair variant)
     hx = int(round(neck[0])) - HEAD_ANCHOR[0] + pose.get("head_dx", 0)
     hy = int(round(neck[1])) - HEAD_ANCHOR[1] + pose.get("head_dy", 0)
@@ -755,6 +897,18 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
 
     grid, clipped = compose(head)
 
+    # print coordinates for every visible shirt pixel (torso and short sleeves)
+    print_uv = {}
+    for (x, y), tag in grid.items():
+        base, regs = split_tag(tag)
+        q = (x, y - dy)
+        if base in ("jersey0", "jersey1") and q in body.uv:
+            print_uv[(x, y)] = body.uv[q]
+        elif "sa" in regs:
+            src = near_arm if q in near_arm.px else far_arm
+            if q in src.uv:
+                print_uv[(x, y)] = src.uv[q]
+
     def ball_spot(spec):
         """Ball centre (before the vertical shift) and depth for a ball spec.
         Depth: +1 near (camera) side, 0 centred in front, -1 far side."""
@@ -793,6 +947,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "lift": max(0, GROUND - (legs_bottom + dy_legs)),
         "clipped": clipped,
         "head_origin": (hx, hy + dy),
+        "print_uv": print_uv,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
     }
@@ -2332,6 +2487,8 @@ class Compositor:
             if name in worn:
                 layers.append((ref, worn[name]))
         layers += [(f["jersey"], colors["jersey"]), (f["trim"], colors["trim"])]
+        if out.get("print") and f["prints"]:
+            layers.append((f["prints"][[p_["id"] for p_ in self.data["prints"]].index(out["print"])], None))
         layers += [(f[k], out[k]) for k in ("shorts", "sock", "shoe", "sole")]
         layers.append((f["detail"], None))
         oset, hx, hy = f["head"]
@@ -2400,7 +2557,7 @@ def _pt(p):
 
 STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
 FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift",
-                "shorts", "sock", "shoe", "sole", "wear"]
+                "shorts", "sock", "shoe", "sole", "wear", "prints"]
 
 
 def frame_obj(bodies, body, anim, i):
@@ -2438,6 +2595,11 @@ def build_body(body):
             masks, detail = body_layers(bald)
             rec = {s_: ref(masks[s_], "mask", group) for s_ in BODY_SLOTS}
             rec["wear"] = [ref(masks[r], "mask", group) for r in WEAR_REGIONS]
+            opaque = {p_ for p_, t_ in bald.items() if split_tag(t_)[0] in FIXED}
+            rec["prints"] = []
+            for pname, (_, pfn) in PRINTS.items():
+                pix = {p_: pfn(u_, v_) + (255,) for p_, (u_, v_) in info["print_uv"].items()}
+                rec["prints"].append(ref(to_mask_res(pix, opaque), "mask", "%s/print_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
             head = info["head_origin"]
             overlays = []
@@ -2507,7 +2669,8 @@ def build_all():
                             [oi, hx * SCALE, hy * SCALE], rnd(rec["nearHand"]), rnd(rec["farHand"]),
                             rnd(rec["ball"]), rec["ballDepth"], rec["lift"],
                             conv(rec["shorts"]), conv(rec["sock"]), conv(rec["shoe"]), conv(rec["sole"]),
-                            wear_refs if any(wear_refs) else None])
+                            wear_refs if any(wear_refs) else None,
+                            [conv(r) for r in rec["prints"]] if any(rec["prints"]) else None])
             frames[body][name] = out
     pages, page_groups, page_scales, rects = atlas.pack()
 
@@ -2536,8 +2699,9 @@ def build_all():
                 rec = list(rec)
                 for k in (0, 1, 2, 3, 10, 11, 12, 13):
                     rec[k] = to_local(rec[k])
-                if rec[14]:
-                    rec[14] = [to_local(r) for r in rec[14]]
+                for k in (14, 15):
+                    if rec[k]:
+                        rec[k] = [to_local(r) for r in rec[k]]
                 out[name].append(rec)
         bodies[body] = {"pieces": [rects[g] for g in sorted(local, key=local.get)], "frames": out}
     data = {
@@ -2554,6 +2718,7 @@ def build_all():
         "hairStyles": list(HAIR_STYLES),
         "facialHair": list(FACIAL_HAIR),
         "headwear": list(HEADWEAR),
+        "prints": [{"id": k, "label": v[0]} for k, v in PRINTS.items()],
         "wearRegions": [WEAR_NAMES[r] for r in WEAR_REGIONS],
         "defaultOutfit": DEFAULT_OUTFIT,
         "frameFields": FRAME_FIELDS,
@@ -2804,6 +2969,22 @@ def write_outfit_preview(data, bodies, pages, palettes):
             img = img.resize((FRAME_W * 2, FRAME_H * 2), Image.NEAREST).crop((0, 56, FRAME_W * 2, FRAME_H + 56))
             sheet.alpha_composite(img, (c * FRAME_W * 2, r * FRAME_H + 4))
     sheet.save(os.path.join(PREVIEW_DIR, "headbands.png"))
+    # every shirt print, as a tee, in a few poses
+    poses = [("idle", 0), ("run", 3), ("shoot", 4), ("dribble_run", 6), ("victory_arms_up", 4)]
+    cw, chh = FRAME_W * 3, int(FRAME_H * 3 * 0.62)
+    sheet = Image.new("RGBA", (len(poses) * cw + 110, len(PRINTS) * chh), bg)
+    d = ImageDraw.Draw(sheet)
+    for r, (pid, (label, _)) in enumerate(PRINTS.items()):
+        d.text((6, r * chh + chh // 2), label, fill=(255, 255, 255, 255))
+        look = {"skin": skins[r % len(skins)], "hair": ["crew", "afro", "fade", "cornrows"][r % 4],
+                "hairColor": hair_c["black"], "outfit": {"print": pid, "wear": {"sleeveShort": "#f2f2f4"},
+                                                         "shorts": "#26262c", "shoe": "#f2f2f4"}}
+        for c, (anim, i) in enumerate(poses):
+            img = comp.frame(MID_BODY, anim, i, look, {"jersey": "#f2f2f4", "trim": "#26262c"})
+            img = img.resize((cw, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cw,
+                                                                      int(FRAME_H * 3 * 0.92)))
+            sheet.alpha_composite(img, (110 + c * cw, r * chh))
+    sheet.save(os.path.join(PREVIEW_DIR, "shirt_prints.png"))
 
 
 def main():

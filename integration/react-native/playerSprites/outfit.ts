@@ -3,7 +3,7 @@
  * game (and tests) can use it directly; PlayerSprite draws the result.
  */
 import { SPRITE_DATA } from './frames';
-import type { HeadwearStyle, Outfit, WearRegion } from './types';
+import type { HeadwearStyle, Outfit, ShirtPrint, WearRegion } from './types';
 
 export type OutfitTints = {
   shorts: string;
@@ -13,7 +13,11 @@ export type OutfitTints = {
   /** a tint per wear region (FrameData.wear order); null = not worn, the skin shows */
   wear: (string | null)[];
   headwear: { style: HeadwearStyle; color: string } | null;
+  /** index into FrameData.prints, or null for a plain shirt */
+  print: number | null;
 };
+
+const PRINT_INDEX = new Map(SPRITE_DATA.prints.map((p, i) => [p.id, i]));
 
 /** The league look: tank top, black shorts, white socks, grey shoes. */
 export const LEAGUE_OUTFIT: Outfit = {};
@@ -27,7 +31,9 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   const o = outfit ?? {};
   const d = SPRITE_DATA.defaultOutfit;
   const worn: Partial<Record<WearRegion, string>> = {};
-  const sleeves = o.shirt?.sleeves ?? 'none';
+  const print = o.shirt?.print ? PRINT_INDEX.get(o.shirt.print) ?? null : null;
+  // printed shirts are tees: the print covers the short sleeves
+  const sleeves = o.shirt?.sleeves === 'long' ? 'long' : print !== null ? 'short' : o.shirt?.sleeves ?? 'none';
   const sleeveColor = o.shirt?.sleeveColor ?? shirtColor;
   if (sleeves !== 'none') worn.sleeveShort = sleeveColor;
   if (sleeves === 'long') worn.sleeveLong = sleeveColor;
@@ -48,6 +54,7 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
     sole: o.shoes?.sole ?? d.sole,
     wear: SPRITE_DATA.wearRegions.map((r) => worn[r] ?? null),
     headwear: o.headband ?? null,
+    print,
   };
 }
 
@@ -69,6 +76,7 @@ export const COSMETICS = {
     { id: 'wide_headband', label: 'Sweatband', value: 'wide_headband' },
     { id: 'tied_headband', label: 'Tied headband', value: 'tied_headband' },
   ] as CosmeticOption<HeadwearStyle>[],
+  prints: SPRITE_DATA.prints.map((p) => ({ id: p.id, label: p.label, value: p.id })) as CosmeticOption<ShirtPrint>[],
   colors: [
     { id: 'black', label: 'Black', value: '#26262c' },
     { id: 'white', label: 'White', value: '#f2f2f4' },

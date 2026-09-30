@@ -60,3 +60,32 @@ describe('outfits', () => {
     }
   });
 });
+
+describe('shirt prints', () => {
+  it('has at least 10 prints, each with a piece on every frame of a few animations', () => {
+    expect(SPRITES.prints.length).toBeGreaterThanOrEqual(10);
+    expect(SPRITES.prints.map((p) => p.id)).toEqual(
+      expect.arrayContaining(['hawaiian', 'tie_dye', 'wave', 'us_flag']),
+    );
+    for (const anim of ['idle', 'run', 'shoot', 'dunk_athletic'] as AnimName[]) {
+      for (const f of framesOf('h4-average', anim)) {
+        expect(f.prints).toHaveLength(SPRITES.prints.length);
+        for (const p of f.prints!) {
+          expect(p).not.toBeNull();
+          expect(SPRITES.pageGroups[p![0]].startsWith('h4-average/print_')).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('turns a printed shirt into a tee and picks the right print piece', () => {
+    const t = outfitTints({ shirt: { print: 'us_flag' } }, '#ffffff');
+    expect(t.print).toBe(SPRITES.prints.findIndex((p) => p.id === 'us_flag'));
+    expect(t.wear[region('sleeveShort')]).toBe('#ffffff');
+    expect(t.wear[region('sleeveLong')]).toBeNull();
+    const long = outfitTints({ shirt: { print: 'plaid', sleeves: 'long', sleeveColor: '#111111' } }, '#ffffff');
+    expect(long.wear[region('sleeveLong')]).toBe('#111111');
+    expect(outfitTints({}, '#ffffff').print).toBeNull();
+    expect(COSMETICS.prints).toHaveLength(SPRITES.prints.length);
+  });
+});

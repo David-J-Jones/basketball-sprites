@@ -28,7 +28,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
 - **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
 - **League look:** tank top in team colors, black shorts, white socks, grey shoes.
-- **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression), shorts (any color, standard or long), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
+- **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), shorts (any color, standard or long), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
 - **Celebrations:** 3 dances and 5 victory poses.
 - **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
 - **102 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
@@ -165,6 +165,7 @@ Pass an `outfit` to `<PlayerSprite>`; anything left out keeps the league look. T
 ```tsx
 const outfit: Outfit = {
   shirt: { sleeves: 'long', sleeveColor: '#26262c' },   // 'none' (tank) | 'short' (tee) | 'long'; other color = compression shirt
+  // or a printed tee: shirt: { print: 'hawaiian' }      // see COSMETICS.prints for the list and labels
   shorts: { color: '#2c5fd6', length: 'long' },         // 'standard' | 'long'
   socks: { color: '#f2f2f4', tall: true },              // tall = retro tube socks
   shoes: { color: '#26262c', sole: '#f2f2f4' },
@@ -178,6 +179,7 @@ const outfit: Outfit = {
 Every color is a tint, so any hex works; `COSMETICS` has option lists and a starter palette for a locker screen. How it works:
 - **Shorts, socks, shoes and soles** are tint layers on every frame, like the jersey. The league defaults (`SPRITES.defaultOutfit`) reproduce the old fixed colors.
 - **Sleeves, long shorts, tall socks, wristbands and the shooting sleeve** are small masks over skin areas (`FrameData.wear`, in `SPRITES.wearRegions` order), drawn only when worn. So they cost nothing to draw for players who don't wear them.
+- **Printed shirts** are one full-color layer per print, drawn in the shirt's own coordinates (up the torso, across the chest). The pattern stays on the shirt through every animation and continues onto the short sleeves. A print always makes the shirt at least a tee. The collar and arm trim still use `colors.trim`. Each print has its own page group per body (`<body>/print_<id>`, ~1.2 MB for all of that body's animations), decoded only when someone with that body wears it. Add a print by writing a `print_<name>(u, v)` function in `tools/generate_sprites.py` and listing it in `PRINTS`. `previews/shirt_prints.png` shows them all.
 - **Headbands** are head overlays like hair, drawn on top of the hair. They're shared by every body and cost almost no memory.
 - `outfitTints(outfit, shirtColor, flip)` resolves an outfit to the layer tints if you need them outside `PlayerSprite`.
 
@@ -372,8 +374,8 @@ Each player is drawn from tinted layers: skin, any worn wear masks, jersey, trim
 
   A typical game with ~7 distinct bodies starts around 65 MB and grows toward ~130 MB as moves and finishes get used. The outfit layers added about 10% to each group.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
-- **Data size:** the frame data is split. `spriteData.json` (~1.2 MB) holds what every body shares, and `bodies/<body>.json` (~0.35 MB each) holds one body's frames. Body files are required lazily, so only bodies actually drawn are parsed. Frames are stored as compact arrays and each hair / beard placement is stored once. Read them through `frameData(body, anim, i)` / `framesOf(body, anim)` and `headOverlay(frame, style)` from `frames.ts`. These return pieces ready to draw (`[page, sx, sy, w, h, dx, dy]`). The atlas PNGs are ~17 MB on disk, 1,509 pages.
-- **Build:** the generator uses every CPU core. All 35 bodies take about 4 minutes on 4 cores.
+- **Data size:** the frame data is split. `spriteData.json` (~1.2 MB) holds what every body shares, and `bodies/<body>.json` (~0.65 MB each) holds one body's frames. Body files are required lazily, so only bodies actually drawn are parsed. Frames are stored as compact arrays and each hair / beard placement is stored once. Read them through `frameData(body, anim, i)` / `framesOf(body, anim)` and `headOverlay(frame, style)` from `frames.ts`. These return pieces ready to draw (`[page, sx, sy, w, h, dx, dy]`). The atlas PNGs are ~34 MB on disk (the shirt prints are about half of that), 1,929 pages.
+- **Build:** the generator uses every CPU core. All 35 bodies take about 6 minutes on 4 cores.
 
 ## Tests
 
@@ -402,7 +404,7 @@ The tests cover:
 
 ```bash
 pip install pillow
-python3 tools/generate_sprites.py      # ~4 min
+python3 tools/generate_sprites.py      # ~6 min
 python3 tools/generate_trails.py       # ball trails, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
 ```

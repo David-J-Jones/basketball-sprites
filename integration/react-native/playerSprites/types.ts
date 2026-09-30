@@ -59,6 +59,11 @@ export type PieceRect = [page: number, sx: number, sy: number, w: number, h: num
 /** A piece ready to draw: its atlas rect plus where its top-left sits in the frame. */
 export type PlacedPiece = [page: number, sx: number, sy: number, w: number, h: number, dx: number, dy: number];
 
+/** Full-color shirt prints for park-mode tees (see Outfit.shirt.print). */
+export type ShirtPrint =
+  | 'hawaiian' | 'tie_dye' | 'wave' | 'us_flag' | 'camo' | 'flames' | 'checker' | 'galaxy' | 'plaid'
+  | 'retro_stripes' | 'polka_dots' | 'lightning';
+
 /** Headbands, drawn over the hair (see Outfit). */
 export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
 
@@ -77,6 +82,8 @@ export type FrameData = {
   sole: PlacedPiece | null;
   /** one mask per WearRegion (drawn over the skin only when the outfit covers it), or null */
   wear: (PlacedPiece | null)[] | null;
+  /** one full-color piece per shirt print (SpriteData.prints order): torso and short sleeves */
+  prints: (PlacedPiece | null)[] | null;
   /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
   head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
@@ -99,7 +106,7 @@ export type CompactFrame = [
   head: [number, number, number], nearHand: [number, number], farHand: [number, number],
   ball: [number, number] | null, ballDepth: number | null, lift: number,
   shorts: PieceRef | null, sock: PieceRef | null, shoe: PieceRef | null, sole: PieceRef | null,
-  wear: (PieceRef | null)[] | null,
+  wear: (PieceRef | null)[] | null, prints: (PieceRef | null)[] | null,
 ];
 
 /** One body's own pieces and frames (bodies/<body>.json, loaded on first use). */
@@ -139,6 +146,7 @@ export type SpriteData = {
   facialHair: SpriteFacialHair[];
   headwear: HeadwearStyle[];
   wearRegions: WearRegion[];
+  prints: { id: ShirtPrint; label: string }[];
   /** league colors for shorts, socks, shoes and soles */
   defaultOutfit: { shorts: string; sock: string; shoe: string; sole: string };
   /** unique [mask, detail] overlay pieces, positioned relative to the head */
@@ -173,6 +181,12 @@ export type Outfit = {
     sleeves?: 'none' | 'short' | 'long';
     /** defaults to the shirt color; a different color reads as a compression shirt under the top */
     sleeveColor?: string;
+    /**
+     * A printed tee (Hawaiian, tie-dye, US flag...). The print covers the
+     * torso and short sleeves in its own colors; the collar and arm trim
+     * still use `colors.trim`. Printed shirts always have at least short sleeves.
+     */
+    print?: ShirtPrint;
   };
   shorts?: { color?: string; length?: 'standard' | 'long' };
   socks?: { color?: string; tall?: boolean };
