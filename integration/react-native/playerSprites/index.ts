@@ -13,8 +13,8 @@ export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from '
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';
 export { frameData, framesOf, headOverlay, loadBody, SPRITE_DATA } from './frames';
-export { outfitTints, LEAGUE_OUTFIT, COSMETICS } from './outfit';
-export type { OutfitTints, CosmeticOption } from './outfit';
+export { outfitTints, LEAGUE_OUTFIT, COSMETICS, OUTFIT_PRESETS } from './outfit';
+export type { OutfitTints, CosmeticOption, OutfitPreset } from './outfit';
 export {
   STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickLayup, pickDunk,
 } from './animStyles';

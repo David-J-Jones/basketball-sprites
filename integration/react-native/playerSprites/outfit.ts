@@ -3,7 +3,7 @@
  * game (and tests) can use it directly; PlayerSprite draws the result.
  */
 import { SPRITE_DATA } from './frames';
-import type { HeadwearStyle, Outfit, WearRegion } from './types';
+import type { HeadwearStyle, JerseyColors, Outfit, ShirtPrint, WearRegion } from './types';
 
 export type OutfitTints = {
   shorts: string;
@@ -13,7 +13,11 @@ export type OutfitTints = {
   /** a tint per wear region (FrameData.wear order); null = not worn, the skin shows */
   wear: (string | null)[];
   headwear: { style: HeadwearStyle; color: string } | null;
+  /** index into FrameData.prints, or null for a plain shirt */
+  print: number | null;
 };
+
+const PRINT_INDEX = new Map(SPRITE_DATA.prints.map((p, i) => [p.id, i]));
 
 /** The league look: tank top, black shorts, white socks, grey shoes. */
 export const LEAGUE_OUTFIT: Outfit = {};
@@ -27,7 +31,9 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   const o = outfit ?? {};
   const d = SPRITE_DATA.defaultOutfit;
   const worn: Partial<Record<WearRegion, string>> = {};
-  const sleeves = o.shirt?.sleeves ?? 'none';
+  const print = o.shirt?.print ? PRINT_INDEX.get(o.shirt.print) ?? null : null;
+  // printed shirts are tees: the print covers the short sleeves
+  const sleeves = o.shirt?.sleeves === 'long' ? 'long' : print !== null ? 'short' : o.shirt?.sleeves ?? 'none';
   const sleeveColor = o.shirt?.sleeveColor ?? shirtColor;
   if (sleeves !== 'none') worn.sleeveShort = sleeveColor;
   if (sleeves === 'long') worn.sleeveLong = sleeveColor;
@@ -38,9 +44,11 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   }
   if (o.wristbands) worn.wristband = o.wristbands.color;
   const shorts = o.shorts?.color ?? d.shorts;
-  if (o.shorts?.length === 'long') worn.shortsLong = shorts;
-  const sock = o.socks?.color ?? d.sock;
-  if (o.socks?.tall) worn.sockTall = sock;
+  const pants = o.shorts?.length === 'pants';
+  if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
+  if (pants) worn.pantsLong = shorts;
+  const sock = pants ? shorts : o.socks?.color ?? d.sock;
+  if (o.socks?.tall && !pants) worn.sockTall = sock;
   return {
     shorts,
     sock,
@@ -48,10 +56,28 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
     sole: o.shoes?.sole ?? d.sole,
     wear: SPRITE_DATA.wearRegions.map((r) => worn[r] ?? null),
     headwear: o.headband ?? null,
+    print,
   };
 }
 
 export type CosmeticOption<T> = { id: string; label: string; value: T };
+
+export type OutfitPreset = { id: string; label: string; outfit: Outfit; colors: JerseyColors };
+
+/** Complete looks: pass `outfit` and `colors` to PlayerSprite. */
+export const OUTFIT_PRESETS: OutfitPreset[] = [
+  {
+    id: 'brown_suit',
+    label: 'Brown suit',
+    // brown jacket with a white tie and pocket square, matching trousers, brown dress shoes
+    outfit: {
+      shirt: { print: 'suit_brown', sleeves: 'long', sleeveColor: '#7a4a26' },
+      shorts: { color: '#6e4222', length: 'pants' },
+      shoes: { color: '#3b2416', sole: '#1c120c' },
+    },
+    colors: { jersey: '#7a4a26', trim: '#4e2c14' },
+  },
+];
 
 /** Ready-made pieces for a park-mode locker (colors are suggestions; any hex works). */
 export const COSMETICS = {
@@ -63,12 +89,14 @@ export const COSMETICS = {
   shortsLength: [
     { id: 'standard', label: 'Standard', value: 'standard' },
     { id: 'long', label: 'Long / baggy', value: 'long' },
-  ] as CosmeticOption<'standard' | 'long'>[],
+    { id: 'pants', label: 'Trousers', value: 'pants' },
+  ] as CosmeticOption<'standard' | 'long' | 'pants'>[],
   headbands: [
     { id: 'headband', label: 'Headband', value: 'headband' },
     { id: 'wide_headband', label: 'Sweatband', value: 'wide_headband' },
     { id: 'tied_headband', label: 'Tied headband', value: 'tied_headband' },
   ] as CosmeticOption<HeadwearStyle>[],
+  prints: SPRITE_DATA.prints.map((p) => ({ id: p.id, label: p.label, value: p.id })) as CosmeticOption<ShirtPrint>[],
   colors: [
     { id: 'black', label: 'Black', value: '#26262c' },
     { id: 'white', label: 'White', value: '#f2f2f4' },

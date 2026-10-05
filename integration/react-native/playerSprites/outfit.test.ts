@@ -1,5 +1,5 @@
 import { framesOf, headOverlay, SPRITE_DATA as SPRITES } from './frames';
-import { COSMETICS, outfitTints } from './outfit';
+import { COSMETICS, OUTFIT_PRESETS, outfitTints } from './outfit';
 import type { AnimName, Outfit } from './types';
 
 const region = (name: string) => SPRITES.wearRegions.indexOf(name as never);
@@ -58,5 +58,52 @@ describe('outfits', () => {
       expect(a.events.hold).toBe(a.frameCount - 1);
       expect(a.group).toBe('celebrations');
     }
+  });
+});
+
+describe('shirt prints', () => {
+  it('has at least 10 prints, each with a piece on every frame of a few animations', () => {
+    expect(SPRITES.prints.length).toBeGreaterThanOrEqual(10);
+    expect(SPRITES.prints.map((p) => p.id)).toEqual(
+      expect.arrayContaining(['hawaiian', 'tie_dye', 'wave', 'us_flag']),
+    );
+    for (const anim of ['idle', 'run', 'shoot', 'dunk_athletic'] as AnimName[]) {
+      for (const f of framesOf('h4-average', anim)) {
+        expect(f.prints).toHaveLength(SPRITES.prints.length);
+        for (const p of f.prints!) {
+          expect(p).not.toBeNull();
+          expect(SPRITES.pageGroups[p![0]].startsWith('h4-average/print_')).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('turns a printed shirt into a tee and picks the right print piece', () => {
+    const t = outfitTints({ shirt: { print: 'us_flag' } }, '#ffffff');
+    expect(t.print).toBe(SPRITES.prints.findIndex((p) => p.id === 'us_flag'));
+    expect(t.wear[region('sleeveShort')]).toBe('#ffffff');
+    expect(t.wear[region('sleeveLong')]).toBeNull();
+    const long = outfitTints({ shirt: { print: 'plaid', sleeves: 'long', sleeveColor: '#111111' } }, '#ffffff');
+    expect(long.wear[region('sleeveLong')]).toBe('#111111');
+    expect(outfitTints({}, '#ffffff').print).toBeNull();
+    expect(COSMETICS.prints).toHaveLength(SPRITES.prints.length);
+  });
+});
+
+describe('brown suit', () => {
+  it('is a full suit: jacket print with long sleeves, trousers to the shoe, matching socks', () => {
+    const suit = OUTFIT_PRESETS.find((p) => p.id === 'brown_suit')!;
+    const t = outfitTints(suit.outfit, suit.colors.jersey);
+    expect(t.print).toBe(SPRITES.prints.findIndex((p) => p.id === 'suit_brown'));
+    expect(t.wear[region('sleeveShort')]).toBe('#7a4a26');
+    expect(t.wear[region('sleeveLong')]).toBe('#7a4a26');
+    expect(t.wear[region('shortsLong')]).toBe('#6e4222');
+    expect(t.wear[region('pantsLong')]).toBe('#6e4222');
+    expect(t.sock).toBe('#6e4222');
+    expect(t.wear[region('sockTall')]).toBeNull();
+  });
+
+  it('has trouser masks on every frame', () => {
+    for (const f of framesOf('h4-average', 'walk')) expect(f.wear![region('pantsLong')]).not.toBeNull();
   });
 });

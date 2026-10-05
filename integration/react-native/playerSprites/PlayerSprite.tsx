@@ -103,6 +103,7 @@ export const PlayerSprite = memo(function PlayerSprite({
       )}
       <Piece piece={f.jersey} scale={scale} tint={colors.jersey} />
       <Piece piece={f.trim} scale={scale} tint={colors.trim} />
+      {wear.print !== null && <Piece piece={f.prints?.[wear.print] ?? null} scale={scale} />}
       <Piece piece={f.shorts} scale={scale} tint={wear.shorts} />
       <Piece piece={f.sock} scale={scale} tint={wear.sock} />
       <Piece piece={f.shoe} scale={scale} tint={wear.shoe} />
