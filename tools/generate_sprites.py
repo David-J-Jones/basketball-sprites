@@ -98,9 +98,9 @@ DEFAULT_OUTFIT = {"shorts": "#3E3E46", "sock": "#F2F2F6", "shoe": "#AAACB4", "so
 # Wear regions: skin areas an outfit can cover. A skin tag carries them as a
 # suffix ("skin0@sa.sb"); each region becomes an extra mask the app draws
 # over the skin, tinted with the item's color, only when it's worn.
-WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh"]
+WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh", "pl"]
 WEAR_NAMES = {"sa": "sleeveShort", "sb": "sleeveLong", "sn": "armSleeveNear", "sf": "armSleeveFar",
-              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall"}
+              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall", "pl": "pantsLong"}
 _SPLIT = {}
 
 
@@ -609,6 +609,24 @@ def print_lightning(u, v):
     return _hex("#fff4a8") if d < 0.6 else _hex("#ffc61a") if d < 1.5 else _hex("#18181d")
 
 
+def print_suit_brown(u, v):
+    """Brown suit jacket: white shirt front and white tie at the chest, dark
+    lapel, white pocket square. The front of the chest is v > ~2.5."""
+    brown, lapel, shirt, tie, tie_edge, square = (_hex("#7a4a26"), _hex("#4e2c14"), _hex("#d8c6a2"),
+                                                   _hex("#ffffff"), _hex("#b9b4ac"), _hex("#ffffff"))
+    if u > 3.6 and v > 3.2:
+        return tie_edge if u > 9.4 else tie            # tie, darker knot at the collar
+    if u > 5.0 and v > 2.3:
+        return shirt
+    if u > 4.0 and v > 1.5:
+        return lapel
+    if 6.6 < u < 7.6 and -0.2 < v < 1.2:
+        return square
+    if 2.2 < u < 2.9:
+        return lapel                                   # jacket button line / hem shadow
+    return brown
+
+
 PRINTS = {
     # id: (label, fn)
     "hawaiian": ("Hawaiian", print_hawaiian),
@@ -623,6 +641,7 @@ PRINTS = {
     "retro_stripes": ("70s stripes", print_retro_stripes),
     "polka_dots": ("Polka dots", print_polka_dots),
     "lightning": ("Lightning bolt", print_lightning),
+    "suit_brown": ("Brown suit jacket", print_suit_brown),
 }
 
 
@@ -696,7 +715,8 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
         if t > 0.62:
             return sock_s if lit(ox, oy) < -0.4 else sock
         tag = skin_s if lit(ox, oy) < -0.3 else skin
-        return wear(tag, "sh") if t > 0.18 else tag      # tall socks
+        # tall socks; full-length trousers cover the whole shin
+        return wear(tag, "sh", "pl") if t > 0.18 else wear(tag, "pl")
     layer.capsule(knee, ankle, B["shin_r"], shin_fn)
 
     def thigh_fn(t, ox, oy):
@@ -2985,6 +3005,21 @@ def write_outfit_preview(data, bodies, pages, palettes):
                                                                       int(FRAME_H * 3 * 0.92)))
             sheet.alpha_composite(img, (110 + c * cw, r * chh))
     sheet.save(os.path.join(PREVIEW_DIR, "shirt_prints.png"))
+    # the brown suit (OUTFIT_PRESETS.brown_suit in outfit.ts)
+    suit = {"print": "suit_brown", "shorts": "#6e4222", "sock": "#6e4222", "shoe": "#3b2416", "sole": "#1c120c",
+            "wear": {"sleeveShort": "#7a4a26", "sleeveLong": "#7a4a26", "shortsLong": "#6e4222",
+                     "pantsLong": "#6e4222"}}
+    poses = [("idle", 0), ("walk", 2), ("run", 3), ("shoot", 4), ("dribble", 0), ("dance_two_step", 1),
+             ("victory_bow", 4), ("victory_cool", 3)]
+    sheet = Image.new("RGBA", (len(poses) * cw, 2 * chh), bg)
+    for r, (sk, hair, fac) in enumerate([(skins[1], "fade", "goatee"), (skins[3], "afro", "beard")]):
+        look = {"skin": sk, "hair": hair, "facial": fac, "hairColor": hair_c["black"], "outfit": suit}
+        for c, (anim, i) in enumerate(poses):
+            img = comp.frame(MID_BODY, anim, i, look, {"jersey": "#7a4a26", "trim": "#4e2c14"})
+            img = img.resize((cw, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cw,
+                                                                      int(FRAME_H * 3 * 0.92)))
+            sheet.alpha_composite(img, (c * cw, r * chh))
+    sheet.save(os.path.join(PREVIEW_DIR, "brown_suit.png"))
 
 
 def main():

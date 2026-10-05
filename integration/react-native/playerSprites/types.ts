@@ -62,14 +62,15 @@ export type PlacedPiece = [page: number, sx: number, sy: number, w: number, h: n
 /** Full-color shirt prints for park-mode tees (see Outfit.shirt.print). */
 export type ShirtPrint =
   | 'hawaiian' | 'tie_dye' | 'wave' | 'us_flag' | 'camo' | 'flames' | 'checker' | 'galaxy' | 'plaid'
-  | 'retro_stripes' | 'polka_dots' | 'lightning';
+  | 'retro_stripes' | 'polka_dots' | 'lightning' | 'suit_brown';
 
 /** Headbands, drawn over the hair (see Outfit). */
 export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
 
 /** Skin areas an outfit can cover, in the order of FrameData.wear. */
 export type WearRegion =
-  | 'sleeveShort' | 'sleeveLong' | 'armSleeveNear' | 'armSleeveFar' | 'wristband' | 'shortsLong' | 'sockTall';
+  | 'sleeveShort' | 'sleeveLong' | 'armSleeveNear' | 'armSleeveFar' | 'wristband' | 'shortsLong' | 'sockTall'
+  | 'pantsLong';
 
 export type FrameData = {
   skin: PlacedPiece | null;
@@ -188,7 +189,8 @@ export type Outfit = {
      */
     print?: ShirtPrint;
   };
-  shorts?: { color?: string; length?: 'standard' | 'long' };
+  /** 'pants' = full-length trousers (socks take the same color so the leg reads as one piece) */
+  shorts?: { color?: string; length?: 'standard' | 'long' | 'pants' };
   socks?: { color?: string; tall?: boolean };
   shoes?: { color?: string; sole?: string };
   headband?: { style: HeadwearStyle; color: string } | null;

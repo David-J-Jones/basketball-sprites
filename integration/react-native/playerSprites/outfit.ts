@@ -3,7 +3,7 @@
  * game (and tests) can use it directly; PlayerSprite draws the result.
  */
 import { SPRITE_DATA } from './frames';
-import type { HeadwearStyle, Outfit, ShirtPrint, WearRegion } from './types';
+import type { HeadwearStyle, JerseyColors, Outfit, ShirtPrint, WearRegion } from './types';
 
 export type OutfitTints = {
   shorts: string;
@@ -44,9 +44,11 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   }
   if (o.wristbands) worn.wristband = o.wristbands.color;
   const shorts = o.shorts?.color ?? d.shorts;
-  if (o.shorts?.length === 'long') worn.shortsLong = shorts;
-  const sock = o.socks?.color ?? d.sock;
-  if (o.socks?.tall) worn.sockTall = sock;
+  const pants = o.shorts?.length === 'pants';
+  if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
+  if (pants) worn.pantsLong = shorts;
+  const sock = pants ? shorts : o.socks?.color ?? d.sock;
+  if (o.socks?.tall && !pants) worn.sockTall = sock;
   return {
     shorts,
     sock,
@@ -60,6 +62,23 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
 
 export type CosmeticOption<T> = { id: string; label: string; value: T };
 
+export type OutfitPreset = { id: string; label: string; outfit: Outfit; colors: JerseyColors };
+
+/** Complete looks: pass `outfit` and `colors` to PlayerSprite. */
+export const OUTFIT_PRESETS: OutfitPreset[] = [
+  {
+    id: 'brown_suit',
+    label: 'Brown suit',
+    // brown jacket with a white tie and pocket square, matching trousers, brown dress shoes
+    outfit: {
+      shirt: { print: 'suit_brown', sleeves: 'long', sleeveColor: '#7a4a26' },
+      shorts: { color: '#6e4222', length: 'pants' },
+      shoes: { color: '#3b2416', sole: '#1c120c' },
+    },
+    colors: { jersey: '#7a4a26', trim: '#4e2c14' },
+  },
+];
+
 /** Ready-made pieces for a park-mode locker (colors are suggestions; any hex works). */
 export const COSMETICS = {
   sleeves: [
@@ -70,7 +89,8 @@ export const COSMETICS = {
   shortsLength: [
     { id: 'standard', label: 'Standard', value: 'standard' },
     { id: 'long', label: 'Long / baggy', value: 'long' },
-  ] as CosmeticOption<'standard' | 'long'>[],
+    { id: 'pants', label: 'Trousers', value: 'pants' },
+  ] as CosmeticOption<'standard' | 'long' | 'pants'>[],
   headbands: [
     { id: 'headband', label: 'Headband', value: 'headband' },
     { id: 'wide_headband', label: 'Sweatband', value: 'wide_headband' },

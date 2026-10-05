@@ -28,7 +28,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 12 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
 - **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
 - **League look:** tank top in team colors, black shorts, white socks, grey shoes.
-- **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), shorts (any color, standard or long), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
+- **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), a brown wedding-style suit with a white tie (`OUTFIT_PRESETS`), shorts (any color, standard, long or full-length trousers), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
 - **Celebrations:** 3 dances and 5 victory poses.
 - **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
 - **102 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
@@ -166,7 +166,7 @@ Pass an `outfit` to `<PlayerSprite>`; anything left out keeps the league look. T
 const outfit: Outfit = {
   shirt: { sleeves: 'long', sleeveColor: '#26262c' },   // 'none' (tank) | 'short' (tee) | 'long'; other color = compression shirt
   // or a printed tee: shirt: { print: 'hawaiian' }      // see COSMETICS.prints for the list and labels
-  shorts: { color: '#2c5fd6', length: 'long' },         // 'standard' | 'long'
+  shorts: { color: '#2c5fd6', length: 'long' },         // 'standard' | 'long' | 'pants' (trousers)
   socks: { color: '#f2f2f4', tall: true },              // tall = retro tube socks
   shoes: { color: '#26262c', sole: '#f2f2f4' },
   headband: { style: 'tied_headband', color: '#d62b2b' }, // 'headband' | 'wide_headband' | 'tied_headband'
@@ -174,6 +174,13 @@ const outfit: Outfit = {
   armSleeve: { color: '#f2f2f4', arm: 'right' },        // stays on that arm when the player turns around
 };
 <PlayerSprite look={look} colors={{ jersey: '#f2f2f4', trim: '#2c5fd6' }} outfit={outfit} ... />
+```
+
+**Complete looks** live in `OUTFIT_PRESETS`. `brown_suit` is a brown suit jacket with a white tie, shirt front and pocket square, matching brown trousers and brown dress shoes:
+
+```tsx
+const suit = OUTFIT_PRESETS.find((p) => p.id === 'brown_suit')!;
+<PlayerSprite look={look} colors={suit.colors} outfit={suit.outfit} ... />
 ```
 
 Every color is a tint, so any hex works; `COSMETICS` has option lists and a starter palette for a locker screen. How it works:
