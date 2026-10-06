@@ -62,10 +62,28 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
 
 export type CosmeticOption<T> = { id: string; label: string; value: T };
 
-export type OutfitPreset = { id: string; label: string; outfit: Outfit; colors: JerseyColors };
+export type OutfitPreset = { id: string; label: string; outfit: Outfit; colors: JerseyColors; developerOnly?: boolean };
+
+/** Full-spectrum developer tee color. One complete hue rotation every 8 seconds. */
+export function developerNeonColor(seconds: number): string {
+  const hue = (((seconds % 8) + 8) % 8) / 8 * 360;
+  const c = 1;
+  const x = 1 - Math.abs(((hue / 60) % 2) - 1);
+  const [r1, g1, b1] = hue < 60 ? [c, x, 0] : hue < 120 ? [x, c, 0] : hue < 180 ? [0, c, x]
+    : hue < 240 ? [0, x, c] : hue < 300 ? [x, 0, c] : [c, 0, x];
+  const hex = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${hex(r1)}${hex(g1)}${hex(b1)}`;
+}
 
 /** Complete looks: pass `outfit` and `colors` to PlayerSprite. */
 export const OUTFIT_PRESETS: OutfitPreset[] = [
+  {
+    id: 'developer_neon_tee',
+    label: 'Developer neon tee',
+    developerOnly: true,
+    outfit: { shirt: { sleeves: 'short', effect: 'developer_neon' } },
+    colors: { jersey: '#ff0000', trim: '#ffffff' },
+  },
   {
     id: 'brown_suit',
     label: 'Brown suit',
