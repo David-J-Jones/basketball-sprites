@@ -1,5 +1,5 @@
 import meta from './trails.json';
-import { trailFrame, TRAILS, TRAIL_IDS } from './trails';
+import { ballFrame, trailFrame, TRAILS, TRAIL_IDS } from './trails';
 
 describe('ball trails', () => {
   it('has a label and fps for every trail, including at least 10 effects', () => {
@@ -24,5 +24,14 @@ describe('ball trails', () => {
     expect(cx).toBeGreaterThan(meta.frameWidth * 0.8);
     expect(cx).toBeLessThan(meta.frameWidth);
     expect(Math.abs(cy - meta.frameHeight / 2)).toBeLessThanOrEqual(meta.scale);
+  });
+
+  it('spins the plain ball through a full loop of frames', () => {
+    expect(meta.ball.spinFrames).toBe(16);
+    expect(ballFrame(0)).toBe(0);
+    expect(ballFrame(1.01 / meta.ball.fps)).toBe(1);
+    expect(ballFrame((meta.ball.spinFrames + 0.01) / meta.ball.fps)).toBe(0);
+    expect(meta.ball.squash).toBe(meta.ball.spinFrames);
+    expect(meta.ball.shadow).toBe(meta.ball.spinFrames + 1);
   });
 });

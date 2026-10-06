@@ -205,6 +205,22 @@ Every color is a tint, so any hex works; `COSMETICS` has option lists and a star
 
 Victory poses end on their pose: play them with `animator.hold('victory_flex')` (or `hold('dance_robot')` for a dance) and `release()` when the celebration is over. They live in their own `celebrations` page group (~2 MB per body), loaded only when one plays.
 
+### The ball
+
+`<Ball>` draws the basketball in the same pixel art as the players: shaded orange with a highlight, a glint and thin seams, spinning with backspin.
+
+```tsx
+import { Ball } from './ballTrails';
+
+<Ball x={ballScreenX} y={ballScreenY} size={ballSpritePx} seconds={secondsSinceRelease} flip={movingLeft} />
+<Ball x={ballScreenX} y={floorY} size={ballSpritePx} shadow />    // ground shadow
+<Ball x={ballScreenX} y={ballScreenY} size={ballSpritePx} squash /> // the instant a dribble hits the floor
+```
+
+- **Size:** the strip is 16 spin frames (one full turn), then a squashed frame and a shadow. Each cell is 11 art px (33 px in the PNG), so `size = 11 × the player's screen px per art px` keeps it in scale with the sprites.
+- **Spin:** it's backspin for a ball moving right; pass `flip` when it moves left. `fps` sets the spin speed (default 20, `0` = still).
+- **Shared art:** the trails, the app icon and `sprites/ball.png` use the same ball. Previews are `previews/ball.png` and `previews/ball_spin.gif`.
+
 ### Ball trails
 
 ```tsx
@@ -215,7 +231,7 @@ import { BallTrail } from './ballTrails';
            size={ballDiameterPx} seconds={secondsInAir} />
 ```
 
-Each trail is an 8-frame loop with the ball spinning at the front and the effect streaming out behind. `BallTrail` rotates it to the velocity, around the ball's centre. Trails: `fire`, `laser`, `bubbles`, `money`, `lightning`, `rainbow`, `ice`, `smoke`, `stars`, `confetti`, `afterimage`, plus `none` (just the spinning ball). `TRAILS[id].label` is the display name. Each strip is one small PNG (~0.1 MB decoded), required only when that trail is used. Redraw them with `python3 tools/generate_trails.py`.
+Each trail is an 8-frame loop with the ball (the same one as `<Ball>`) making one full turn of backspin at the front and the effect streaming out behind. `BallTrail` rotates it to the velocity, around the ball's centre. Trails: `fire`, `laser`, `bubbles`, `money`, `lightning`, `rainbow`, `ice`, `smoke`, `stars`, `confetti`, `afterimage`, plus `none` (just the spinning ball). `TRAILS[id].label` is the display name. Each strip is one small PNG (~0.1 MB decoded), required only when that trail is used. Redraw them with `python3 tools/generate_trails.py`.
 
 ## App icon
 
@@ -412,7 +428,7 @@ The tests cover:
 ```bash
 pip install pillow
 python3 tools/generate_sprites.py      # ~6 min
-python3 tools/generate_trails.py       # ball trails, a few seconds
+python3 tools/generate_trails.py       # the ball and its trails, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
 ```
 

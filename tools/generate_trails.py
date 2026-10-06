@@ -20,7 +20,8 @@ import sys
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from generate_sprites import FIXED, PREVIEW_DIR, ROOT, ball_layer  # noqa: E402
+from generate_sprites import (BALL_CELL, BALL_SPIN_FRAMES, FIXED, PREVIEW_DIR, ROOT, ball_layer,  # noqa: E402
+                              build_ball_sheet)
 
 OUT_DIR = os.path.join(ROOT, "integration", "react-native", "ballTrails")
 W, H = 60, 20                  # frame size in art pixels
@@ -295,7 +296,7 @@ def fx_confetti(c, i):
 def fx_afterimage(c, i):
     """Retro speed ghosting: fading copies of the ball behind it."""
     for k, a in ((1, 0.55), (2, 0.32), (3, 0.16)):
-        ghost = ball_layer((BX - k * 11 + 0.5, BY + 0.5), (i - k) * 22.5)
+        ghost = ball_layer((BX - k * 11 + 0.5, BY + 0.5), (i - k) * 360 / FRAMES)
         for (x, y), col in ghost.px.items():
             c.put(x, y, tuple(col[:3]) + (int(col[3] * a),))
 
@@ -323,7 +324,7 @@ def frame(trail, i):
     if fn:
         fn(c, i)
     img = c.image()
-    ball = ball_layer((BX + 0.5, BY + 0.5), i * 22.5)        # the ball spins through the loop
+    ball = ball_layer((BX + 0.5, BY + 0.5), i * 360 / FRAMES)   # one full turn of backspin per loop
     for src in (ball.outline(), ball.px):
         for (x, y), col in src.items():
             if 0 <= x < W and 0 <= y < H:
@@ -343,6 +344,9 @@ def main():
         "ballCenter": [(BX + 0.5) * SCALE, (BY + 0.5) * SCALE],
         "ballDiameter": 11 * SCALE,
         "trails": {},
+        # the plain ball (Ball.tsx): BALL_SPIN_FRAMES spin cells, then squash, then shadow
+        "ball": {"cell": BALL_CELL * SCALE, "spinFrames": BALL_SPIN_FRAMES, "fps": 20,
+                 "squash": BALL_SPIN_FRAMES, "shadow": BALL_SPIN_FRAMES + 1},
     }
     bg = (34, 40, 58, 255)
     sheet = Image.new("RGBA", (W * 2 * FRAMES, len(TRAILS) * (H * 2 + 12)), bg)
@@ -367,6 +371,20 @@ def main():
         gif[0].save(os.path.join(PREVIEW_DIR, "trails", tid + ".gif"), save_all=True, append_images=gif[1:],
                     duration=int(1000 / fps), loop=0)
     sheet.save(os.path.join(PREVIEW_DIR, "trails.png"))
+    ball, _ = build_ball_sheet()
+    ball.resize((ball.width * SCALE, ball.height * SCALE), Image.NEAREST).save(
+        os.path.join(OUT_DIR, "ball.png"), optimize=True)
+    # ball preview: every frame big, and a spinning gif
+    big = Image.new("RGBA", ball.size, bg)
+    big.alpha_composite(ball)
+    big.resize((ball.width * 8, ball.height * 8), Image.NEAREST).save(os.path.join(PREVIEW_DIR, "ball.png"))
+    spin = []
+    for i in range(BALL_SPIN_FRAMES):
+        f = Image.new("RGBA", (BALL_CELL, BALL_CELL), bg)
+        f.alpha_composite(ball.crop((i * BALL_CELL, 0, (i + 1) * BALL_CELL, BALL_CELL)))
+        spin.append(f.resize((BALL_CELL * 12, BALL_CELL * 12), Image.NEAREST).convert("RGB"))
+    spin[0].save(os.path.join(PREVIEW_DIR, "ball_spin.gif"), save_all=True, append_images=spin[1:],
+                 duration=50, loop=0)
     with open(os.path.join(OUT_DIR, "trails.json"), "w") as f:
         json.dump(meta, f, indent=1)
     lines = [
@@ -378,7 +396,7 @@ def main():
         "export const TRAIL_IMAGES: Record<TrailId, () => ImageSourcePropType> = {",
     ]
     lines += ["  %s: () => require('./%s.png')," % (t, t) for t in TRAILS]
-    lines += ["};", ""]
+    lines += ["};", "", "export const BALL_IMAGE: ImageSourcePropType = require('./ball.png');", ""]
     with open(os.path.join(OUT_DIR, "trailImages.ts"), "w") as f:
         f.write("\n".join(lines))
     print("wrote %d trails to %s" % (len(TRAILS), OUT_DIR))
