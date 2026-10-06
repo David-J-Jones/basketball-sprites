@@ -260,6 +260,8 @@ Each trail is an 8-frame loop with the ball (the same one as `<Ball>`) making on
 | `splash-icon.png` | 1024 × 1024, transparent | Splash screen |
 | `favicon.png` | 48 × 48 | Web |
 
+**Google Play feature graphic:** `appIcon/feature-graphic.png` (1024 × 500 PNG) is the icon's dunker throwing it down over a defender who's a step late, on the same sunburst with a hardwood floor. It has no text; add your app name in the Play listing, or ask to have a pixel-font title drawn in. Redraw it with `python3 tools/generate_feature_graphic.py`.
+
 `previews/app_icon.png` shows it square, rounded, in Android's circle mask, and at home-screen sizes. Colors and the pose are at the top of `tools/generate_app_icon.py`; rerun it to redraw.
 
 ## Directions: up/down, near/far
@@ -430,6 +432,7 @@ pip install pillow
 python3 tools/generate_sprites.py      # ~6 min
 python3 tools/generate_trails.py       # the ball and its trails, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
+python3 tools/generate_feature_graphic.py  # Play feature graphic, a second
 ```
 
 The first rewrites the atlas, `spriteData.*`, `bodyData.ts`, `bodies/`, and the sprite previews in `previews/` (including `outfits.png` and `headbands.png`). The second rewrites `ballTrails/` and `previews/trails.png` / `previews/trails/*.gif`.
