@@ -53,6 +53,7 @@ PAD = 1                   # gap between atlas pieces, in stored units
 
 LIGHT = (-0.6, -0.8)      # light from the upper-left
 BALL_R = 4.8
+BALL_SPIN_FRAMES = 16     # one full turn of backspin
 BALL_CELL = 11
 
 # ---------------------------------------------------------------- colors
@@ -663,19 +664,34 @@ def blit_head(layer, origin, style=None, facial=None, headwear=None):
 
 # ---------------------------------------------------------------- ball (separate sheet)
 BALL_COLORS = {
-    "ball": (234, 116, 38, 255), "ball_light": (252, 166, 92, 255),
-    "ball_shade": (178, 72, 24, 255), "ball_seam": (58, 26, 14, 255),
+    "glint": (255, 244, 224, 255), "hi": (255, 196, 132, 255), "light": (250, 152, 74, 255),
+    "base": (232, 114, 38, 255), "shade": (196, 82, 28, 255), "deep": (146, 56, 22, 255),
+    "bounce": (214, 98, 40, 255), "seam": (56, 24, 14, 255), "seam_lit": (96, 42, 20, 255),
 }
+# Seams in ball coordinates (u right, v down, the ball is the unit disc),
+# as implicit curves f(u, v) = 0: the classic small-ball design of two
+# crossing curves and two side arcs.
+BALL_SEAM_CURVES = [
+    lambda u, v: v - (0.10 + 0.30 * u * u),                 # "equator", sagging like a great circle
+    lambda u, v: u - (-0.08 + 0.26 * v * v),                # "meridian", bowing to the right
+    lambda u, v: u - (0.50 + 0.30 * v * v),                 # right side arc  )
+    lambda u, v: u + (0.62 + 0.24 * v * v),                 # left side arc   (
+]
 
 
 def ball_layer(center, rot_deg=0.0, squash=0.0):
-    """Shaded basketball with seams; rot_deg spins the seams (180 deg period)."""
+    """Shaded pixel-art basketball. rot_deg spins the seams in the picture
+    plane (counter-clockwise on screen: backspin for a ball moving right), so
+    0..360 degrees is a full turn; the light stays put. squash > 0 flattens
+    it for the bounce."""
     cx, cy = center
     rx = BALL_R * (1 + 0.18 * squash)
     ry = BALL_R * (1 - 0.22 * squash)
-    L = (-0.45, -0.6, 0.66)
+    L = (-0.5, -0.62, 0.6)
+    ln = math.sqrt(sum(v * v for v in L))
+    L = tuple(v / ln for v in L)
     th = math.radians(rot_deg)
-    tilt_x = math.radians(-20)
+    ct, st = math.cos(th), math.sin(th)
     layer = Layer()
     for y in range(int(cy - ry) - 2, int(cy + ry) + 3):
         for x in range(int(cx - rx) - 2, int(cx + rx) + 3):
@@ -686,20 +702,34 @@ def ball_layer(center, rot_deg=0.0, squash=0.0):
                 continue
             nz = math.sqrt(max(0.0, 1 - d2))
             light = nx * L[0] + ny * L[1] + nz * L[2]
-            u = nx * math.cos(th) + nz * math.sin(th)
-            w = -nx * math.sin(th) + nz * math.cos(th)
-            v = ny
-            v, w = v * math.cos(tilt_x) - w * math.sin(tilt_x), v * math.sin(tilt_x) + w * math.cos(tilt_x)
-            seam = abs(u) < 0.12 or abs(v) < 0.12 or abs(abs(u) - 0.66 - 0.3 * v * v) < 0.07
-            if seam and d2 < 0.9:
-                c = BALL_COLORS["ball_seam"]
-            elif light > 0.72:
-                c = BALL_COLORS["ball_light"]
-            elif light > 0.12:
-                c = BALL_COLORS["ball"]
+            if light > 0.93:
+                c = BALL_COLORS["hi"]
+            elif light > 0.62:
+                c = BALL_COLORS["light"]
+            elif light > -0.12:
+                c = BALL_COLORS["base"]
+            elif nx > 0.2 and ny > 0.3:
+                c = BALL_COLORS["bounce"]                      # light bounced up off the floor
             else:
-                c = BALL_COLORS["ball_shade"]
+                c = BALL_COLORS["shade"]
+            # seams: rotate into ball coordinates; a pixel is on a seam when
+            # it is within half a pixel of the curve
+            u, v = nx * ct + ny * st, -nx * st + ny * ct
+            if d2 < 0.78:
+                for f in BALL_SEAM_CURVES:
+                    e = 1e-3
+                    fv = f(u, v)
+                    gu = (f(u + e, v) - fv) / e
+                    gv = (f(u, v + e) - fv) / e
+                    # gradient in pixels: ball units are rx px wide
+                    if abs(fv) / (math.hypot(gu, gv) + 1e-9) * BALL_R < 0.5:
+                        c = BALL_COLORS["seam_lit"] if light > 0.8 else BALL_COLORS["seam"]
+                        break
             layer.px[(x, y)] = c
+    # specular glint, fixed (the light doesn't spin with the ball)
+    g = (int(math.floor(cx - rx * 0.45)), int(math.floor(cy - ry * 0.52)))
+    if g in layer.px:
+        layer.px[g] = BALL_COLORS["glint"]
     return layer
 
 
@@ -2539,9 +2569,9 @@ class Compositor:
 def build_ball_sheet():
     size = BALL_CELL
     frames = []
-    for i in range(8):
+    for i in range(BALL_SPIN_FRAMES):
         img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        _blit_rgba(img, ball_layer((5.5, 5.5), i * 22.5))
+        _blit_rgba(img, ball_layer((5.5, 5.5), i * 360 / BALL_SPIN_FRAMES))
         frames.append(("spin_%d" % i, img))
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     _blit_rgba(img, ball_layer((5.5, 6.5), 0, 1))
@@ -2553,9 +2583,10 @@ def build_ball_sheet():
     sheet = Image.new("RGBA", (size * len(frames), size), (0, 0, 0, 0))
     meta = {"frames": {}, "meta": {"image": "ball.png", "size": {"w": sheet.width, "h": size},
                                    "frameTags": [
-                                       {"name": "spin", "from": 0, "to": 7, "fps": 16},
-                                       {"name": "squash", "from": 8, "to": 8},
-                                       {"name": "shadow", "from": 9, "to": 9},
+                                       {"name": "spin", "from": 0, "to": BALL_SPIN_FRAMES - 1, "fps": 20},
+                                       {"name": "squash", "from": BALL_SPIN_FRAMES, "to": BALL_SPIN_FRAMES},
+                                       {"name": "shadow", "from": BALL_SPIN_FRAMES + 1,
+                                        "to": BALL_SPIN_FRAMES + 1},
                                    ]}}
     for i, (name, img) in enumerate(frames):
         sheet.paste(img, (i * size, 0))

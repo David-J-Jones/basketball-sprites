@@ -17,3 +17,5 @@ export const TRAIL_IMAGES: Record<TrailId, () => ImageSourcePropType> = {
   confetti: () => require('./confetti.png'),
   afterimage: () => require('./afterimage.png'),
 };
+
+export const BALL_IMAGE: ImageSourcePropType = require('./ball.png');

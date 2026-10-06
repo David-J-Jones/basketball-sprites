@@ -13,3 +13,8 @@ export const TRAILS = meta.trails as Record<TrailId, TrailInfo>;
 export function trailFrame(trail: TrailId, seconds: number): number {
   return Math.floor(Math.max(0, seconds) * TRAILS[trail].fps) % meta.frames;
 }
+
+/** Spin frame of the plain ball after `seconds` of backspin (see Ball). */
+export function ballFrame(seconds: number, fps: number = meta.ball.fps): number {
+  return Math.floor(Math.max(0, seconds) * fps) % meta.ball.spinFrames;
+}
