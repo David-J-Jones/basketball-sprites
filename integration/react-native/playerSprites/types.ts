@@ -188,6 +188,8 @@ export type Outfit = {
      * still use `colors.trim`. Printed shirts always have at least short sleeves.
      */
     print?: ShirtPrint;
+    /** Developer-only animated shirt treatment; color is resolved at render time. */
+    effect?: 'developer_neon';
   };
   /** 'pants' = full-length trousers (socks take the same color so the leg reads as one piece) */
   shorts?: { color?: string; length?: 'standard' | 'long' | 'pants' };
