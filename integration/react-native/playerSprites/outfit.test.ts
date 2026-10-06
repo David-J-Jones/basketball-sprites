@@ -1,5 +1,5 @@
 import { framesOf, headOverlay, SPRITE_DATA as SPRITES } from './frames';
-import { COSMETICS, OUTFIT_PRESETS, outfitTints } from './outfit';
+import { COSMETICS, OUTFIT_PRESETS, developerNeonColor, outfitTints } from './outfit';
 import type { AnimName, Outfit } from './types';
 
 const region = (name: string) => SPRITES.wearRegions.indexOf(name as never);
@@ -105,5 +105,22 @@ describe('brown suit', () => {
 
   it('has trouser masks on every frame', () => {
     for (const f of framesOf('h4-average', 'walk')) expect(f.wear![region('pantsLong')]).not.toBeNull();
+  });
+});
+
+
+describe('developer neon tee', () => {
+  it('is developer-only, short sleeved, and cycles through the hue wheel', () => {
+    const dev = OUTFIT_PRESETS.find((p) => p.id === 'developer_neon_tee')!;
+    expect(dev.developerOnly).toBe(true);
+    expect(dev.outfit.shirt).toMatchObject({ sleeves: 'short', effect: 'developer_neon' });
+    expect(developerNeonColor(0)).toBe('#ff0000');
+    expect(developerNeonColor(2)).toBe('#80ff00');
+    expect(developerNeonColor(4)).toBe('#00ffff');
+    expect(developerNeonColor(6)).toBe('#8000ff');
+    expect(developerNeonColor(8)).toBe('#ff0000');
+    const tint = outfitTints(dev.outfit, developerNeonColor(4));
+    expect(tint.wear[region('sleeveShort')]).toBe('#00ffff');
+    expect(tint.wear[region('sleeveLong')]).toBeNull();
   });
 });
