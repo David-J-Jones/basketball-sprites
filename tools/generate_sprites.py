@@ -75,6 +75,9 @@ FIXED = {
     "fish_eye": (20, 20, 30, 255), "gravel": (232, 204, 128, 255), "gravel_d": (184, 146, 92, 255),
     "prop_r": (232, 52, 52, 255), "prop_y": (255, 212, 60, 255), "prop_b": (52, 112, 232, 255),
     "prop_g": (52, 190, 92, 255), "prop_stem": (92, 92, 104, 255),
+    "prop_r_d": (170, 30, 36, 255), "prop_y_d": (206, 160, 30, 255), "prop_b_d": (32, 74, 170, 255),
+    "prop_g_d": (30, 136, 62, 255), "prop_hub": (255, 236, 120, 255), "shine": (255, 255, 255, 120),
+    "halo_glow": (255, 240, 150, 90), "hat_white": (246, 246, 246, 255),
 }
 TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
     "skin0": ("skin", None, 255),
@@ -104,6 +107,8 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "sole": ("sole", None, 255),
     "hw0": ("headwear", None, 255),
     "hw1": ("headwear", (0, 0, 0, 80), 255),
+    "hw2": ("headwear", (255, 255, 255, 80), 255),     # hat highlight
+    "hw3": ("headwear", (0, 0, 0, 150), 255),          # hat band / deep shade
 }
 BODY_SLOTS = ["skin", "jersey", "trim", "shorts", "sock", "shoe", "sole"]
 DEFAULT_OUTFIT = {"shorts": "#3E3E46", "sock": "#F2F2F6", "shoe": "#AAACB4", "sole": "#484852"}
@@ -206,7 +211,10 @@ class Layer:
 
     def outline(self):
         out = {}
+        glow = getattr(self, "no_outline", ())
         for (x, y) in self.px:
+            if (x, y) in glow:
+                continue                       # glowing pixels (the halo) get no dark outline
             for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                 if (nx, ny) not in self.px:
                     out[(nx, ny)] = "outline"
@@ -521,80 +529,106 @@ def _tpl(rows, chars, r0, c0=0):
     return m
 
 
-HAT_CHARS = {"H": "hw0", "h": "hw1", "b": "hat_band", "f": "fed_band", "G": "gold", "g": "gold_hi",
-             "d": "gold_dk", "p": "pink_in"}
+HAT_CHARS = {"H": "hw0", "h": "hw1", "L": "hw2", "d": "hw3", "w": "hat_white", "b": "hat_band",
+             "G": "gold", "g": "gold_hi", "D": "gold_dk", "o": "halo_glow", "p": "pink_in",
+             "K": "goat_horn", "k": "goat_horn_d", "e": "goat_iris", "x": "goat_eye", "n": "goat_nose"}
+GLOW_TAGS = {"gold", "gold_hi", "gold_dk", "halo_glow"}
 
+# Hats are drawn on the head grid (face to the right; the skull covers
+# columns 2-12, rows 4-15, eyes on row 9). Tinted parts: H base, h shade,
+# L highlight, d deep shade; other letters are fixed colors.
 TOP_HAT = _tpl([
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "hHHHHHHHh",
-    "bbbbbbbbb",
-    "hHHHHHHHHHHHh",
-], HAT_CHARS, -3, 3)
-TOP_HAT = {(c - 2 if r == 6 else c, r): t for (c, r), t in TOP_HAT.items()}   # brim reaches both ways
+    "...hHHHHHHHh...",
+    "...hLHHHHHHh...",
+    "...hLHHHHHHh...",
+    "...hLHHHHHHh...",
+    "...hHHHHHHHh...",
+    "...hHHHHHHHh...",
+    "...hHHHHHHHh...",
+    "...LLLLLLLLL...",          # band: a light line over a dark stripe, visible on any hat color
+    ".h.ddddddddd.h.",          # (the brim curls up at the ends)
+    ".hHHHHHHHHHHHh.",
+    "..hhhhhhhhhhh..",
+], HAT_CHARS, -4)
 
-CAP_DOME = [
-    "..hHHHHh..",
-    ".hHHHHHHH.",
-    "hHHHHHHHHHH",
-    "hHHHHHHHHHH",
-    "hhhhhhhhhhh",
-]
-CAP_FORWARD = {**_tpl(CAP_DOME, HAT_CHARS, 3, 2), **_tpl(["hHHH"], HAT_CHARS, 7, 12), (7, 2): "hw1"}
-CAP_BACKWARD = {**_tpl(CAP_DOME, HAT_CHARS, 3, 2), **_tpl(["HHHh"], HAT_CHARS, 7, -1), (7, 2): "hw1",
-                (11, 6): "hw1"}
+CAP_FORWARD = _tpl([
+    "......hdh........",
+    "....hHLLLHh......",
+    "...hHLLHHHHh.....",
+    "..hHHLHHHwwHh....",
+    "..hHHHHHHwwHHh...",
+    "..hhhhhhhhhhhLLLH",
+    ".............ddd.",
+], HAT_CHARS, 2)
+
+CAP_BACKWARD = _tpl([
+    "........hdh......",
+    "......hLLLHHh....",
+    ".....hLLHHHHHh...",
+    "....hHLHHHHHHdh..",        # the strap gap shows above the forehead
+    "....hHHHHHHHHdHh.",
+    "HLLLhhhhhhhhhhh..",
+    ".ddd.............",
+], HAT_CHARS, 2, -2)
 
 HALO = _tpl([
-    ".gGGGGGg.",
-    "GdddddddG",
-], HAT_CHARS, -4, 3)
+    "....ooooooo....",
+    "...oGgggggGo...",
+    "...oDGGGGGDo...",
+    "....ooooooo....",
+], HAT_CHARS, -4)
 
 CAT_EARS = _tpl([
-    "..H...H.",
-    ".hph.HpH",
-    ".hph.HpH",
-    "hhhhhhhhh",
-], HAT_CHARS, 0, 3)
+    "..h.....H......",
+    "..hh...HpH.....",
+    "..hhh..HppH....",
+    "..hhhh.HpppH...",
+    "..hhhh.HHHHHH..",
+    "...ddddddddd...",          # thin headband
+], HAT_CHARS, -2)
 
 FEDORA = _tpl([
-    "..hHhHHh..",
-    ".hHHHHHHH.",
-    ".hHHHHHHH.",
-    ".hHHHHHHH.",
-    ".fffffffff",
-    "hHHHHHHHHHHHHHH",
-    ".............hh",
-], HAT_CHARS, 1, 0)
+    ".....hLdLh......",
+    "....hHLLHHHh....",
+    "....hHLHHHHh....",
+    "h...dddddddd....",         # band; the back of the brim flips up
+    "hHHHHHHHHHHHHHh.",
+    ".............HLh",         # the front of the brim snaps down
+], HAT_CHARS, 1)
 
 
 def _goat_head():
-    """A whole goat head over the player's: fur (tinted, white by default),
-    curled horns, a snout out to the right, a yellow eye and a little beard.
-    It stops above the neck so it doesn't vary with every pose."""
+    """A whole goat head over the player's: the cranium covers his head, a
+    long muzzle sticks out front, an ear out the back, horns curling up and
+    back, a yellow eye with a black pupil, and a little beard. Fur is
+    tinted (white by default)."""
     m = {}
     skull = _skull_pixels()
-    for r in range(1, 15):
-        for c in range(0, 17):
-            dx, dy = (c + 0.5 - 7) / 6.2, (r + 0.5 - 8.6) / 6.2
-            sx, sy = (c + 0.5 - 12.6) / 3.0, (r + 0.5 - 10.6) / 2.3
-            if dx * dx + dy * dy <= 1 or sx * sx + sy * sy <= 1 or (c, r) in skull:
-                m[(c, r)] = "hw1" if dx < -0.45 or dy > 0.55 or sy > 0.55 else "hw0"
-    for c, r in ((5, 2), (6, 2), (4, 1), (3, 0), (2, 0), (1, 1), (0, 2), (0, 3), (1, 4)):
-        m[(c, r)] = "goat_horn"                                       # horn curling back
-    for c, r in ((2, 1), (1, 2), (1, 3)):
+    cranium = set(skull) | {(c, r) for c in range(3, 12) for r in range(3, 5)} | \
+        {(c, 5) for c in range(2, 13)} | {(13, r) for r in range(7, 13)}
+    muzzle = {(c, r) for r in range(9, 14) for c in range(12, 17)
+              if not (c == 16 and r in (9, 13)) and not (c >= 15 and r == 13)}
+    for c, r in cranium | muzzle:
+        if r <= 6 and 5 <= c <= 10:
+            m[(c, r)] = "hw2"                                         # light on top of the head
+        elif c <= 3 or r >= 13 or (c >= 12 and r == 13):
+            m[(c, r)] = "hw1"
+        else:
+            m[(c, r)] = "hw0"
+    for c, r in ((-1, 8), (0, 8), (1, 8), (0, 9), (1, 9), (2, 9)):
+        m[(c, r)] = "hw1"                                             # ear sticking out the back
+    m[(0, 9)] = "pink_in"
+    horn = [(5, 3), (5, 2), (4, 1), (3, 0), (2, 0), (1, 1), (0, 2), (0, 3), (1, 4)]
+    for c, r in horn:
+        m[(c, r)] = "goat_horn"
+    for c, r in ((4, 2), (3, 1), (1, 2), (1, 3)):
         m[(c, r)] = "goat_horn_d"
-    for c, r in ((0, 8), (1, 8), (0, 9), (2, 9)):
-        m[(c, r)] = "hw1"                                             # floppy ear
-    m[(9, 7)], m[(10, 7)] = "goat_iris", "goat_eye"
-    m[(15, 10)] = "goat_nose"
-    m[(14, 12)] = m[(13, 12)] = "goat_nose"                           # mouth
-    for c, r in ((11, 13), (11, 14), (10, 14)):
-        m[(c, r)] = "hw0"                                             # beard
+    m[(9, 8)], m[(10, 8)] = "goat_iris", "goat_eye"                   # eye with a dark pupil
+    m[(16, 10)] = "goat_nose"
+    for c in (14, 15, 16):
+        m[(c, 12)] = "goat_nose"                                      # mouth line
+    for c, r in ((11, 14), (12, 14), (11, 15), (12, 15), (11, 16)):
+        m[(c, r)] = "hw1"                                             # beard
     return m
 
 
@@ -622,22 +656,28 @@ def _fishbowl():
 
 
 def _propeller(frame):
-    """Beanie in four colored panels with a propeller on top; four frames of spin."""
-    panels = ["prop_r", "prop_r", "prop_r", "prop_y", "prop_y", "prop_y", "prop_b", "prop_b", "prop_b",
-              "prop_g", "prop_g"]
+    """Four-panel beanie with a visor and a propeller on top; four frames of spin."""
     m = {}
-    for r, (c0, c1) in zip(range(3, 8), [(4, 10), (3, 11), (2, 12), (2, 12), (2, 12)]):
+    rows = [(3, 4, 10), (4, 3, 11), (5, 2, 12), (6, 2, 12), (7, 2, 12)]
+    for r, c0, c1 in rows:
         for c in range(c0, c1 + 1):
-            m[(c, r)] = "prop_y" if r == 7 else panels[c - 2]
+            panel = "prop_r" if c <= 4 else "prop_y" if c <= 7 else "prop_b" if c <= 10 else "prop_g"
+            m[(c, r)] = panel + "_d" if r == 7 or c == c0 else panel
+    m[(5, 4)] = m[(6, 4)] = "shine"
+    m[(13, 7)], m[(14, 7)] = "prop_g", "prop_g_d"                     # visor
     m[(7, 1)] = m[(7, 2)] = "prop_stem"
     blades = [
-        {**{(c, 0): "prop_r" for c in range(3, 7)}, **{(c, 0): "prop_b" for c in range(8, 12)}},
-        {**{(c, 0): "prop_r" for c in range(5, 7)}, **{(c, 0): "prop_b" for c in range(8, 10)}},
-        {(6, 0): "prop_b", (8, 0): "prop_r"},
-        {**{(c, 0): "prop_b" for c in range(4, 7)}, **{(c, 0): "prop_r" for c in range(8, 11)}},
+        ([(c, 0) for c in range(2, 7)], [(c, 0) for c in range(8, 13)]),
+        ([(c, 0) for c in range(4, 7)], [(c, 0) for c in range(8, 11)]),
+        ([(6, 0)], [(8, 0)]),
+        ([(c, 0) for c in range(4, 7)], [(c, 0) for c in range(8, 11)]),
     ][frame]
-    m.update(blades)
-    m[(7, 0)] = "prop_stem"
+    left, right = ("prop_r", "prop_b") if frame < 3 else ("prop_b", "prop_r")
+    for p_ in blades[0]:
+        m[p_] = left
+    for p_ in blades[1]:
+        m[p_] = right
+    m[(7, 0)] = "prop_hub"
     return m
 
 
@@ -663,6 +703,8 @@ HEADWEAR_HIDES = {k: ["hair"] for k in ("top_hat", "cap_forward", "cap_backward"
                                          "propeller_hat_0", "propeller_hat_1", "propeller_hat_2",
                                          "propeller_hat_3")}
 HEADWEAR_HIDES["goat_head"] = ["hair", "facial"]
+# drawn the same in every frame (arms pass behind it) to keep its memory tiny
+STATIC_HEADWEAR = {"goat_head"}
 
 
 # ---------------------------------------------------------------- shirt prints
@@ -851,6 +893,9 @@ def blit_head(layer, origin, style=None, facial=None, headwear=None):
             layer.px[(ox + c, oy + r)] = tag
             if headwear not in ("headband", "wide_headband", "tied_headband"):
                 layer.hat_px.add((ox + c, oy + r))
+            if tag in GLOW_TAGS:
+                layer.no_outline = getattr(layer, "no_outline", set())
+                layer.no_outline.add((ox + c, oy + r))
 
 # ---------------------------------------------------------------- ball (separate sheet)
 BALL_COLORS = {
@@ -2626,6 +2671,31 @@ def body_layers(grid):
     return out, detail
 
 
+def static_overlay(kind, head):
+    """Headwear drawn the same in every frame (no occlusion by the arms), so
+    one piece serves every pose and body. Used for the goat head, which
+    would otherwise need a separate piece for almost every frame."""
+    layer = Layer()
+    hx, hy = head
+    for (c, r), tag in HEADWEAR[kind].items():
+        layer.px[(hx + c, hy + r)] = tag
+    mask, detail = {}, {}
+    for src in (layer.outline(), layer.px):
+        for p, tag in src.items():
+            if not (0 <= p[0] < FRAME_W and 0 <= p[1] < FRAME_H):
+                continue
+            if tag in TINTED:
+                _, over, alpha = TINTED[tag]
+                mask[p] = (255, 255, 255, alpha)
+                detail.pop(p, None)
+                if over:
+                    detail[p] = over
+            else:
+                detail[p] = FIXED[tag]
+                mask.pop(p, None)
+    return to_mask_res(mask, {p for p, c in detail.items() if c[3] == 255}), detail
+
+
 def overlay_layers(bald, styled, slot, where):
     """Hair / facial-hair overlay = every pixel that differs from the plain
     render, so it already has holes wherever an arm passes in front."""
@@ -2914,7 +2984,10 @@ def build_body(body):
                 m, d = overlay_layers(bald, info["restyle"](None, kind), "facial", where + "/" + kind)
                 overlays.append((ref(m, "mask", "facial/" + kind, head), ref(d, "detail", "facial/" + kind, head)))
             for kind in HEADWEAR:
-                m, d = overlay_layers(bald, info["restyle"](None, None, kind), "headwear", where + "/" + kind)
+                if kind in STATIC_HEADWEAR:
+                    m, d = static_overlay(kind, head)
+                else:
+                    m, d = overlay_layers(bald, info["restyle"](None, None, kind), "headwear", where + "/" + kind)
                 overlays.append((ref(m, "mask", "headwear/" + kind, head), ref(d, "detail", "headwear/" + kind, head)))
             rec["overlays"] = overlays
             rec["headOrigin"] = head
@@ -3332,6 +3405,32 @@ def write_outfit_preview(data, bodies, pages, palettes):
         col, row = k % ((len(fits) + 1) // 2), k // ((len(fits) + 1) // 2)
         sheet.alpha_composite(img, (col * cell_w, row * cell_h))
     sheet.save(os.path.join(PREVIEW_DIR, "store_items.png"))
+    # every tintable hat in six colors (HAT_COLOR_OPTIONS in outfit.ts), plus the fixed-color ones
+    variants = {
+        "top_hat": ["#1c1c22", "#f0f0f0", "#7a3ac8", "#c82830", "#2e8250", "#6e5032"],
+        "cap_forward": ["#d62828", "#1c1c22", "#2c5fd6", "#f0f0f0", "#2ea050", "#ffc828"],
+        "cap_backward": ["#2c5fd6", "#d62828", "#1c1c22", "#ff7828", "#f064aa", "#2ea050"],
+        "fedora": ["#6b5a48", "#464650", "#1c1c22", "#c4aa78", "#962832", "#f0f0f0"],
+        "cat_ears": ["#28282e", "#f0f0f0", "#f08cb4", "#e68c3c", "#9696a0", "#7a3ac8"],
+        "goat_head": ["#eeeade", "#28282e", "#825a3c", "#c8c8cd", "#e6be8c", "#a0785a"],
+        "fixed": ["halo", "fishbowl", "propeller_hat_0", "propeller_hat_1", "propeller_hat_2", "propeller_hat_3"],
+    }
+    cw_, ch_ = 26 * 4, 30 * 4
+    sheet = Image.new("RGBA", (6 * cw_, len(variants) * ch_), bg)
+    for r, (hat, cols) in enumerate(variants.items()):
+        for c, colr in enumerate(cols):
+            hw = (colr, "#ffffff") if hat == "fixed" else (hat, colr)
+            hide = HEADWEAR_HIDES.get(hw[0], [])
+            look = {"skin": skins[(r + c) % len(skins)], "hair": None if "hair" in hide else "afro",
+                    "facial": None if "facial" in hide else "goatee", "hairColor": hair_c["black"],
+                    "outfit": {"headwear": hw}}
+            img = comp.frame(MID_BODY, "idle", 0, look, {"jersey": "#2c5fd6", "trim": "#f2f2f4"})
+            f_ = frame_obj(bodies, MID_BODY, "idle", 0)
+            hx, hy = f_["head"][1] / SCALE, f_["head"][2] / SCALE
+            crop = img.crop((int((hx - 5) * SCALE), int((hy - 8) * SCALE), int((hx + 21) * SCALE),
+                             int((hy + 22) * SCALE)))
+            sheet.alpha_composite(crop.resize((cw_, ch_), Image.NEAREST), (c * cw_, r * ch_))
+    sheet.save(os.path.join(PREVIEW_DIR, "hat_colors.png"))
     # developer tee shifting color while running, and the propeller hat spinning
     gif = []
     for i in range(48):

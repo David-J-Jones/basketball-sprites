@@ -2023,5 +2023,4 @@ export const PAGES: ImageSourcePropType[] = [
   require('./atlas/page2014.png'),
   require('./atlas/page2015.png'),
   require('./atlas/page2016.png'),
-  require('./atlas/page2017.png'),
 ];

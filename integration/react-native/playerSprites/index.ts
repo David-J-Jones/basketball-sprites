@@ -14,7 +14,7 @@ export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './a
 export { SPRITES } from './spriteData';
 export { frameData, framesOf, headOverlay, loadBody, SPRITE_DATA } from './frames';
 export {
-  outfitTints, shiftingColor, presetsFor, LEAGUE_OUTFIT, COSMETICS, OUTFIT_PRESETS, HAT_COLORS, PARACHUTE_COLORS,
+  outfitTints, shiftingColor, presetsFor, LEAGUE_OUTFIT, COSMETICS, OUTFIT_PRESETS, HAT_COLORS, HAT_COLOR_OPTIONS, PARACHUTE_COLORS,
   PROPELLER_FPS,
 } from './outfit';
 export type { OutfitTints, CosmeticOption, OutfitPreset } from './outfit';

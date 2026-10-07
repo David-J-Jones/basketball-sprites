@@ -189,7 +189,8 @@ outfit={{
 }}
 ```
 
-- **Hats** are head overlays like hair, so they're shared by every body and cost little memory. `color` tints the cap, top hat, fedora, cat ears and the goat's fur (white by default; try black); the halo, fishbowl and propeller hat have their own colors. A hat replaces the headband.
+- **Hats** are head overlays like hair, so they're shared by every body and cost little memory (1–4 MB each when worn). `color` tints the cap, top hat, fedora, cat ears and the goat's fur, and `HAT_COLOR_OPTIONS` has six named colors for each of those for the store. The halo (glowing gold, no outline), fishbowl and propeller hat have their own colors. Every hat is shaded in three tones. The top hat's band is a light line over a dark stripe, so it shows on any hat color. A hat replaces the headband. `previews/hat_colors.png` shows them all.
+- **Goat head:** it's drawn the same in every frame (one image, almost no memory), so an arm raised in front of the face passes behind it. The other hats are worked out per frame, so arms in front of the face still show.
 - **What hats hide:** hats that sit on the head hide the player's hair, so an afro doesn't poke through a top hat. The goat head also hides facial hair. The halo and cat ears keep the hair. When arms go up behind the head (dunks, blocks), hats stay in front of the arms.
 - **Propeller hat:** it spins (4 frames at `PROPELLER_FPS`), driven by PlayerSprite's `time`.
 - **Parachute pants** are full-length pants in any color, with a detail layer drawn on top: nylon sheen, diagonal zippers, a knee seam and elastic cuffs.

@@ -35,6 +35,40 @@ export const HAT_COLORS: Partial<Record<HatStyle, string>> = {
   top_hat: '#1c1c22', cap_forward: '#d62b2b', cap_backward: '#2c5fd6', fedora: '#6b5a48', cat_ears: '#2a2a30',
   goat_head: '#eeeade',
 };
+/** Color options for the hats that take a color (the halo, fishbowl and propeller hat have their own). */
+export const HAT_COLOR_OPTIONS: Partial<Record<HatStyle, { id: string; label: string; value: string }[]>> = {
+  top_hat: [
+    { id: 'black', label: 'Black', value: '#1c1c22' }, { id: 'white', label: 'White', value: '#f0f0f0' },
+    { id: 'purple', label: 'Purple', value: '#7a3ac8' }, { id: 'red', label: 'Red', value: '#c82830' },
+    { id: 'green', label: 'Green', value: '#2e8250' }, { id: 'brown', label: 'Brown', value: '#6e5032' },
+  ],
+  cap_forward: [
+    { id: 'red', label: 'Red', value: '#d62828' }, { id: 'black', label: 'Black', value: '#1c1c22' },
+    { id: 'royal', label: 'Royal', value: '#2c5fd6' }, { id: 'white', label: 'White', value: '#f0f0f0' },
+    { id: 'green', label: 'Green', value: '#2ea050' }, { id: 'gold', label: 'Gold', value: '#ffc828' },
+  ],
+  cap_backward: [
+    { id: 'royal', label: 'Royal', value: '#2c5fd6' }, { id: 'red', label: 'Red', value: '#d62828' },
+    { id: 'black', label: 'Black', value: '#1c1c22' }, { id: 'orange', label: 'Orange', value: '#ff7828' },
+    { id: 'pink', label: 'Pink', value: '#f064aa' }, { id: 'green', label: 'Green', value: '#2ea050' },
+  ],
+  fedora: [
+    { id: 'brown', label: 'Brown', value: '#6b5a48' }, { id: 'grey', label: 'Grey', value: '#464650' },
+    { id: 'black', label: 'Black', value: '#1c1c22' }, { id: 'tan', label: 'Tan', value: '#c4aa78' },
+    { id: 'wine', label: 'Wine', value: '#962832' }, { id: 'white', label: 'White', value: '#f0f0f0' },
+  ],
+  cat_ears: [
+    { id: 'black', label: 'Black', value: '#28282e' }, { id: 'white', label: 'White', value: '#f0f0f0' },
+    { id: 'pink', label: 'Pink', value: '#f08cb4' }, { id: 'orange', label: 'Ginger', value: '#e68c3c' },
+    { id: 'grey', label: 'Grey', value: '#9696a0' }, { id: 'purple', label: 'Purple', value: '#7a3ac8' },
+  ],
+  goat_head: [
+    { id: 'white', label: 'White', value: '#eeeade' }, { id: 'black', label: 'Black', value: '#28282e' },
+    { id: 'brown', label: 'Brown', value: '#825a3c' }, { id: 'grey', label: 'Grey', value: '#c8c8cd' },
+    { id: 'tan', label: 'Tan', value: '#e6be8c' }, { id: 'cocoa', label: 'Cocoa', value: '#a0785a' },
+  ],
+};
+
 /** Propeller spin speed, frames per second (4 frames per turn). */
 export const PROPELLER_FPS = 14;
 
