@@ -28,6 +28,11 @@ export type PlayerSpriteProps = {
   bakedLift?: boolean;
   /** park-mode cosmetics; leave out for the league look */
   outfit?: Outfit;
+  /**
+   * Seconds of game time, for animated cosmetics (a color-shifting shirt,
+   * the propeller hat). Defaults to the wall clock.
+   */
+  time?: number;
 };
 
 type PieceProps = { piece: PlacedPiece | null; scale: number; tint?: string };
@@ -77,12 +82,13 @@ export const PlayerSprite = memo(function PlayerSprite({
   flip = false,
   bakedLift = true,
   outfit,
+  time,
 }: PlayerSpriteProps) {
   const f = frameData(look.body, anim, frame);
-  const facial = look.facialHair ? headOverlay(f, look.facialHair) : null;
-  const hair = look.hairStyle ? headOverlay(f, look.hairStyle) : null;
+  const wear = outfitTints(outfit, colors.jersey, flip, time ?? Date.now() / 1000);
+  const facial = look.facialHair && !wear.hideFacial ? headOverlay(f, look.facialHair) : null;
+  const hair = look.hairStyle && !wear.hideHair ? headOverlay(f, look.hairStyle) : null;
   const hairTint = hairColor(look);
-  const wear = outfitTints(outfit, colors.jersey, flip);
   const band = wear.headwear ? headOverlay(f, wear.headwear.style) : null;
   const drop = bakedLift ? 0 : f.lift * scale;
   return (
@@ -101,13 +107,14 @@ export const PlayerSprite = memo(function PlayerSprite({
       {f.wear?.map((piece, i) =>
         wear.wear[i] ? <Piece key={i} piece={piece} scale={scale} tint={wear.wear[i]!} /> : null,
       )}
-      <Piece piece={f.jersey} scale={scale} tint={colors.jersey} />
+      <Piece piece={f.jersey} scale={scale} tint={wear.shirt} />
       <Piece piece={f.trim} scale={scale} tint={colors.trim} />
       {wear.print !== null && <Piece piece={f.prints?.[wear.print] ?? null} scale={scale} />}
       <Piece piece={f.shorts} scale={scale} tint={wear.shorts} />
       <Piece piece={f.sock} scale={scale} tint={wear.sock} />
       <Piece piece={f.shoe} scale={scale} tint={wear.shoe} />
       <Piece piece={f.sole} scale={scale} tint={wear.sole} />
+      {wear.legPrint !== null && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}
       <Piece piece={f.detail} scale={scale} />
       {facial && <Piece piece={facial[0]} scale={scale} tint={hairTint} />}
       {facial && <Piece piece={facial[1]} scale={scale} />}

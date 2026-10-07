@@ -8,7 +8,7 @@ import raw from './spriteData.json';
 import { BODY_LOADERS } from './bodyData';
 import type { BodyKey } from './features';
 import type {
-  AnimName, BodyData, CompactFrame, FrameData, HeadwearStyle, PieceRect, PieceRef, PlacedPiece, SpriteData,
+  AnimName, BodyData, CompactFrame, FrameData, PieceRect, PieceRef, PlacedPiece, SpriteData, SpriteHeadwear,
   SpriteFacialHair, SpriteHairStyle,
 } from './types';
 
@@ -28,6 +28,7 @@ export function expandFrame(body: BodyData, r: CompactFrame): FrameData {
     shorts: p(r[10]), sock: p(r[11]), shoe: p(r[12]), sole: p(r[13]),
     wear: r[14] ? r[14].map(p) : null,
     prints: r[15] ? r[15].map(p) : null,
+    legPrints: r[16] ? r[16].map(p) : null,
   };
 }
 
@@ -71,7 +72,7 @@ const STYLE_INDEX = new Map<string, number>(
  */
 export function headOverlay(
   f: FrameData,
-  style: SpriteHairStyle | SpriteFacialHair | HeadwearStyle,
+  style: SpriteHairStyle | SpriteFacialHair | SpriteHeadwear,
 ): [PlacedPiece | null, PlacedPiece | null] {
   const [set, hx, hy] = f.head;
   const i = STYLE_INDEX.get(style);

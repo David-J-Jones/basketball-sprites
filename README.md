@@ -29,7 +29,9 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
 - **League look:** tank top in team colors, black shorts, white socks, grey shoes.
 - **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), a brown wedding-style suit with a white tie (`OUTFIT_PRESETS`), shorts (any color, standard, long or full-length trousers), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
-- **Celebrations:** 3 dances and 5 victory poses.
+- **Store add-ons:** hats (top hat, ball cap forward and backwards, halo, cat ears, fedora, goat head, fishbowl with a goldfish, spinning propeller hat), parachute pants, cowboy boots.
+- **Developer-only:** a color-shifting tee (`developer_tee`).
+- **Celebrations:** air guitar, 3 dances and 5 victory poses.
 - **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
 - **102 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
@@ -176,6 +178,34 @@ const outfit: Outfit = {
 <PlayerSprite look={look} colors={{ jersey: '#f2f2f4', trim: '#2c5fd6' }} outfit={outfit} ... />
 ```
 
+### Store add-ons
+
+```tsx
+outfit={{
+  hat: { style: 'top_hat', color: '#1c1c22' },              // top_hat | cap_forward | cap_backward | halo | cat_ears
+                                                            // | fedora | goat_head | fishbowl | propeller_hat
+  shorts: { color: PARACHUTE_COLORS.purple, style: 'parachute' },   // parachute pants: purple, pink, green, red (any tint)
+  shoes: { style: 'cowboy_boots', color: '#7a4520', sole: '#3a2010' },
+}}
+```
+
+- **Hats** are head overlays like hair, so they're shared by every body and cost little memory. `color` tints the cap, top hat, fedora, cat ears and the goat's fur (white by default; try black); the halo, fishbowl and propeller hat have their own colors. A hat replaces the headband.
+- **What hats hide:** hats that sit on the head hide the player's hair, so an afro doesn't poke through a top hat. The goat head also hides facial hair. The halo and cat ears keep the hair. When arms go up behind the head (dunks, blocks), hats stay in front of the arms.
+- **Propeller hat:** it spins (4 frames at `PROPELLER_FPS`), driven by PlayerSprite's `time`.
+- **Parachute pants** are full-length pants in any color, with a detail layer drawn on top: nylon sheen, diagonal zippers, a knee seam and elastic cuffs.
+- **Cowboy boots** pull the shoe color up the shin over the socks (and over trouser cuffs), with a darker band at the top (`topColor`).
+
+### Developer tee
+
+`developer_tee` is a plain tee that cycles through the rainbow as you play, every 8 s (`colorShift: { period }`). It's marked `exclusive: 'developer'`:
+
+```tsx
+const presets = presetsFor(account.isDeveloper);   // the developer tee only shows up for you
+<PlayerSprite ... colors={dev.colors} outfit={dev.outfit} time={gameSeconds} />
+```
+
+Keep the "who is a developer" check on your server (by account id) so nobody can unlock it by editing the app. Any shirt can use `colorShift`, so the same effect can be a store item later if you change your mind. Pass `time` (game seconds) to PlayerSprite for animated cosmetics. Without it, they follow the wall clock and only update when the sprite re-renders.
+
 **Complete looks** live in `OUTFIT_PRESETS`. `brown_suit` is a brown suit jacket with a white tie, shirt front and pocket square, matching brown trousers and brown dress shoes:
 
 ```tsx
@@ -194,6 +224,7 @@ Every color is a tint, so any hex works; `COSMETICS` has option lists and a star
 
 | Animation | Frames | FPS | Loop | Notes |
 |---|---|---|---|---|
+| `air_guitar` | 8 | 10 | yes | Leaning back, fretting the neck, strumming, a windmill and a head-bang |
 | `dance_two_step` | 8 | 8 | yes | Side-to-side two-step, arms swinging |
 | `dance_shimmy` | 8 | 10 | yes | Fists at the chest, shoulder shimmy, knee bounce |
 | `dance_robot` | 8 | 8 | yes | Stiff, snapping arm positions |

@@ -53,7 +53,8 @@ describe('sprite data', () => {
 
   it('has every body, animation, hair style and facial hair', () => {
     expect(Object.keys(BODY_LOADERS).sort()).toEqual([...BODY_KEYS].sort());
-    expect(SPRITES.headwear).toEqual(['headband', 'wide_headband', 'tied_headband']);
+    expect(SPRITES.headwear.slice(0, 3)).toEqual(['headband', 'wide_headband', 'tied_headband']);
+    expect(SPRITES.headwear).toEqual(expect.arrayContaining(['top_hat', 'goat_head', 'fishbowl', 'propeller_hat_3']));
     expect(SPRITES.hairStyles).toEqual(HAIR_STYLES.filter((h) => h !== 'bald'));
     expect(SPRITES.facialHair).toEqual(FACIAL_HAIR.filter((h) => h !== 'none'));
     expect(anims).toEqual(expect.arrayContaining(['dunk_basic', 'run_power', 'guard_on_ball', 'celebrate']));

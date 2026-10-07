@@ -13,7 +13,10 @@ export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from '
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
 export { SPRITES } from './spriteData';
 export { frameData, framesOf, headOverlay, loadBody, SPRITE_DATA } from './frames';
-export { outfitTints, LEAGUE_OUTFIT, COSMETICS, OUTFIT_PRESETS } from './outfit';
+export {
+  outfitTints, shiftingColor, presetsFor, LEAGUE_OUTFIT, COSMETICS, OUTFIT_PRESETS, HAT_COLORS, PARACHUTE_COLORS,
+  PROPELLER_FPS,
+} from './outfit';
 export type { OutfitTints, CosmeticOption, OutfitPreset } from './outfit';
 export {
   STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickLayup, pickDunk,

@@ -63,6 +63,18 @@ FIXED = {
     "outline": (28, 22, 32, 255),
     "eye": (22, 16, 24, 255),
     "smear": (255, 255, 255, 150),
+    # hats (park mode)
+    "hat_band": (176, 30, 44, 255), "fed_band": (40, 34, 30, 255),
+    "gold": (255, 206, 64, 255), "gold_hi": (255, 244, 170, 255), "gold_dk": (204, 146, 30, 255),
+    "pink_in": (245, 140, 170, 255),
+    "goat_w": (238, 234, 222, 255), "goat_s": (196, 190, 176, 255), "goat_horn": (156, 134, 104, 255),
+    "goat_horn_d": (110, 92, 70, 255), "goat_iris": (240, 196, 70, 255), "goat_eye": (24, 20, 18, 255),
+    "goat_nose": (150, 104, 98, 255),
+    "glass": (200, 236, 255, 80), "glass_hi": (255, 255, 255, 210), "glass_rim": (176, 222, 250, 235),
+    "water": (84, 166, 240, 150), "fish": (255, 140, 30, 255), "fish_d": (218, 86, 20, 255),
+    "fish_eye": (20, 20, 30, 255), "gravel": (232, 204, 128, 255), "gravel_d": (184, 146, 92, 255),
+    "prop_r": (232, 52, 52, 255), "prop_y": (255, 212, 60, 255), "prop_b": (52, 112, 232, 255),
+    "prop_g": (52, 190, 92, 255), "prop_stem": (92, 92, 104, 255),
 }
 TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
     "skin0": ("skin", None, 255),
@@ -99,9 +111,10 @@ DEFAULT_OUTFIT = {"shorts": "#3E3E46", "sock": "#F2F2F6", "shoe": "#AAACB4", "so
 # Wear regions: skin areas an outfit can cover. A skin tag carries them as a
 # suffix ("skin0@sa.sb"); each region becomes an extra mask the app draws
 # over the skin, tinted with the item's color, only when it's worn.
-WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh", "pl"]
+WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh", "pl", "bt", "bb"]
 WEAR_NAMES = {"sa": "sleeveShort", "sb": "sleeveLong", "sn": "armSleeveNear", "sf": "armSleeveFar",
-              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall", "pl": "pantsLong"}
+              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall", "pl": "pantsLong",
+              "bt": "bootShaft", "bb": "bootTop"}
 _SPLIT = {}
 
 
@@ -169,10 +182,10 @@ class Layer:
         self.px = {}
         self.uv = {}      # shirt-print coordinates for cloth pixels (see PRINTS)
 
-    def mark_uv(self, u, v):
+    def mark_uv(self, u, v, store=None):
         """Record print coordinates for the pixel a color function is filling."""
         px, py = self.pos
-        self.uv[(int(math.floor(px)), int(math.floor(py)))] = (u, v)
+        (self.uv if store is None else store)[(int(math.floor(px)), int(math.floor(py)))] = (u, v)
 
     def capsule(self, a, b, r, color_fn):
         ax, ay = a
@@ -497,11 +510,159 @@ def _headwear(rows, tails=()):
     return m
 
 
+def _tpl(rows, chars, r0, c0=0):
+    """Pixel template: rows of chars from head-grid row r0, column c0
+    ('.' = nothing). chars maps a char to a tag."""
+    m = {}
+    for r, row in enumerate(rows):
+        for c, ch in enumerate(row):
+            if ch != ".":
+                m[(c0 + c, r0 + r)] = chars[ch]
+    return m
+
+
+HAT_CHARS = {"H": "hw0", "h": "hw1", "b": "hat_band", "f": "fed_band", "G": "gold", "g": "gold_hi",
+             "d": "gold_dk", "p": "pink_in"}
+
+TOP_HAT = _tpl([
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "hHHHHHHHh",
+    "bbbbbbbbb",
+    "hHHHHHHHHHHHh",
+], HAT_CHARS, -3, 3)
+TOP_HAT = {(c - 2 if r == 6 else c, r): t for (c, r), t in TOP_HAT.items()}   # brim reaches both ways
+
+CAP_DOME = [
+    "..hHHHHh..",
+    ".hHHHHHHH.",
+    "hHHHHHHHHHH",
+    "hHHHHHHHHHH",
+    "hhhhhhhhhhh",
+]
+CAP_FORWARD = {**_tpl(CAP_DOME, HAT_CHARS, 3, 2), **_tpl(["hHHH"], HAT_CHARS, 7, 12), (7, 2): "hw1"}
+CAP_BACKWARD = {**_tpl(CAP_DOME, HAT_CHARS, 3, 2), **_tpl(["HHHh"], HAT_CHARS, 7, -1), (7, 2): "hw1",
+                (11, 6): "hw1"}
+
+HALO = _tpl([
+    ".gGGGGGg.",
+    "GdddddddG",
+], HAT_CHARS, -4, 3)
+
+CAT_EARS = _tpl([
+    "..H...H.",
+    ".hph.HpH",
+    ".hph.HpH",
+    "hhhhhhhhh",
+], HAT_CHARS, 0, 3)
+
+FEDORA = _tpl([
+    "..hHhHHh..",
+    ".hHHHHHHH.",
+    ".hHHHHHHH.",
+    ".hHHHHHHH.",
+    ".fffffffff",
+    "hHHHHHHHHHHHHHH",
+    ".............hh",
+], HAT_CHARS, 1, 0)
+
+
+def _goat_head():
+    """A whole goat head over the player's: fur (tinted, white by default),
+    curled horns, a snout out to the right, a yellow eye and a little beard.
+    It stops above the neck so it doesn't vary with every pose."""
+    m = {}
+    skull = _skull_pixels()
+    for r in range(1, 15):
+        for c in range(0, 17):
+            dx, dy = (c + 0.5 - 7) / 6.2, (r + 0.5 - 8.6) / 6.2
+            sx, sy = (c + 0.5 - 12.6) / 3.0, (r + 0.5 - 10.6) / 2.3
+            if dx * dx + dy * dy <= 1 or sx * sx + sy * sy <= 1 or (c, r) in skull:
+                m[(c, r)] = "hw1" if dx < -0.45 or dy > 0.55 or sy > 0.55 else "hw0"
+    for c, r in ((5, 2), (6, 2), (4, 1), (3, 0), (2, 0), (1, 1), (0, 2), (0, 3), (1, 4)):
+        m[(c, r)] = "goat_horn"                                       # horn curling back
+    for c, r in ((2, 1), (1, 2), (1, 3)):
+        m[(c, r)] = "goat_horn_d"
+    for c, r in ((0, 8), (1, 8), (0, 9), (2, 9)):
+        m[(c, r)] = "hw1"                                             # floppy ear
+    m[(9, 7)], m[(10, 7)] = "goat_iris", "goat_eye"
+    m[(15, 10)] = "goat_nose"
+    m[(14, 12)] = m[(13, 12)] = "goat_nose"                           # mouth
+    for c, r in ((11, 13), (11, 14), (10, 14)):
+        m[(c, r)] = "hw0"                                             # beard
+    return m
+
+
+def _fishbowl():
+    """A round fishbowl worn on top of the head: glass, water, gravel and a goldfish."""
+    m = {}
+    cx, cy, rad = 7.5, -0.5, 5.6
+    for r in range(-7, 6):
+        for c in range(1, 15):
+            d = math.hypot(c + 0.5 - cx, (r + 0.5 - cy) * 1.05)
+            if d > rad:
+                continue
+            if r <= -5:
+                m[(c, r)] = "glass_rim" if r == -5 else "glass"
+            elif r >= 4:
+                m[(c, r)] = "gravel" if (c + r) % 2 else "gravel_d"
+            else:
+                m[(c, r)] = "water" if r >= -3 else "glass"
+    for c, r in ((4, -3), (3, -2), (3, -1)):
+        m[(c, r)] = "glass_hi"
+    fish = {(7, 0): "fish_eye", (8, 0): "fish", (9, 0): "fish", (8, 1): "fish_d", (10, -1): "fish_d",
+            (10, 0): "fish", (10, 1): "fish_d", (8, -1): "fish"}
+    m.update(fish)
+    return m
+
+
+def _propeller(frame):
+    """Beanie in four colored panels with a propeller on top; four frames of spin."""
+    panels = ["prop_r", "prop_r", "prop_r", "prop_y", "prop_y", "prop_y", "prop_b", "prop_b", "prop_b",
+              "prop_g", "prop_g"]
+    m = {}
+    for r, (c0, c1) in zip(range(3, 8), [(4, 10), (3, 11), (2, 12), (2, 12), (2, 12)]):
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "prop_y" if r == 7 else panels[c - 2]
+    m[(7, 1)] = m[(7, 2)] = "prop_stem"
+    blades = [
+        {**{(c, 0): "prop_r" for c in range(3, 7)}, **{(c, 0): "prop_b" for c in range(8, 12)}},
+        {**{(c, 0): "prop_r" for c in range(5, 7)}, **{(c, 0): "prop_b" for c in range(8, 10)}},
+        {(6, 0): "prop_b", (8, 0): "prop_r"},
+        {**{(c, 0): "prop_b" for c in range(4, 7)}, **{(c, 0): "prop_r" for c in range(8, 11)}},
+    ][frame]
+    m.update(blades)
+    m[(7, 0)] = "prop_stem"
+    return m
+
+
 HEADWEAR = {
     "headband": _headwear([8]),
     "wide_headband": _headwear([7, 8]),
     "tied_headband": _headwear([8], tails=[(0, 8), (0, 9), (1, 9), (0, 10), (0, 11), (1, 12)]),
+    "top_hat": TOP_HAT,
+    "cap_forward": CAP_FORWARD,
+    "cap_backward": CAP_BACKWARD,
+    "halo": HALO,
+    "cat_ears": CAT_EARS,
+    "fedora": FEDORA,
+    "goat_head": _goat_head(),
+    "fishbowl": _fishbowl(),
+    "propeller_hat_0": _propeller(0),
+    "propeller_hat_1": _propeller(1),
+    "propeller_hat_2": _propeller(2),
+    "propeller_hat_3": _propeller(3),
 }
+# what each piece of headwear hides: hats sit where the hair is
+HEADWEAR_HIDES = {k: ["hair"] for k in ("top_hat", "cap_forward", "cap_backward", "fedora", "fishbowl",
+                                         "propeller_hat_0", "propeller_hat_1", "propeller_hat_2",
+                                         "propeller_hat_3")}
+HEADWEAR_HIDES["goat_head"] = ["hair", "facial"]
 
 
 # ---------------------------------------------------------------- shirt prints
@@ -646,6 +807,32 @@ PRINTS = {
 }
 
 
+# Pants details drawn over the tinted pants (None = let the tint show):
+# u runs down the leg from the hip (about -2.6 at the waist to ~16 at the
+# ankle), v across it.
+def legprint_parachute(u, v):
+    """80s parachute pants: shiny nylon streaks, diagonal zippers on the thigh
+    and shin, a knee seam and elastic ankle cuffs. Use any bright tint."""
+    ankle = B["thigh"] + B["shin"] * 0.82
+    if u > ankle:
+        return (0, 0, 0, 96)                                   # elastic cuff
+    for z in (3.4 + 0.9 * v, B["thigh"] + 3.0 - 0.9 * v):
+        if abs(u - z) < 0.55:
+            return (236, 236, 244, 255) if math.floor(u * 2) % 2 else (150, 152, 166, 255)   # zipper
+    if abs(u - B["thigh"]) < 0.5:
+        return (0, 0, 0, 72)                                   # knee seam
+    if v < -0.6 and math.floor(u) % 3 == 0:
+        return (255, 255, 255, 120)                            # nylon sheen
+    if -0.1 < u < 0.6:
+        return (0, 0, 0, 60)                                   # hip yoke seam
+    return None
+
+
+LEG_PRINTS = {
+    "parachute": ("Parachute pants", legprint_parachute),
+}
+
+
 def blit_head(layer, origin, style=None, facial=None, headwear=None):
     ox, oy = origin
     for r, row in enumerate(SKULL):
@@ -659,8 +846,11 @@ def blit_head(layer, origin, style=None, facial=None, headwear=None):
         for (c, r), tag in HAIR_STYLES[style].items():
             layer.px[(ox + c, oy + r)] = tag
     if headwear:
+        layer.hat_px = set()
         for (c, r), tag in HEADWEAR[headwear].items():
             layer.px[(ox + c, oy + r)] = tag
+            if headwear not in ("headband", "wide_headband", "tied_headband"):
+                layer.hat_px.add((ox + c, oy + r))
 
 # ---------------------------------------------------------------- ball (separate sheet)
 BALL_COLORS = {
@@ -740,23 +930,35 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
     sock, sock_s = ("sock1", "sock1") if far else ("sock0", "sock1")
     knee = add(hip, vec(thigh_deg, B["thigh"]))
     ankle = add(knee, vec(shin_deg, B["shin"]))
+    td, sd = vec(thigh_deg), vec(shin_deg)
+
+    def leg_uv(u, d, ox, oy, r):
+        # pants-print coordinates: u down the leg from the hip, v across it
+        layer.mark_uv(u, (ox * -d[1] + oy * d[0]) * r)
 
     def shin_fn(t, ox, oy):
+        leg_uv(B["thigh"] + t * B["shin"], sd, ox, oy, B["shin_r"])
         if t > 0.62:
             return sock_s if lit(ox, oy) < -0.4 else sock
         tag = skin_s if lit(ox, oy) < -0.3 else skin
-        # tall socks; full-length trousers cover the whole shin
-        return wear(tag, "sh", "pl") if t > 0.18 else wear(tag, "pl")
+        # tall socks and trousers; cowboy-boot shafts with a top band
+        regs = ["pl"] + (["sh"] if t > 0.18 else []) + (["bt"] if t > 0.42 else []) + \
+            (["bb"] if 0.42 < t <= 0.5 else [])
+        return wear(tag, *regs)
     layer.capsule(knee, ankle, B["shin_r"], shin_fn)
 
     def thigh_fn(t, ox, oy):
+        leg_uv(t * B["thigh"], td, ox, oy, B["thigh_r"])
         if t < 0.55:
             return cloth_s if lit(ox, oy) < -0.2 else cloth
         return wear(skin_s if lit(ox, oy) < -0.3 else skin, "tl")     # long shorts
     layer.capsule(hip, knee, B["thigh_r"], thigh_fn)
+
     # shorts leg opening is a touch wider than the thigh
-    layer.capsule(hip, add(hip, vec(thigh_deg, B["thigh"] * 0.5)), B["thigh_r"] + 0.6,
-                  shaded(cloth, cloth_s, 0.2))
+    def opening_fn(t, ox, oy):
+        leg_uv(t * B["thigh"] * 0.5, td, ox, oy, B["thigh_r"] + 0.6)
+        return cloth_s if lit(ox, oy) < -0.2 else cloth
+    layer.capsule(hip, add(hip, vec(thigh_deg, B["thigh"] * 0.5)), B["thigh_r"] + 0.6, opening_fn)
     # shoe
     fr = math.radians(foot_rot)
     fwd = (math.cos(fr), math.sin(fr))
@@ -815,6 +1017,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     neck = add(hip, (tdir[0] * B["neck"], tdir[1] * B["neck"]))
 
     far_leg, near_leg, body = Layer(), Layer(), Layer()
+    body.leg_uv = {}
     far_arm, near_arm, head = Layer(), Layer(), Layer()
 
     fl, nl = pose["far_leg"], pose["near_leg"]
@@ -853,6 +1056,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             return None             # above the waist: leave the jersey
         if along > waist - 1:
             return "trim0"          # waistband
+        body.mark_uv(-along, (px - hip[0]) * fwd_dir[0] + (py - hip[1]) * fwd_dir[1], body.leg_uv)
         return "shorts1" if lit(ox, oy) < -0.35 else "shorts0"
     body.capsule(add(hip, (tdir[0] * -1.0, tdir[1] * -1.0)), add(hip, (tdir[0] * 1.5, tdir[1] * 1.5)),
                  B["hip_r"], shorts_fn)
@@ -937,11 +1141,14 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         grid = dict(under)
         clipped = paint(grid, order[split:], head_layer) or under_clipped
         if behind:
-            # hands raised above the skull stay in front of big hair (afro etc.)
+            # hands raised above the skull stay in front of big hair (afro
+            # etc.), but hats stay in front of the arms
+            hat = getattr(head_layer, "hat_px", set())
             for layer in (far_arm, near_arm):
                 for src in cached[id(layer)]:
                     for (x, y), tag in src.items():
-                        if y < skull_top and 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+                        if (y < skull_top and (x, y) not in hat and 0 <= x < FRAME_W
+                                and 0 <= y + dy < FRAME_H):
                             grid[(x, y + dy)] = tag
         return grid, clipped
 
@@ -958,6 +1165,21 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             src = near_arm if q in near_arm.px else far_arm
             if q in src.uv:
                 print_uv[(x, y)] = src.uv[q]
+
+    # pants-print coordinates for every visible pants pixel (shorts, long
+    # shorts / trouser legs, socks under trousers)
+    leg_print_uv = {}
+    for (x, y), tag in grid.items():
+        base, regs = split_tag(tag)
+        if not (base.startswith("shorts") or base.startswith("sock") or "tl" in regs or "pl" in regs):
+            continue
+        qb, ql = (x, y - dy), (x, y - dy_legs)
+        if base.startswith("shorts") and qb in body.leg_uv:
+            leg_print_uv[(x, y)] = body.leg_uv[qb]
+        else:
+            src = near_leg if ql in near_leg.px else far_leg
+            if ql in src.uv:
+                leg_print_uv[(x, y)] = src.uv[ql]
 
     def ball_spot(spec):
         """Ball centre (before the vertical shift) and depth for a ball spec.
@@ -998,6 +1220,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "clipped": clipped,
         "head_origin": (hx, hy + dy),
         "print_uv": print_uv,
+        "leg_print_uv": leg_print_uv,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
     }
@@ -2195,7 +2418,20 @@ def victory_roar_frames():
     ]
 
 
-CELEBRATIONS = ["dance_two_step", "dance_shimmy", "dance_robot", "victory_flex", "victory_arms_up",
+def air_guitar_frames():
+    """Rock out: leaning back, far hand on the neck, near hand strumming,
+    then a big windmill strum and a head-bang."""
+    legs = [((30, -6, 0), (-26, -36, 12)), ((32, -10, 0), (-28, -40, 12))]
+    fret = [(84, 104), (84, 104), (88, 110), (88, 110), (82, 100), (80, 98), (88, 110), (84, 104)]
+    strum = [(30, 120), (40, 70), (30, 124), (40, 66), (96, 140), (128, 156), (70, 84), (36, 72)]
+    lean = [-16, -18, -16, -20, -18, -22, -10, -16]
+    bob = [1, 2, 1, 2, 1, 0, 3, 2]
+    head = [0, 1, 0, 1, 0, -1, 1, 1]
+    return [P(*legs[i % 2], strum[i], fret[i], lean=lean[i], bob=bob[i], head_dy=head[i], reach=1.1)
+            for i in range(8)]
+
+
+CELEBRATIONS = ["air_guitar", "dance_two_step", "dance_shimmy", "dance_robot", "victory_flex", "victory_arms_up",
                 "victory_bow", "victory_cool", "victory_roar"]
 
 DRIBBLE_STYLES = ["low", "high", "rhythm", "protect"]
@@ -2227,6 +2463,7 @@ for _s in SHOT_STYLES:
     ]
 SIGNATURE_ANIMS += [
     ("dance_two_step", dance_two_step_frames, 8, True, {}),
+    ("air_guitar", air_guitar_frames, 10, True, {}),
     ("dance_shimmy", dance_shimmy_frames, 10, True, {}),
     ("dance_robot", dance_robot_frames, 8, True, {}),
     ("victory_flex", victory_flex_frames, 8, False, {"hold": 4}),
@@ -2539,13 +2776,20 @@ class Compositor:
         layers += [(f["jersey"], colors["jersey"]), (f["trim"], colors["trim"])]
         if out.get("print") and f["prints"]:
             layers.append((f["prints"][[p_["id"] for p_ in self.data["prints"]].index(out["print"])], None))
+        legs_after = []
+        if out.get("legPrint") and f.get("legPrints"):
+            legs_after.append((f["legPrints"][[p_["id"] for p_ in self.data["legPrints"]].index(out["legPrint"])],
+                               None))
         layers += [(f[k], out[k]) for k in ("shorts", "sock", "shoe", "sole")]
+        layers += legs_after
         layers.append((f["detail"], None))
         oset, hx, hy = f["head"]
         ids = self.data["overlays"][oset]
         styles = self.data["hairStyles"] + self.data["facialHair"] + self.data["headwear"]
         head_layers = []
-        wanted = [(look.get("facial"), look.get("hairColor")), (look.get("hair"), look.get("hairColor"))]
+        hides = self.data.get("headwearHides", {}).get(out["headwear"][0], []) if out.get("headwear") else []
+        wanted = [(None if "facial" in hides else look.get("facial"), look.get("hairColor")),
+                  (None if "hair" in hides else look.get("hair"), look.get("hairColor"))]
         if out.get("headwear"):
             wanted.append(tuple(out["headwear"]))
         for style, tint in wanted:
@@ -2608,7 +2852,7 @@ def _pt(p):
 
 STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
 FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift",
-                "shorts", "sock", "shoe", "sole", "wear", "prints"]
+                "shorts", "sock", "shoe", "sole", "wear", "prints", "legPrints"]
 
 
 def frame_obj(bodies, body, anim, i):
@@ -2651,6 +2895,15 @@ def build_body(body):
             for pname, (_, pfn) in PRINTS.items():
                 pix = {p_: pfn(u_, v_) + (255,) for p_, (u_, v_) in info["print_uv"].items()}
                 rec["prints"].append(ref(to_mask_res(pix, opaque), "mask", "%s/print_%s" % (body, pname)))
+            rec["legPrints"] = []
+            for pname, (_, pfn) in LEG_PRINTS.items():
+                pix = {}
+                for p_, (u_, v_) in info["leg_print_uv"].items():
+                    c_ = pfn(u_, v_)
+                    if c_:
+                        pix[p_] = c_
+                rec["legPrints"].append(ref(to_mask_res(pix, opaque), "mask",
+                                            "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
             head = info["head_origin"]
             overlays = []
@@ -2721,7 +2974,8 @@ def build_all():
                             rnd(rec["ball"]), rec["ballDepth"], rec["lift"],
                             conv(rec["shorts"]), conv(rec["sock"]), conv(rec["shoe"]), conv(rec["sole"]),
                             wear_refs if any(wear_refs) else None,
-                            [conv(r) for r in rec["prints"]] if any(rec["prints"]) else None])
+                            [conv(r) for r in rec["prints"]] if any(rec["prints"]) else None,
+                            [conv(r) for r in rec["legPrints"]] if any(rec["legPrints"]) else None])
             frames[body][name] = out
     pages, page_groups, page_scales, rects = atlas.pack()
 
@@ -2750,7 +3004,7 @@ def build_all():
                 rec = list(rec)
                 for k in (0, 1, 2, 3, 10, 11, 12, 13):
                     rec[k] = to_local(rec[k])
-                for k in (14, 15):
+                for k in (14, 15, 16):
                     if rec[k]:
                         rec[k] = [to_local(r) for r in rec[k]]
                 out[name].append(rec)
@@ -2770,6 +3024,8 @@ def build_all():
         "facialHair": list(FACIAL_HAIR),
         "headwear": list(HEADWEAR),
         "prints": [{"id": k, "label": v[0]} for k, v in PRINTS.items()],
+        "legPrints": [{"id": k, "label": v[0]} for k, v in LEG_PRINTS.items()],
+        "headwearHides": HEADWEAR_HIDES,
         "wearRegions": [WEAR_NAMES[r] for r in WEAR_REGIONS],
         "defaultOutfit": DEFAULT_OUTFIT,
         "frameFields": FRAME_FIELDS,
@@ -3012,7 +3268,7 @@ def write_outfit_preview(data, bodies, pages, palettes):
     # headbands on each hair style
     styles = list(HAIR_STYLES)
     sheet = Image.new("RGBA", (len(styles) * FRAME_W * 2, 3 * (FRAME_H * 2 // 2) + 10), bg)
-    for r, hw in enumerate(HEADWEAR):
+    for r, hw in enumerate(("headband", "wide_headband", "tied_headband")):
         for c, st in enumerate(styles):
             look = {"skin": skins[c % len(skins)], "hair": st, "hairColor": hair_c["black"],
                     "outfit": {"headwear": (hw, ["#d62b2b", "#f2f2f4", "#2c5fd6"][r])}}
@@ -3051,6 +3307,44 @@ def write_outfit_preview(data, bodies, pages, palettes):
                                                                       int(FRAME_H * 3 * 0.92)))
             sheet.alpha_composite(img, (c * cw, r * chh))
     sheet.save(os.path.join(PREVIEW_DIR, "brown_suit.png"))
+    # park store items: hats, parachute pants, cowboy boots
+    def colorsys_hex(h):
+        import colorsys
+        r, g_, b = colorsys.hls_to_rgb(h, 0.55, 0.75)
+        return "#%02x%02x%02x" % (int(r * 255), int(g_ * 255), int(b * 255))
+    hats = [("top_hat", "#1c1c22"), ("cap_forward", "#d62b2b"), ("cap_backward", "#2c5fd6"), ("halo", None),
+            ("cat_ears", "#2a2a30"), ("fedora", "#6b5a48"), ("goat_head", "#eeeade"), ("fishbowl", None),
+            ("propeller_hat_0", None)]
+    fits = [{"headwear": (h, c or "#ffffff")} for h, c in hats]
+    fits += [{"shorts": c, "legPrint": "parachute", "sock": c,
+              "wear": {"shortsLong": c, "pantsLong": c}} for c in ("#8a3cf0", "#ff4fb3", "#2ee06a", "#ff3b3b")]
+    fits.append({"shoe": "#7a4520", "sole": "#3a2010", "sock": "#7a4520",
+                 "wear": {"bootShaft": "#7a4520", "bootTop": "#4b2a14"}})
+    cell_w, cell_h = FRAME_W * 3, int(FRAME_H * 3 * 0.66)
+    sheet = Image.new("RGBA", (len(fits) * cell_w // 2 + 40, 2 * cell_h), bg)
+    for k, outfit in enumerate(fits):
+        hide = HEADWEAR_HIDES.get(outfit.get("headwear", ("",))[0], [])
+        look = {"skin": skins[k % len(skins)], "hair": None if "hair" in hide else ["afro", "fade", "crew"][k % 3],
+                "facial": None if "facial" in hide else "goatee", "hairColor": hair_c["black"], "outfit": outfit}
+        img = comp.frame(MID_BODY, "idle", 0, look, {"jersey": "#f2f2f4", "trim": "#26262c"})
+        img = img.resize((cell_w, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cell_w,
+                                                                       int(FRAME_H * 3 * 0.96)))
+        col, row = k % ((len(fits) + 1) // 2), k // ((len(fits) + 1) // 2)
+        sheet.alpha_composite(img, (col * cell_w, row * cell_h))
+    sheet.save(os.path.join(PREVIEW_DIR, "store_items.png"))
+    # developer tee shifting color while running, and the propeller hat spinning
+    gif = []
+    for i in range(48):
+        t = i / 12
+        look = {"skin": skins[1], "hair": None, "hairColor": hair_c["black"],
+                "outfit": {"wear": {"sleeveShort": colorsys_hex((t / 4) % 1)}, "shorts": "#26262c",
+                           "shoe": "#f2f2f4", "headwear": ("propeller_hat_%d" % (i % 4), "#fff")}}
+        img = comp.frame(MID_BODY, "run", i % 12, look, {"jersey": colorsys_hex((t / 4) % 1), "trim": "#f2f2f4"})
+        f_ = Image.new("RGBA", img.size, bg)
+        f_.alpha_composite(img)
+        gif.append(f_.resize((FRAME_W * 3, FRAME_H * 3), Image.NEAREST).convert("RGB"))
+    gif[0].save(os.path.join(PREVIEW_DIR, "developer_tee.gif"), save_all=True, append_images=gif[1:],
+                duration=83, loop=0)
 
 
 def main():

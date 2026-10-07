@@ -3,38 +3,84 @@
  * game (and tests) can use it directly; PlayerSprite draws the result.
  */
 import { SPRITE_DATA } from './frames';
-import type { HeadwearStyle, JerseyColors, Outfit, ShirtPrint, WearRegion } from './types';
+import type {
+  HatStyle, HeadwearStyle, JerseyColors, Outfit, PantsStyle, ShirtPrint, SpriteHeadwear, WearRegion,
+} from './types';
 
 export type OutfitTints = {
+  /** the shirt color to draw (differs from colors.jersey for a color-shifting shirt) */
+  shirt: string;
   shorts: string;
   sock: string;
   shoe: string;
   sole: string;
   /** a tint per wear region (FrameData.wear order); null = not worn, the skin shows */
   wear: (string | null)[];
-  headwear: { style: HeadwearStyle; color: string } | null;
+  /** the head overlay to draw (a hat, or a headband) and its tint */
+  headwear: { style: SpriteHeadwear; color: string } | null;
+  /** hats hide the hair; the goat head hides the facial hair too */
+  hideHair: boolean;
+  hideFacial: boolean;
   /** index into FrameData.prints, or null for a plain shirt */
   print: number | null;
+  /** index into FrameData.legPrints, or null */
+  legPrint: number | null;
 };
 
 const PRINT_INDEX = new Map(SPRITE_DATA.prints.map((p, i) => [p.id, i]));
+const LEG_PRINT_INDEX = new Map(SPRITE_DATA.legPrints.map((p, i) => [p.id, i]));
+
+/** Default tints for hats whose color can be chosen. */
+export const HAT_COLORS: Partial<Record<HatStyle, string>> = {
+  top_hat: '#1c1c22', cap_forward: '#d62b2b', cap_backward: '#2c5fd6', fedora: '#6b5a48', cat_ears: '#2a2a30',
+  goat_head: '#eeeade',
+};
+/** Propeller spin speed, frames per second (4 frames per turn). */
+export const PROPELLER_FPS = 14;
 
 /** The league look: tank top, black shorts, white socks, grey shoes. */
 export const LEAGUE_OUTFIT: Outfit = {};
+
+function hsl(h: number, s: number, l: number): string {
+  const f = (n: number) => {
+    const k = (n + h * 12) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function darken(hex: string, k: number): string {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k).toString(16).padStart(2, '0'));
+  return `#${c.join('')}`;
+}
+
+type ColorShift = NonNullable<NonNullable<Outfit['shirt']>['colorShift']>;
+
+/** The color of a color-shifting shirt at `time` seconds. */
+export function shiftingColor(time: number, shift: ColorShift = {}): string {
+  const period = shift.period ?? 8;
+  const hue = (((time / period) % 1) + 1) % 1;
+  return hsl(hue, shift.saturation ?? 0.75, shift.lightness ?? 0.55);
+}
 
 /**
  * Resolve an outfit to layer tints. `shirtColor` is the jersey color (used
  * for sleeves unless the outfit gives its own). `flip` is the sprite's flip,
  * so a one-arm sleeve stays on the same arm when the player turns around.
+ * `time` (seconds) drives a color-shifting shirt and the propeller hat.
  */
-export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip = false): OutfitTints {
+export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip = false, time = 0): OutfitTints {
   const o = outfit ?? {};
   const d = SPRITE_DATA.defaultOutfit;
   const worn: Partial<Record<WearRegion, string>> = {};
+  const shirt = o.shirt?.colorShift ? shiftingColor(time, o.shirt.colorShift) : shirtColor;
   const print = o.shirt?.print ? PRINT_INDEX.get(o.shirt.print) ?? null : null;
   // printed shirts are tees: the print covers the short sleeves
   const sleeves = o.shirt?.sleeves === 'long' ? 'long' : print !== null ? 'short' : o.shirt?.sleeves ?? 'none';
-  const sleeveColor = o.shirt?.sleeveColor ?? shirtColor;
+  const sleeveColor = o.shirt?.sleeveColor ?? shirt;
   if (sleeves !== 'none') worn.sleeveShort = sleeveColor;
   if (sleeves === 'long') worn.sleeveLong = sleeveColor;
   if (o.armSleeve) {
@@ -44,25 +90,55 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   }
   if (o.wristbands) worn.wristband = o.wristbands.color;
   const shorts = o.shorts?.color ?? d.shorts;
-  const pants = o.shorts?.length === 'pants';
+  // parachute pants are always full length
+  const pants = o.shorts?.length === 'pants' || o.shorts?.style === 'parachute';
   if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
   if (pants) worn.pantsLong = shorts;
-  const sock = pants ? shorts : o.socks?.color ?? d.sock;
+  let sock = pants ? shorts : o.socks?.color ?? d.sock;
   if (o.socks?.tall && !pants) worn.sockTall = sock;
+  const shoe = o.shoes?.color ?? d.shoe;
+  if (o.shoes?.style === 'cowboy_boots') {
+    // boots go over the socks (and trouser cuffs) up to mid-shin
+    sock = shoe;
+    worn.bootShaft = shoe;
+    worn.bootTop = o.shoes.topColor ?? darken(shoe, 0.62);
+  }
+  let headwear: OutfitTints['headwear'] = o.headband ?? null;
+  if (o.hat) {
+    const style = (o.hat.style === 'propeller_hat'
+      ? `propeller_hat_${Math.floor(Math.max(0, time) * PROPELLER_FPS) % 4}`
+      : o.hat.style) as SpriteHeadwear;
+    headwear = { style, color: o.hat.color ?? HAT_COLORS[o.hat.style] ?? '#ffffff' };
+  }
+  const hides = headwear ? SPRITE_DATA.headwearHides[headwear.style] ?? [] : [];
   return {
+    shirt,
     shorts,
     sock,
-    shoe: o.shoes?.color ?? d.shoe,
+    shoe,
     sole: o.shoes?.sole ?? d.sole,
     wear: SPRITE_DATA.wearRegions.map((r) => worn[r] ?? null),
-    headwear: o.headband ?? null,
+    headwear,
+    hideHair: hides.includes('hair'),
+    hideFacial: hides.includes('facial'),
     print,
+    legPrint: o.shorts?.style ? LEG_PRINT_INDEX.get(o.shorts.style) ?? null : null,
   };
 }
 
 export type CosmeticOption<T> = { id: string; label: string; value: T };
 
-export type OutfitPreset = { id: string; label: string; outfit: Outfit; colors: JerseyColors };
+export type OutfitPreset = {
+  id: string;
+  label: string;
+  outfit: Outfit;
+  colors: JerseyColors;
+  /** only for the account(s) your game marks as developers; never sold in the store */
+  exclusive?: 'developer';
+};
+
+/** Bright nylon colors for parachute pants (any tint works). */
+export const PARACHUTE_COLORS = { purple: '#8a3cf0', pink: '#ff4fb3', green: '#2ee06a', red: '#ff3b3b' };
 
 /** Complete looks: pass `outfit` and `colors` to PlayerSprite. */
 export const OUTFIT_PRESETS: OutfitPreset[] = [
@@ -77,7 +153,39 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
     },
     colors: { jersey: '#7a4a26', trim: '#4e2c14' },
   },
+  {
+    id: 'developer_tee',
+    label: 'Developer tee',
+    // a plain tee that keeps shifting through the rainbow; developer only
+    outfit: {
+      shirt: { sleeves: 'short', colorShift: { period: 8 } },
+      shorts: { color: '#26262c' },
+      shoes: { color: '#f2f2f4', sole: '#26262c' },
+    },
+    colors: { jersey: '#ffffff', trim: '#f2f2f4' },
+    exclusive: 'developer',
+  },
+  ...(['purple', 'pink', 'green', 'red'] as const).map((c): OutfitPreset => ({
+    id: `parachute_${c}`,
+    label: `Parachute pants (${c})`,
+    outfit: { shorts: { color: PARACHUTE_COLORS[c], style: 'parachute' } },
+    colors: { jersey: '#f2f2f4', trim: '#26262c' },
+  })),
+  {
+    id: 'cowboy',
+    label: 'Cowboy boots',
+    outfit: { shoes: { style: 'cowboy_boots', color: '#7a4520', sole: '#3a2010' } },
+    colors: { jersey: '#f2f2f4', trim: '#26262c' },
+  },
 ];
+
+/**
+ * Presets a player may use: exclusive ones only for developer accounts.
+ * The game decides who is a developer (e.g. by account id on your server).
+ */
+export function presetsFor(isDeveloper: boolean): OutfitPreset[] {
+  return OUTFIT_PRESETS.filter((p) => !p.exclusive || isDeveloper);
+}
 
 /** Ready-made pieces for a park-mode locker (colors are suggestions; any hex works). */
 export const COSMETICS = {
@@ -97,6 +205,22 @@ export const COSMETICS = {
     { id: 'tied_headband', label: 'Tied headband', value: 'tied_headband' },
   ] as CosmeticOption<HeadwearStyle>[],
   prints: SPRITE_DATA.prints.map((p) => ({ id: p.id, label: p.label, value: p.id })) as CosmeticOption<ShirtPrint>[],
+  hats: [
+    { id: 'top_hat', label: 'Top hat', value: 'top_hat' },
+    { id: 'cap_forward', label: 'Ball cap', value: 'cap_forward' },
+    { id: 'cap_backward', label: 'Ball cap (backwards)', value: 'cap_backward' },
+    { id: 'halo', label: 'Halo', value: 'halo' },
+    { id: 'cat_ears', label: 'Cat ears', value: 'cat_ears' },
+    { id: 'fedora', label: 'Fedora', value: 'fedora' },
+    { id: 'goat_head', label: 'Goat head', value: 'goat_head' },
+    { id: 'fishbowl', label: 'Fishbowl', value: 'fishbowl' },
+    { id: 'propeller_hat', label: 'Propeller hat', value: 'propeller_hat' },
+  ] as CosmeticOption<HatStyle>[],
+  pants: SPRITE_DATA.legPrints.map((p) => ({ id: p.id, label: p.label, value: p.id })) as CosmeticOption<PantsStyle>[],
+  shoes: [
+    { id: 'sneakers', label: 'Sneakers', value: 'sneakers' },
+    { id: 'cowboy_boots', label: 'Cowboy boots', value: 'cowboy_boots' },
+  ] as CosmeticOption<'sneakers' | 'cowboy_boots'>[],
   colors: [
     { id: 'black', label: 'Black', value: '#26262c' },
     { id: 'white', label: 'White', value: '#f2f2f4' },

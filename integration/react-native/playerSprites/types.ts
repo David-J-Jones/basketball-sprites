@@ -24,7 +24,7 @@ export type AnimName =
   | `shoot_${StyledShot}` | `shoot_${StyledShot}_pullup` | `shoot_${StyledShot}_fade`
   | 'layup_reverse' | 'layup_scoop' | 'layup_floater'
   | 'dunk_reverse' | 'dunk_two_hand' | 'dunk_cradle'
-  | 'dance_two_step' | 'dance_shimmy' | 'dance_robot'
+  | 'dance_two_step' | 'dance_shimmy' | 'dance_robot' | 'air_guitar'
   | 'victory_flex' | 'victory_arms_up' | 'victory_bow' | 'victory_cool' | 'victory_roar';
 
 /** The six run cycles; they all share one stride clock (see runStyleFor). */
@@ -67,10 +67,23 @@ export type ShirtPrint =
 /** Headbands, drawn over the hair (see Outfit). */
 export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
 
+/** Hats (park-mode store items). Most hide the hair; the goat head hides the face too. */
+export type HatStyle =
+  | 'top_hat' | 'cap_forward' | 'cap_backward' | 'halo' | 'cat_ears' | 'fedora' | 'goat_head' | 'fishbowl'
+  | 'propeller_hat';
+
+/** Head overlays as stored in the sprite data (the propeller hat has 4 spin frames). */
+export type SpriteHeadwear =
+  | HeadwearStyle | Exclude<HatStyle, 'propeller_hat'>
+  | 'propeller_hat_0' | 'propeller_hat_1' | 'propeller_hat_2' | 'propeller_hat_3';
+
+/** Pants details drawn over the pants color. */
+export type PantsStyle = 'parachute';
+
 /** Skin areas an outfit can cover, in the order of FrameData.wear. */
 export type WearRegion =
   | 'sleeveShort' | 'sleeveLong' | 'armSleeveNear' | 'armSleeveFar' | 'wristband' | 'shortsLong' | 'sockTall'
-  | 'pantsLong';
+  | 'pantsLong' | 'bootShaft' | 'bootTop';
 
 export type FrameData = {
   skin: PlacedPiece | null;
@@ -85,6 +98,8 @@ export type FrameData = {
   wear: (PlacedPiece | null)[] | null;
   /** one full-color piece per shirt print (SpriteData.prints order): torso and short sleeves */
   prints: (PlacedPiece | null)[] | null;
+  /** one full-color detail piece per pants style (SpriteData.legPrints order), drawn over the pants */
+  legPrints: (PlacedPiece | null)[] | null;
   /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
   head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
@@ -108,6 +123,7 @@ export type CompactFrame = [
   ball: [number, number] | null, ballDepth: number | null, lift: number,
   shorts: PieceRef | null, sock: PieceRef | null, shoe: PieceRef | null, sole: PieceRef | null,
   wear: (PieceRef | null)[] | null, prints: (PieceRef | null)[] | null,
+  legPrints: (PieceRef | null)[] | null,
 ];
 
 /** One body's own pieces and frames (bodies/<body>.json, loaded on first use). */
@@ -145,7 +161,10 @@ export type SpriteData = {
   /** hair styles, then facial-hair types, then headwear: the column order of each overlay set */
   hairStyles: SpriteHairStyle[];
   facialHair: SpriteFacialHair[];
-  headwear: HeadwearStyle[];
+  headwear: SpriteHeadwear[];
+  /** what each piece of headwear hides ('hair', 'facial') */
+  headwearHides: Partial<Record<SpriteHeadwear, ('hair' | 'facial')[]>>;
+  legPrints: { id: PantsStyle; label: string }[];
   wearRegions: WearRegion[];
   prints: { id: ShirtPrint; label: string }[];
   /** league colors for shorts, socks, shoes and soles */
@@ -188,11 +207,20 @@ export type Outfit = {
      * still use `colors.trim`. Printed shirts always have at least short sleeves.
      */
     print?: ShirtPrint;
+    /**
+     * The shirt slowly cycles through the rainbow while you play (the
+     * developer tee). period = seconds per full cycle (default 8). Pass
+     * PlayerSprite's `time` so every frame gets the current color.
+     */
+    colorShift?: { period?: number; saturation?: number; lightness?: number };
   };
   /** 'pants' = full-length trousers (socks take the same color so the leg reads as one piece) */
-  shorts?: { color?: string; length?: 'standard' | 'long' | 'pants' };
+  shorts?: { color?: string; length?: 'standard' | 'long' | 'pants'; style?: PantsStyle };
   socks?: { color?: string; tall?: boolean };
-  shoes?: { color?: string; sole?: string };
+  /** 'cowboy_boots': boot shafts up the shin (socks hidden) with a darker band at the top */
+  shoes?: { color?: string; sole?: string; style?: 'sneakers' | 'cowboy_boots'; topColor?: string };
+  /** a hat; drawn instead of the headband. color tints caps, top hats, fedoras and cat ears */
+  hat?: { style: HatStyle; color?: string } | null;
   headband?: { style: HeadwearStyle; color: string } | null;
   wristbands?: { color: string } | null;
   /** shooting sleeve on one arm (stays on that arm whichever way the player faces) */

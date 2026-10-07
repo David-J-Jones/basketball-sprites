@@ -1,5 +1,5 @@
 import { framesOf, headOverlay, SPRITE_DATA as SPRITES } from './frames';
-import { COSMETICS, OUTFIT_PRESETS, outfitTints } from './outfit';
+import { COSMETICS, OUTFIT_PRESETS, outfitTints, presetsFor, shiftingColor } from './outfit';
 import type { AnimName, Outfit } from './types';
 
 const region = (name: string) => SPRITES.wearRegions.indexOf(name as never);
@@ -50,6 +50,7 @@ describe('outfits', () => {
   it('has 3 dances and 5 victory poses, each victory pose ending on its hold frame', () => {
     const names = Object.keys(SPRITES.anims);
     expect(names.filter((n) => n.startsWith('dance_'))).toHaveLength(3);
+    expect(names).toContain('air_guitar');
     const victory = names.filter((n) => n.startsWith('victory_')) as AnimName[];
     expect(victory).toHaveLength(5);
     for (const v of victory) {
@@ -105,5 +106,63 @@ describe('brown suit', () => {
 
   it('has trouser masks on every frame', () => {
     for (const f of framesOf('h4-average', 'walk')) expect(f.wear![region('pantsLong')]).not.toBeNull();
+  });
+});
+
+describe('developer tee', () => {
+  it('shifts color over time and loops', () => {
+    const dev = OUTFIT_PRESETS.find((p) => p.id === 'developer_tee')!;
+    const a = outfitTints(dev.outfit, dev.colors.jersey, false, 0).shirt;
+    const b = outfitTints(dev.outfit, dev.colors.jersey, false, 2).shirt;
+    const c = outfitTints(dev.outfit, dev.colors.jersey, false, 8).shirt;
+    expect(a).toMatch(/^#[0-9a-f]{6}$/);
+    expect(b).not.toBe(a);
+    expect(c).toBe(a);
+    expect(outfitTints(dev.outfit, '#fff', false, 2).wear[region('sleeveShort')]).toBe(b);
+    expect(shiftingColor(0)).toBe(shiftingColor(8));
+  });
+
+  it('is exclusive to developers', () => {
+    expect(presetsFor(false).some((p) => p.id === 'developer_tee')).toBe(false);
+    expect(presetsFor(true).some((p) => p.id === 'developer_tee')).toBe(true);
+    expect(presetsFor(false).some((p) => p.id === 'brown_suit')).toBe(true);
+  });
+});
+
+describe('hats, parachute pants, cowboy boots, air guitar', () => {
+  it('draws every hat on every frame, and hats hide the hair', () => {
+    for (const hat of COSMETICS.hats) {
+      const t = outfitTints({ hat: { style: hat.value } }, '#fff');
+      for (const f of framesOf('h4-average', 'idle')) expect(headOverlay(f, t.headwear!.style)[0] ?? headOverlay(f, t.headwear!.style)[1]).not.toBeNull();
+      const keepsHair = hat.value === 'halo' || hat.value === 'cat_ears';
+      expect(t.hideHair).toBe(!keepsHair);
+      expect(t.hideFacial).toBe(hat.value === 'goat_head');
+    }
+  });
+
+  it('spins the propeller', () => {
+    const styles = new Set([0, 0.08, 0.16, 0.24, 0.32].map((s) => outfitTints({ hat: { style: 'propeller_hat' } }, '#fff', false, s).headwear!.style));
+    expect(styles.size).toBe(4);
+  });
+
+  it('makes parachute pants full length with their detail layer', () => {
+    const t = outfitTints({ shorts: { color: '#8a3cf0', style: 'parachute' } }, '#fff');
+    expect(t.legPrint).toBe(0);
+    expect(t.wear[region('pantsLong')]).toBe('#8a3cf0');
+    for (const f of framesOf('h4-average', 'run')) expect(f.legPrints?.[0]).toBeTruthy();
+  });
+
+  it('pulls cowboy boots up the shin over the socks', () => {
+    const t = outfitTints({ shoes: { style: 'cowboy_boots', color: '#7a4520' } }, '#fff');
+    expect(t.sock).toBe('#7a4520');
+    expect(t.wear[region('bootShaft')]).toBe('#7a4520');
+    expect(t.wear[region('bootTop')]).not.toBeNull();
+    for (const f of framesOf('h4-average', 'walk')) expect(f.wear![region('bootShaft')]).not.toBeNull();
+  });
+
+  it('has an air guitar celebration', () => {
+    const a = SPRITES.anims.air_guitar;
+    expect(a.loop).toBe(true);
+    expect(a.group).toBe('celebrations');
   });
 });
