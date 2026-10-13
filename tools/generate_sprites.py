@@ -78,6 +78,11 @@ FIXED = {
     "prop_r_d": (170, 30, 36, 255), "prop_y_d": (206, 160, 30, 255), "prop_b_d": (32, 74, 170, 255),
     "prop_g_d": (30, 136, 62, 255), "prop_hub": (255, 236, 120, 255), "shine": (255, 255, 255, 120),
     "halo_glow": (255, 240, 150, 90), "hat_white": (246, 246, 246, 255),
+    # rocket car
+    "car_paint": (30, 100, 230, 255), "car_paint_hi": (110, 170, 255, 255), "car_paint_d": (18, 60, 150, 255),
+    "car_grille": (34, 36, 44, 255), "car_grille_hi": (80, 84, 96, 255), "car_light": (255, 246, 190, 255),
+    "car_light_glow": (255, 230, 120, 255), "car_bumper": (24, 24, 30, 255), "car_antenna": (150, 150, 160, 255),
+    "car_topper": (255, 140, 30, 255),
 }
 TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
     "skin0": ("skin", None, 255),
@@ -681,6 +686,42 @@ def _propeller(frame):
     return m
 
 
+def _rocket_car_top():
+    """The front of the upright car over the head, the same width as the
+    body: front bumper on top, a headlight, the hood with a highlight, the
+    windshield on the roof side flowing into the side windows, the underside
+    skirt down the front, and a little antenna with a ball topper."""
+    m = {}
+    for r in range(-1, 16):
+        for c in range(0, 15):
+            if (r <= 0 and (c <= 1 or c >= 13)) or (r == -1 and (c <= 2 or c >= 12)):
+                continue                                              # rounded nose
+            if r <= 0:
+                tag = "car_bumper"
+            elif c >= 13:
+                tag = "car_bumper"                                    # underside skirt
+            elif r in (2, 3) and 9 <= c <= 11:
+                tag = "car_light"
+            elif r in (1, 4) and 9 <= c <= 11:
+                tag = "car_light_glow"
+            elif r >= 8 and c <= 4 - (r - 8) // 3:
+                tag = "car_grille_hi" if (r + c) % 4 == 0 else "car_grille"   # windshield glass
+            elif c == 0:
+                tag = "car_paint_hi"                                  # roof edge
+            elif r <= 4 and 2 <= c <= 7:
+                tag = "car_paint_hi"
+            elif r == 7 and 3 <= c <= 11:
+                tag = "car_paint_d"                                   # hood line
+            else:
+                tag = "car_paint"
+            m[(c, r)] = tag
+    for r in range(-5, -1):
+        m[(4, r)] = "car_antenna"
+    for c, r in ((3, -7), (4, -7), (5, -7), (3, -6), (4, -6), (5, -6), (4, -8)):
+        m[(c, r)] = "car_topper"
+    return m
+
+
 HEADWEAR = {
     "headband": _headwear([8]),
     "wide_headband": _headwear([7, 8]),
@@ -697,14 +738,16 @@ HEADWEAR = {
     "propeller_hat_1": _propeller(1),
     "propeller_hat_2": _propeller(2),
     "propeller_hat_3": _propeller(3),
+    "rocket_car_top": _rocket_car_top(),
 }
 # what each piece of headwear hides: hats sit where the hair is
 HEADWEAR_HIDES = {k: ["hair"] for k in ("top_hat", "cap_forward", "cap_backward", "fedora", "fishbowl",
                                          "propeller_hat_0", "propeller_hat_1", "propeller_hat_2",
                                          "propeller_hat_3")}
 HEADWEAR_HIDES["goat_head"] = ["hair", "facial"]
+HEADWEAR_HIDES["rocket_car_top"] = ["hair", "facial"]
 # drawn the same in every frame (arms pass behind it) to keep its memory tiny
-STATIC_HEADWEAR = {"goat_head"}
+STATIC_HEADWEAR = {"goat_head", "rocket_car_top"}
 
 
 # ---------------------------------------------------------------- shirt prints
@@ -850,6 +893,18 @@ def print_banana_top(u, v):
     return BANANA["fruit"]
 
 
+def print_rocket_car_body(u, v):
+    """The upright rocket car's middle: blue paint, a dark windshield across
+    the chest (the nose is the hat), an orange stripe up the side."""
+    if u > 7.0 and v > -1.6:
+        return (150, 205, 245) if (math.floor(u * 2 + v) % 5 == 0) else (36, 54, 84)   # windshield
+    if -0.5 < v < 0.7 and u < 7.0:
+        return (255, 140, 30)                                  # racing stripe
+    if abs(v - 0.1) < 1.1 and u < 7.0:
+        return (245, 245, 250)                                 # white edges of the stripe
+    return (110, 170, 255) if v < -2.4 else (30, 100, 230)
+
+
 PRINTS = {
     # id: (label, fn)
     "hawaiian": ("Hawaiian", print_hawaiian),
@@ -866,6 +921,7 @@ PRINTS = {
     "lightning": ("Lightning bolt", print_lightning),
     "suit_brown": ("Brown suit jacket", print_suit_brown),
     "banana_top": ("Banana", print_banana_top),
+    "rocket_car_body": ("Rocket car body", print_rocket_car_body),
 }
 
 
@@ -913,8 +969,19 @@ def legprint_banana_peel(u, v):
     return BANANA["peel"] + (255,)
 
 
+def legprint_rocket_car(u, v):
+    """The car's back half: blue paint over the hips, an orange side skirt,
+    and the dark undercarriage down to the rear wheels (drawn separately)."""
+    if u < B["thigh"] * 0.7:
+        if 1.0 < u < 1.8:
+            return (255, 140, 30, 255)
+        return (110, 170, 255, 255) if v < -1.2 else (30, 100, 230, 255)
+    return (52, 54, 64, 255) if math.floor(u) % 3 else (34, 36, 44, 255)
+
+
 LEG_PRINTS = {
     "parachute": ("Parachute pants", legprint_parachute),
+    "rocket_car": ("Rocket car", legprint_rocket_car),
     "banana_peel": ("Banana peel", legprint_banana_peel),
 }
 
@@ -1110,8 +1177,8 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     far_arm, near_arm, head = Layer(), Layer(), Layer()
 
     fl, nl = pose["far_leg"], pose["near_leg"]
-    draw_leg(far_leg, add(hip, (-0.5, 0)), fl[0], fl[1], fl[2] if len(fl) > 2 else 0, True)
-    draw_leg(near_leg, add(hip, (0.5, 0)), nl[0], nl[1], nl[2] if len(nl) > 2 else 0, False)
+    far_ankle = draw_leg(far_leg, add(hip, (-0.5, 0)), fl[0], fl[1], fl[2] if len(fl) > 2 else 0, True)
+    near_ankle = draw_leg(near_leg, add(hip, (0.5, 0)), nl[0], nl[1], nl[2] if len(nl) > 2 else 0, False)
 
     # torso: jersey, then the shorts waist over its bottom
     chest_lo = add(hip, (tdir[0] * 2.0, tdir[1] * 2.0))
@@ -1286,6 +1353,105 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
                 peel_flaps[n] = (60, 36, 10, 255)
     peel_flaps = {p_: c_ for p_, c_ in peel_flaps.items() if 0 <= p_[0] < FRAME_W and 0 <= p_[1] < FRAME_H}
 
+    # rocket-car extras: wheels at the hands (front) and feet (rear), a boost
+    # flame out the back. The spokes turn with the legs, so they spin as he runs.
+    car_extras = {}
+    spin = math.radians(nl[0] * 3 + fl[0] * 2)
+    CAR = {"tire": (28, 28, 34, 255), "wall": (64, 64, 72, 255), "rim": (196, 202, 214, 255),
+           "hub": (112, 118, 130, 255), "spoke": (60, 64, 74, 255)}
+
+    def wheel(cx, cy, r, ok):
+        for y in range(int(cy - r) - 1, int(cy + r) + 2):
+            for x in range(int(cx - r) - 1, int(cx + r) + 2):
+                d = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
+                if d > r or not ok((x, y)):
+                    continue
+                if d > r - 1.0:
+                    col = CAR["tire"]
+                elif d > r - 1.7:
+                    col = CAR["wall"]
+                elif d < 0.8:
+                    col = CAR["hub"]
+                else:
+                    a = (math.atan2(y + 0.5 - cy, x + 0.5 - cx) - spin) % (math.pi / 2)
+                    col = CAR["spoke"] if a < 0.45 else CAR["rim"]
+                car_extras[(x, y)] = col
+
+    def anywhere(q):
+        return 0 <= q[0] < FRAME_W and 0 <= q[1] < FRAME_H
+
+    def car_behind(q):
+        return anywhere(q) and (grid.get(q) is None or leg_or_empty(q))
+
+    # the car body, seen from the side and standing on its tail: one slab the
+    # width of the nose (the hat), from the neck down to the knees, behind the
+    # near arm (that arm holds a front wheel). Roof and windows on the back
+    # side, the underside skirt on the front side.
+    top_u, bot_u, half = B["neck"] + 2.0, -B["thigh"] * 0.9, 7.0
+    slab = {}
+    for y in range(FRAME_H):
+        for x in range(FRAME_W):
+            rx, ry = x + 0.5 - hip[0], y - dy + 0.5 - hip[1]
+            u_ = rx * tdir[0] + ry * tdir[1]
+            v_ = rx * fwd_dir[0] + ry * fwd_dir[1]
+            if not (bot_u <= u_ <= top_u and -half <= v_ <= half):
+                continue
+            cu = u_ - bot_u
+            cv = min(v_ + half, half - v_)
+            if cu < 2.5 and cv < 2.5 and math.hypot(2.5 - cu, 2.5 - cv) > 2.5:
+                continue                                              # rounded tail corners
+            if (x, y - dy) in near_arm.px:
+                continue
+            if 2.0 < u_ < top_u and -6.2 < v_ < -2.2:
+                if 6.0 < u_ < 6.9:
+                    col = (18, 60, 150)                               # pillar between the windows
+                else:
+                    col = (170, 215, 250) if math.floor(u_ * 0.8 - v_) % 4 == 0 else (44, 64, 98)  # side windows
+            elif v_ < -6.2:
+                col = (110, 170, 255)                                 # roof edge catching the light
+            elif v_ > 6.0:
+                col = (24, 24, 30)                                    # underside skirt
+            elif 2.3 < v_ < 3.5 and u_ < 9.0:
+                col = (255, 140, 30)                                  # decal stripe
+            elif 3.5 <= v_ < 4.0 and u_ < 9.0:
+                col = (245, 245, 250)
+            elif abs(v_ - 0.6) < 0.5 and -1 < u_ < 8:
+                col = (18, 60, 150)                                   # door seam
+            elif u_ < bot_u + 1.2:
+                col = (24, 24, 30)                                    # rear bumper
+            else:
+                col = (30, 100, 230)
+            slab[(x, y)] = col + (255,)
+    car_extras.update(slab)
+    # boost flame out of the tail, down and back (behind everything)
+    def at(u_, v_):
+        return (hip[0] + tdir[0] * u_ + fwd_dir[0] * v_, hip[1] + tdir[1] * u_ + fwd_dir[1] * v_)
+    noz = at(bot_u + 0.5, -4.0)
+    fdir = (-fwd_dir[0] * 0.55, 0.85)
+    fl_len = 8.0 + 1.5 * math.sin(spin * 3)
+    for k in range(int(fl_len * 3)):
+        t = k / (fl_len * 3)
+        cx, cy = noz[0] + fdir[0] * t * fl_len, noz[1] + fdir[1] * t * fl_len
+        w = 2.2 * (1 - t) + 0.4
+        for j in range(-2, 3):
+            q = (int(math.floor(cx + fdir[1] * j * w / 2)), int(math.floor(cy - fdir[0] * j * w / 2)) + dy)
+            if not car_behind(q) or q in slab:
+                continue
+            col = (255, 250, 210, 255) if t < 0.25 else (255, 200, 60, 255) if t < 0.55 else \
+                (255, 120, 30, 255) if t < 0.8 else (220, 50, 30, 255)
+            car_extras[q] = col
+    # rear wheels at the feet (far one only where it's behind)
+    wheel(far_ankle[0] + 0.4, far_ankle[1] - 0.2 + dy_legs, 3.0, car_behind)
+    wheel(near_ankle[0] + 0.6, near_ankle[1] - 0.2 + dy_legs, 3.2, anywhere)
+    # front wheels at the hands: these dribble the ball
+    wheel(far_hand[0], far_hand[1] + dy, 3.1, lambda q: anywhere(q) and (grid.get(q) is None or
+                                                                          (q[0], q[1] - dy) in far_arm.px))
+    wheel(near_hand[0], near_hand[1] + dy, 3.4, anywhere)
+    for (x, y) in list(car_extras):                                    # dark outline where it sticks out
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in car_extras and grid.get(n) is None and anywhere(n):
+                car_extras[n] = (20, 20, 26, 255)
+
     # print coordinates for every visible shirt pixel (torso and short sleeves)
     print_uv = {}
     for (x, y), tag in grid.items():
@@ -1354,6 +1520,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "print_uv": print_uv,
         "leg_print_uv": leg_print_uv,
         "peel_flaps": peel_flaps,
+        "car_extras": car_extras,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
     }
@@ -3062,6 +3229,8 @@ def build_body(body):
                         pix[p_] = c_
                 if pname == "banana_peel":
                     pix.update(info["peel_flaps"])                   # flaps curling out past the legs
+                if pname == "rocket_car":
+                    pix.update(info["car_extras"])                   # wheels and boost
                 rec["legPrints"].append(ref(to_mask_res(pix, opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
@@ -3485,6 +3654,27 @@ def write_outfit_preview(data, bodies, pages, palettes):
                                                                       int(FRAME_H * 3 * 0.97)))
             sheet.alpha_composite(img, (c * cw, r * chh))
     sheet.save(os.path.join(PREVIEW_DIR, "banana_suit.png"))
+    # the rocket car (OUTFIT_PRESETS.rocket_car in outfit.ts)
+    car = {"print": "rocket_car_body", "legPrint": "rocket_car", "shorts": "#1e64e6", "sock": "#1e64e6",
+           "shoe": "#1c1c22", "sole": "#1c1c22", "headwear": ("rocket_car_top", "#ffffff"),
+           "wear": {"sleeveShort": "#1e64e6", "sleeveLong": "#3a3a44", "shortsLong": "#1e64e6",
+                    "pantsLong": "#1e64e6"}}
+    poses = [("idle", 0), ("dribble", 0), ("dribble", 3), ("dribble_run", 2), ("run", 3), ("shoot", 4),
+             ("dunk_basic", 4), ("air_guitar", 5)]
+    sheet = Image.new("RGBA", (len(poses) * cw, chh + 40), bg)
+    look = {"skin": skins[2], "hair": None, "facial": None, "hairColor": hair_c["black"], "outfit": car}
+    for c, (anim, i) in enumerate(poses):
+        img = comp.frame(MID_BODY, anim, i, look, {"jersey": "#1e64e6", "trim": "#ff8c1e"})
+        rec = frame_obj(bodies, MID_BODY, anim, i)
+        if rec["ball"]:
+            bx, by = rec["ball"]
+            ball = ball_layer((bx / SCALE, by / SCALE), 0)
+            bimg = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
+            _blit_rgba(bimg, ball)
+            img.alpha_composite(bimg.resize(img.size, Image.NEAREST))
+        img = img.resize((cw, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.2), cw, FRAME_H * 3))
+        sheet.alpha_composite(img, (c * cw, 0))
+    sheet.save(os.path.join(PREVIEW_DIR, "rocket_car.png"))
     # park store items: hats, parachute pants, cowboy boots
     def colorsys_hex(h):
         import colorsys

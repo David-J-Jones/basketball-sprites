@@ -62,7 +62,7 @@ export type PlacedPiece = [page: number, sx: number, sy: number, w: number, h: n
 /** Full-color shirt prints for park-mode tees (see Outfit.shirt.print). */
 export type ShirtPrint =
   | 'hawaiian' | 'tie_dye' | 'wave' | 'us_flag' | 'camo' | 'flames' | 'checker' | 'galaxy' | 'plaid'
-  | 'retro_stripes' | 'polka_dots' | 'lightning' | 'suit_brown' | 'banana_top';
+  | 'retro_stripes' | 'polka_dots' | 'lightning' | 'suit_brown' | 'banana_top' | 'rocket_car_body';
 
 /** Headbands, drawn over the hair (see Outfit). */
 export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
@@ -70,7 +70,7 @@ export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
 /** Hats (park-mode store items). Most hide the hair; the goat head hides the face too. */
 export type HatStyle =
   | 'top_hat' | 'cap_forward' | 'cap_backward' | 'halo' | 'cat_ears' | 'fedora' | 'goat_head' | 'fishbowl'
-  | 'propeller_hat';
+  | 'propeller_hat' | 'rocket_car_top';
 
 /** Head overlays as stored in the sprite data (the propeller hat has 4 spin frames). */
 export type SpriteHeadwear =
@@ -78,7 +78,7 @@ export type SpriteHeadwear =
   | 'propeller_hat_0' | 'propeller_hat_1' | 'propeller_hat_2' | 'propeller_hat_3';
 
 /** Pants details drawn over the pants color. */
-export type PantsStyle = 'parachute' | 'banana_peel';
+export type PantsStyle = 'parachute' | 'banana_peel' | 'rocket_car';
 
 /** Skin areas an outfit can cover, in the order of FrameData.wear. */
 export type WearRegion =

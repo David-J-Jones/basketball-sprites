@@ -180,3 +180,22 @@ describe('banana suit', () => {
     }
   });
 });
+
+describe('rocket car', () => {
+  it('is a gift-only full outfit', () => {
+    expect(presetsFor(false).some((p) => p.id === 'rocket_car')).toBe(false);
+    expect(presetsFor(true).some((p) => p.id === 'rocket_car')).toBe(false);
+    expect(presetsFor(false, ['rocket_car']).some((p) => p.id === 'rocket_car')).toBe(true);
+  });
+
+  it('puts the car on every frame: nose hat, body print, wheels and boost layer', () => {
+    const car = OUTFIT_PRESETS.find((p) => p.id === 'rocket_car')!;
+    const t = outfitTints(car.outfit, car.colors.jersey);
+    expect(t.hideHair && t.hideFacial).toBe(true);
+    for (const f of framesOf('h4-average', 'dribble')) {
+      expect(headOverlay(f, 'rocket_car_top')[1]).not.toBeNull();
+      expect(f.legPrints?.[t.legPrint!]).toBeTruthy();
+      expect(f.prints?.[t.print!]).toBeTruthy();
+    }
+  });
+});

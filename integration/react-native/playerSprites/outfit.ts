@@ -167,8 +167,11 @@ export type OutfitPreset = {
   label: string;
   outfit: Outfit;
   colors: JerseyColors;
-  /** only for the account(s) your game marks as developers; never sold in the store */
-  exclusive?: 'developer';
+  /**
+   * Not in the store. 'developer': only developer accounts. 'gift': only
+   * players you grant it to (see presetsFor).
+   */
+  exclusive?: 'developer' | 'gift';
 };
 
 /** Bright nylon colors for parachute pants (any tint works). */
@@ -217,6 +220,20 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
     colors: { jersey: '#efe2a8', trim: '#e0b628' },
   },
   {
+    id: 'rocket_car',
+    label: 'Rocket car',
+    // stand up as a rocket-powered car: the hat is the nose, the shirt and pants the body,
+    // front wheels on the hands (they dribble), rear wheels on the feet, boost out the tail
+    outfit: {
+      shirt: { print: 'rocket_car_body', sleeves: 'long', sleeveColor: '#3a3a44' },
+      shorts: { color: '#1e64e6', style: 'rocket_car' },
+      shoes: { color: '#1c1c22', sole: '#1c1c22' },
+      hat: { style: 'rocket_car_top' },
+    },
+    colors: { jersey: '#1e64e6', trim: '#ff8c1e' },
+    exclusive: 'gift',
+  },
+  {
     id: 'cowboy',
     label: 'Cowboy boots',
     outfit: { shoes: { style: 'cowboy_boots', color: '#7a4520', sole: '#3a2010' } },
@@ -225,11 +242,14 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
 ];
 
 /**
- * Presets a player may use: exclusive ones only for developer accounts.
- * The game decides who is a developer (e.g. by account id on your server).
+ * Presets a player may use: store presets for everyone, 'developer' ones for
+ * developer accounts, 'gift' ones only when their id is in `gifted` (e.g. the
+ * rocket car for one player). Decide both on your server, by account id.
  */
-export function presetsFor(isDeveloper: boolean): OutfitPreset[] {
-  return OUTFIT_PRESETS.filter((p) => !p.exclusive || isDeveloper);
+export function presetsFor(isDeveloper: boolean, gifted: string[] = []): OutfitPreset[] {
+  return OUTFIT_PRESETS.filter(
+    (p) => !p.exclusive || (p.exclusive === 'developer' && isDeveloper) || (p.exclusive === 'gift' && gifted.includes(p.id)),
+  );
 }
 
 /** Ready-made pieces for a park-mode locker (colors are suggestions; any hex works). */
