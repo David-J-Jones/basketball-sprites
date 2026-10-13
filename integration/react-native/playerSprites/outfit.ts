@@ -124,8 +124,8 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   }
   if (o.wristbands) worn.wristband = o.wristbands.color;
   const shorts = o.shorts?.color ?? d.shorts;
-  // parachute pants are always full length
-  const pants = o.shorts?.length === 'pants' || o.shorts?.style === 'parachute';
+  // pants styles (parachute, banana peel) are always full length
+  const pants = o.shorts?.length === 'pants' || !!o.shorts?.style;
   if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
   if (pants) worn.pantsLong = shorts;
   let sock = pants ? shorts : o.socks?.color ?? d.sock;
@@ -205,6 +205,17 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
     outfit: { shorts: { color: PARACHUTE_COLORS[c], style: 'parachute' } },
     colors: { jersey: '#f2f2f4', trim: '#26262c' },
   })),
+  {
+    id: 'banana_suit',
+    label: 'Banana',
+    // a peeled banana: pale fruit up the torso, the peel hanging down the legs, feet out the bottom
+    outfit: {
+      shirt: { print: 'banana_top' },
+      shorts: { color: '#ffe44a', style: 'banana_peel' },
+      shoes: { color: '#f2f2f4', sole: '#5a3a14' },
+    },
+    colors: { jersey: '#efe2a8', trim: '#e0b628' },
+  },
   {
     id: 'cowboy',
     label: 'Cowboy boots',

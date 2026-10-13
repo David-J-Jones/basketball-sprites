@@ -166,3 +166,17 @@ describe('hats, parachute pants, cowboy boots, air guitar', () => {
     expect(a.group).toBe('celebrations');
   });
 });
+
+describe('banana suit', () => {
+  it('is a banana top with full-length peel pants', () => {
+    const b = OUTFIT_PRESETS.find((p) => p.id === 'banana_suit')!;
+    const t = outfitTints(b.outfit, b.colors.jersey);
+    expect(t.print).toBe(SPRITES.prints.findIndex((p) => p.id === 'banana_top'));
+    expect(t.legPrint).toBe(SPRITES.legPrints.findIndex((p) => p.id === 'banana_peel'));
+    expect(t.wear[region('pantsLong')]).toBe('#ffe44a');
+    for (const f of framesOf('h4-average', 'run')) {
+      expect(f.legPrints?.[t.legPrint!]).toBeTruthy();
+      expect(f.prints?.[t.print!]).toBeTruthy();
+    }
+  });
+});

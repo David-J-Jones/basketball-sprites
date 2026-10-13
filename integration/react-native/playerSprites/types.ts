@@ -62,7 +62,7 @@ export type PlacedPiece = [page: number, sx: number, sy: number, w: number, h: n
 /** Full-color shirt prints for park-mode tees (see Outfit.shirt.print). */
 export type ShirtPrint =
   | 'hawaiian' | 'tie_dye' | 'wave' | 'us_flag' | 'camo' | 'flames' | 'checker' | 'galaxy' | 'plaid'
-  | 'retro_stripes' | 'polka_dots' | 'lightning' | 'suit_brown';
+  | 'retro_stripes' | 'polka_dots' | 'lightning' | 'suit_brown' | 'banana_top';
 
 /** Headbands, drawn over the hair (see Outfit). */
 export type HeadwearStyle = 'headband' | 'wide_headband' | 'tied_headband';
@@ -78,7 +78,7 @@ export type SpriteHeadwear =
   | 'propeller_hat_0' | 'propeller_hat_1' | 'propeller_hat_2' | 'propeller_hat_3';
 
 /** Pants details drawn over the pants color. */
-export type PantsStyle = 'parachute';
+export type PantsStyle = 'parachute' | 'banana_peel';
 
 /** Skin areas an outfit can cover, in the order of FrameData.wear. */
 export type WearRegion =

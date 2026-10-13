@@ -831,6 +831,25 @@ def print_suit_brown(u, v):
     return brown
 
 
+BANANA = {"peel": _hex("#ffe44a"), "peel_hi": _hex("#fff4a6"), "peel_ridge": _hex("#e0b628"),
+          "inner": _hex("#f6efce"), "fruit": _hex("#efe2a8"), "fruit_line": _hex("#e2d08a"),
+          "spot": _hex("#7a5a22"), "end": _hex("#5a3a14")}
+
+
+def print_banana_top(u, v):
+    """The peeled banana: pale fruit up the torso with faint lengthwise lines,
+    and the ragged top edge of the peel around the waist where it starts to
+    hang down (see the banana_peel pants)."""
+    edge = 3.0 + 0.7 * math.sin(v * 2.6 + 0.5)
+    if u < edge - 0.7:
+        return BANANA["peel"] if math.floor(v * 1.2) % 3 else BANANA["peel_ridge"]
+    if u < edge:
+        return BANANA["inner"]                                 # the peel's pale inside, folded over
+    if abs(((v + 4) % 2.2) - 1.1) < 0.25:
+        return BANANA["fruit_line"]
+    return BANANA["fruit"]
+
+
 PRINTS = {
     # id: (label, fn)
     "hawaiian": ("Hawaiian", print_hawaiian),
@@ -846,6 +865,7 @@ PRINTS = {
     "polka_dots": ("Polka dots", print_polka_dots),
     "lightning": ("Lightning bolt", print_lightning),
     "suit_brown": ("Brown suit jacket", print_suit_brown),
+    "banana_top": ("Banana", print_banana_top),
 }
 
 
@@ -870,8 +890,32 @@ def legprint_parachute(u, v):
     return None
 
 
+def legprint_banana_peel(u, v):
+    """Banana-peel pants: the peel hangs down from the waist in strips that
+    split apart near the top (showing the pale inside), with ridges, brown
+    speckles and the dark peel end at the ankles where the feet come out."""
+    ankle = B["thigh"] + B["shin"] * 0.82
+    if u > ankle:
+        return BANANA["end"] + (255,)
+    if u < -2.0:
+        return BANANA["inner"] + (255,)                        # the fold at the waist
+    gap = max(0.0, (2.0 - u) * 0.22)                           # strips peel apart toward the top
+    for b in (-0.8, 0.8):
+        d = abs(v - b)
+        if d < gap:
+            return BANANA["inner"] + (255,)
+        if d < gap + 0.22:
+            return BANANA["peel_ridge"] + (255,)
+    if _h(math.floor(u * 1.5), math.floor(v * 2 + 7)) > 0.95:
+        return BANANA["spot"] + (255,)
+    if v < -1.3:
+        return BANANA["peel_hi"] + (255,)
+    return BANANA["peel"] + (255,)
+
+
 LEG_PRINTS = {
     "parachute": ("Parachute pants", legprint_parachute),
+    "banana_peel": ("Banana peel", legprint_banana_peel),
 }
 
 
@@ -3380,6 +3424,21 @@ def write_outfit_preview(data, bodies, pages, palettes):
                                                                       int(FRAME_H * 3 * 0.92)))
             sheet.alpha_composite(img, (c * cw, r * chh))
     sheet.save(os.path.join(PREVIEW_DIR, "brown_suit.png"))
+    # the banana suit (OUTFIT_PRESETS.banana_suit in outfit.ts)
+    banana = {"print": "banana_top", "legPrint": "banana_peel", "shorts": "#ffe44a", "sock": "#ffe44a",
+              "shoe": "#f2f2f4", "sole": "#5a3a14",
+              "wear": {"sleeveShort": "#efe2a8", "shortsLong": "#ffe44a", "pantsLong": "#ffe44a"}}
+    poses = [("idle", 0), ("walk", 2), ("run", 3), ("shoot", 4), ("dribble", 0), ("air_guitar", 5),
+             ("dance_two_step", 1), ("victory_arms_up", 4)]
+    sheet = Image.new("RGBA", (len(poses) * cw, 2 * chh), bg)
+    for r, (sk, hair, fac) in enumerate([(skins[1], "crew", None), (skins[3], "afro", "goatee")]):
+        look = {"skin": sk, "hair": hair, "facial": fac, "hairColor": hair_c["black"], "outfit": banana}
+        for c, (anim, i) in enumerate(poses):
+            img = comp.frame(MID_BODY, anim, i, look, {"jersey": "#efe2a8", "trim": "#e0b628"})
+            img = img.resize((cw, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cw,
+                                                                      int(FRAME_H * 3 * 0.97)))
+            sheet.alpha_composite(img, (c * cw, r * chh))
+    sheet.save(os.path.join(PREVIEW_DIR, "banana_suit.png"))
     # park store items: hats, parachute pants, cowboy boots
     def colorsys_hex(h):
         import colorsys
