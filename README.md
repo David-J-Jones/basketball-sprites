@@ -194,7 +194,7 @@ outfit={{
 - **What hats hide:** hats that sit on the head hide the player's hair, so an afro doesn't poke through a top hat. The goat head also hides facial hair. The halo and cat ears keep the hair. When arms go up behind the head (dunks, blocks), hats stay in front of the arms.
 - **Propeller hat:** it spins (4 frames at `PROPELLER_FPS`), driven by PlayerSprite's `time`.
 - **Parachute pants** are full-length pants in any color, with a detail layer drawn on top: nylon sheen, diagonal zippers, a knee seam and elastic cuffs.
-- **Banana suit** (`OUTFIT_PRESETS` → `banana_suit`): a peeled banana. The shirt is the pale fruit with the ragged top edge of the peel at the waist (`print: 'banana_top'`). The pants are the peel hanging down the legs in strips that split apart near the top, with ridges, brown speckles and the dark peel end at the ankles where the feet come out (`shorts: { style: 'banana_peel' }`).
+- **Banana suit** (`OUTFIT_PRESETS` → `banana_suit`): a peeled banana. The shirt is the pale fruit with the ragged top edge of the peel at the waist (`print: 'banana_top'`). The pants are the peel: flaps hang from the waist and curl out past the legs front and back (pale inside edge, brown tips, drawn behind the arms), and strips run down the legs, splitting apart near the top, with ridges, brown speckles and the dark peel end at the ankles where the feet come out (`shorts: { style: 'banana_peel' }`).
 - **Cowboy boots** pull the shoe color up the shin over the socks (and over trouser cuffs), with a darker band at the top (`topColor`).
 
 ### Developer tee

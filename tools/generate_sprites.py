@@ -1243,6 +1243,49 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
 
     grid, clipped = compose(head)
 
+    # banana-peel flaps: strips that hang from the waist and curl outward
+    # past the legs (only where nothing but legs or empty space is drawn,
+    # so the arms stay in front of them)
+    def leg_or_empty(p):
+        t_ = grid.get(p)
+        if t_ is None:
+            return True
+        base, regs = split_tag(t_)
+        return base.startswith("shorts") or base.startswith("sock") or "tl" in regs or "pl" in regs
+
+    peel_flaps = {}
+    waist_pt = add(hip, (tdir[0] * 1.6, tdir[1] * 1.6))
+    flap_r = B["hip_r"] + 0.4
+    length = B["thigh"] * 1.25
+    for side, flare, wid in ((1.0, 4.2, 1.8), (-1.0, 3.8, 1.8), (0.15, 0.6, 1.5)):
+        steps = int(length * 3)
+        for k in range(steps + 1):
+            t = k / steps
+            cx = waist_pt[0] + fwd_dir[0] * side * flap_r + side * flare * t * t * (1 if abs(side) > 0.5 else 0)
+            cy = waist_pt[1] + fwd_dir[1] * side * flap_r + t * length
+            w = wid * (1 - 0.45 * t)
+            for j in range(-int(math.ceil(w)), int(math.ceil(w)) + 1):
+                if abs(j) > w:
+                    continue
+                q = (int(math.floor(cx + j)), int(math.floor(cy)) + dy)
+                if not leg_or_empty(q):
+                    continue
+                outer = j * (1 if side >= 0 else -1) >= w - 0.8      # the edge curling out shows the inside
+                if t > 0.86:
+                    col = BANANA["end"]
+                elif outer and t > 0.15:
+                    col = BANANA["inner"]
+                elif j == 0:
+                    col = BANANA["peel_ridge"]
+                else:
+                    col = BANANA["peel_hi"] if (j < 0) == (side >= 0) else BANANA["peel"]
+                peel_flaps[q] = col + (255,)
+    for (x, y) in list(peel_flaps):                                  # dark outline around the flaps
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in peel_flaps and grid.get(n) is None:
+                peel_flaps[n] = (60, 36, 10, 255)
+    peel_flaps = {p_: c_ for p_, c_ in peel_flaps.items() if 0 <= p_[0] < FRAME_W and 0 <= p_[1] < FRAME_H}
+
     # print coordinates for every visible shirt pixel (torso and short sleeves)
     print_uv = {}
     for (x, y), tag in grid.items():
@@ -1310,6 +1353,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "head_origin": (hx, hy + dy),
         "print_uv": print_uv,
         "leg_print_uv": leg_print_uv,
+        "peel_flaps": peel_flaps,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
     }
@@ -3016,6 +3060,8 @@ def build_body(body):
                     c_ = pfn(u_, v_)
                     if c_:
                         pix[p_] = c_
+                if pname == "banana_peel":
+                    pix.update(info["peel_flaps"])                   # flaps curling out past the legs
                 rec["legPrints"].append(ref(to_mask_res(pix, opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
