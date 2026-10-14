@@ -83,7 +83,7 @@ export type PantsStyle = 'parachute' | 'banana_peel' | 'rocket_car';
 /** Skin areas an outfit can cover, in the order of FrameData.wear. */
 export type WearRegion =
   | 'sleeveShort' | 'sleeveLong' | 'armSleeveNear' | 'armSleeveFar' | 'wristband' | 'shortsLong' | 'sockTall'
-  | 'pantsLong' | 'bootShaft' | 'bootTop';
+  | 'pantsLong';
 
 export type FrameData = {
   skin: PlacedPiece | null;
@@ -100,6 +100,8 @@ export type FrameData = {
   prints: (PlacedPiece | null)[] | null;
   /** one full-color detail piece per pants style (SpriteData.legPrints order), drawn over the pants */
   legPrints: (PlacedPiece | null)[] | null;
+  /** cowboy boots: [foot mask, shaft mask, heel/sole mask, detail], drawn over the legs */
+  boots: [PlacedPiece | null, PlacedPiece | null, PlacedPiece | null, PlacedPiece | null] | null;
   /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
   head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
@@ -124,6 +126,7 @@ export type CompactFrame = [
   shorts: PieceRef | null, sock: PieceRef | null, shoe: PieceRef | null, sole: PieceRef | null,
   wear: (PieceRef | null)[] | null, prints: (PieceRef | null)[] | null,
   legPrints: (PieceRef | null)[] | null,
+  boots: [PieceRef | null, PieceRef | null, PieceRef | null, PieceRef | null] | null,
 ];
 
 /** One body's own pieces and frames (bodies/<body>.json, loaded on first use). */
@@ -221,7 +224,11 @@ export type Outfit = {
   /** 'pants' = full-length trousers (socks take the same color so the leg reads as one piece) */
   shorts?: { color?: string; length?: 'standard' | 'long' | 'pants'; style?: PantsStyle };
   socks?: { color?: string; tall?: boolean };
-  /** 'cowboy_boots': boot shafts up the shin (socks hidden) with a darker band at the top */
+  /**
+   * 'cowboy_boots': pointed-toe boots with a stacked heel and a stitched shaft
+   * to mid-shin. color = the foot, topColor = the shaft (defaults to color),
+   * sole = the heel and sole.
+   */
   shoes?: { color?: string; sole?: string; style?: 'sneakers' | 'cowboy_boots'; topColor?: string };
   /** a hat; drawn instead of the headband. color tints caps, top hats, fedoras and cat ears */
   hat?: { style: HatStyle; color?: string } | null;

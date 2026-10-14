@@ -185,7 +185,7 @@ outfit={{
   hat: { style: 'top_hat', color: '#1c1c22' },              // top_hat | cap_forward | cap_backward | halo | cat_ears
                                                             // | fedora | goat_head | fishbowl | propeller_hat
   shorts: { color: PARACHUTE_COLORS.purple, style: 'parachute' },   // parachute pants: purple, pink, green, red (any tint)
-  shoes: { style: 'cowboy_boots', color: '#7a4520', sole: '#3a2010' },
+  shoes: { style: 'cowboy_boots', color: '#5c2e14', topColor: '#c48a4a', sole: '#24160c' },  // foot, shaft, heel
 }}
 ```
 
@@ -196,7 +196,7 @@ outfit={{
 - **Parachute pants** are full-length pants in any color, with a detail layer drawn on top: nylon sheen, diagonal zippers, a knee seam and elastic cuffs.
 - **Banana suit** (`OUTFIT_PRESETS` → `banana_suit`): a peeled banana. The shirt is the pale fruit with the ragged top edge of the peel at the waist (`print: 'banana_top'`). The pants are the peel: flaps hang from the waist and curl out past the legs front and back (pale inside edge, brown tips, drawn behind the arms), and strips run down the legs, splitting apart near the top, with ridges, brown speckles and the dark peel end at the ankles where the feet come out (`shorts: { style: 'banana_peel' }`).
 - **Rocket car** (`rocket_car`, a gift-only preset): wear all four pieces and you're a rocket-powered car standing on its tail. The hat is the nose (bumper on top, headlight, windshield). The shirt and pants are the body: a wide slab with side windows, a decal stripe, the underside skirt and a boost flame out of the tail. The front wheels are on the hands, so they dribble the ball, and the rear wheels are on the feet. The spokes turn as the legs move. It's a generic design, not a copy of any real game's car. Only players you grant it to get it: `presetsFor(isDeveloper, giftedPresetIds)`.
-- **Cowboy boots** pull the shoe color up the shin over the socks (and over trouser cuffs), with a darker band at the top (`topColor`).
+- **Cowboy boots** are their own layer over the legs (`FrameData.boots`, in a `<body>/boots` page group that loads only when someone wears them). They have a long pointed toe with a shine, a stacked riding heel, and a shaft that flares out to mid-shin with a V-dipped dark collar, pull tabs and a stitched seam. They're tinted in three parts: `color` is the foot, `topColor` the shaft (defaults to `color`), and `sole` the heel and sole. They go over the socks and trouser cuffs; tall socks still show above them.
 
 ### Developer tee
 

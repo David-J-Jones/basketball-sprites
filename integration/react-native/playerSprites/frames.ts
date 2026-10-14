@@ -29,6 +29,7 @@ export function expandFrame(body: BodyData, r: CompactFrame): FrameData {
     wear: r[14] ? r[14].map(p) : null,
     prints: r[15] ? r[15].map(p) : null,
     legPrints: r[16] ? r[16].map(p) : null,
+    boots: r[17] ? [p(r[17][0]), p(r[17][1]), p(r[17][2]), p(r[17][3])] : null,
   };
 }
 

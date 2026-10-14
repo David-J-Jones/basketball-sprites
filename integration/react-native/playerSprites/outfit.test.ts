@@ -152,12 +152,19 @@ describe('hats, parachute pants, cowboy boots, air guitar', () => {
     for (const f of framesOf('h4-average', 'run')) expect(f.legPrints?.[0]).toBeTruthy();
   });
 
-  it('pulls cowboy boots up the shin over the socks', () => {
-    const t = outfitTints({ shoes: { style: 'cowboy_boots', color: '#7a4520' } }, '#fff');
-    expect(t.sock).toBe('#7a4520');
-    expect(t.wear[region('bootShaft')]).toBe('#7a4520');
-    expect(t.wear[region('bootTop')]).not.toBeNull();
-    for (const f of framesOf('h4-average', 'walk')) expect(f.wear![region('bootShaft')]).not.toBeNull();
+  it('draws cowboy boots as their own two-tone layer', () => {
+    expect(outfitTints({}, '#fff').boots).toBeNull();
+    const t = outfitTints({ shoes: { style: 'cowboy_boots', color: '#5c2e14', topColor: '#c48a4a' } }, '#fff');
+    expect(t.boots![0]).toBe('#5c2e14');
+    expect(t.boots![1]).toBe('#c48a4a');
+    expect(t.boots![2]).toMatch(/^#[0-9a-f]{6}$/i);
+    const one = outfitTints({ shoes: { style: 'cowboy_boots', color: '#222222' } }, '#fff');
+    expect(one.boots![1]).toBe('#222222');                     // shaft defaults to the boot color
+    for (const f of framesOf('h4-average', 'walk')) {
+      expect(f.boots).not.toBeNull();
+      for (const p of f.boots!) expect(p).not.toBeNull();
+      expect(SPRITES.pageGroups[f.boots![0]![0]]).toBe('h4-average/boots');
+    }
   });
 
   it('has an air guitar celebration', () => {

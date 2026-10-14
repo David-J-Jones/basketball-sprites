@@ -114,17 +114,30 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "hw1": ("headwear", (0, 0, 0, 80), 255),
     "hw2": ("headwear", (255, 255, 255, 80), 255),     # hat highlight
     "hw3": ("headwear", (0, 0, 0, 150), 255),          # hat band / deep shade
+    # cowboy boots (a separate overlay, see boot_layers): foot, shaft and heel
+    # are tinted separately so the boots can be two-tone
+    "bv0": ("bootVamp", None, 255),
+    "bv1": ("bootVamp", (0, 0, 0, 80), 255),
+    "bvh": ("bootVamp", (255, 255, 255, 90), 255),     # shine on the toe
+    "bs0": ("bootShaft", None, 255),
+    "bs1": ("bootShaft", (0, 0, 0, 80), 255),
+    "bsh": ("bootShaft", (255, 255, 255, 70), 255),
+    "bsb": ("bootShaft", (0, 0, 0, 130), 255),         # collar at the top
+    "bst": ("bootShaft", (255, 240, 210, 110), 255),   # stitched seam
+    "bh0": ("bootSole", None, 255),
+    "bh1": ("bootSole", (0, 0, 0, 90), 255),           # heel stack lines
+    "bh2": ("bootSole", (255, 255, 255, 60), 255),
 }
+BOOT_SLOTS = ["bootVamp", "bootShaft", "bootSole"]
 BODY_SLOTS = ["skin", "jersey", "trim", "shorts", "sock", "shoe", "sole"]
 DEFAULT_OUTFIT = {"shorts": "#3E3E46", "sock": "#F2F2F6", "shoe": "#AAACB4", "sole": "#484852"}
 
 # Wear regions: skin areas an outfit can cover. A skin tag carries them as a
 # suffix ("skin0@sa.sb"); each region becomes an extra mask the app draws
 # over the skin, tinted with the item's color, only when it's worn.
-WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh", "pl", "bt", "bb"]
+WEAR_REGIONS = ["sa", "sb", "sn", "sf", "wr", "tl", "sh", "pl"]
 WEAR_NAMES = {"sa": "sleeveShort", "sb": "sleeveLong", "sn": "armSleeveNear", "sf": "armSleeveFar",
-              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall", "pl": "pantsLong",
-              "bt": "bootShaft", "bb": "bootTop"}
+              "wr": "wristband", "tl": "shortsLong", "sh": "sockTall", "pl": "pantsLong"}
 _SPLIT = {}
 
 
@@ -211,6 +224,25 @@ class Layer:
                 if math.hypot(ox, oy) <= r:
                     self.pos = (px, py)   # for color functions that need it
                     c = color_fn(t, ox / r, oy / r)
+                    if c is not None:
+                        self.px[(x, y)] = c
+
+    def cone(self, a, b, ra, rb, color_fn):
+        """Like capsule, but the radius goes from ra at a to rb at b."""
+        ax, ay = a
+        bx, by = b
+        dx, dy = bx - ax, by - ay
+        seg2 = dx * dx + dy * dy
+        r = max(ra, rb)
+        for y in range(int(math.floor(min(ay, by) - r)) - 1, int(math.ceil(max(ay, by) + r)) + 2):
+            for x in range(int(math.floor(min(ax, bx) - r)) - 1, int(math.ceil(max(ax, bx) + r)) + 2):
+                px, py = x + 0.5, y + 0.5
+                t = 0.0 if seg2 == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / seg2))
+                rt = ra + (rb - ra) * t
+                ox, oy = px - (ax + dx * t), py - (ay + dy * t)
+                if math.hypot(ox, oy) <= rt:
+                    self.pos = (px, py)
+                    c = color_fn(t, ox / rt, oy / rt)
                     if c is not None:
                         self.px[(x, y)] = c
 
@@ -1083,7 +1115,7 @@ def ball_layer(center, rot_deg=0.0, squash=0.0):
 
 
 # ---------------------------------------------------------------- body
-def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
+def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far, boot=False):
     skin, skin_s = ("skin1", "skin2") if far else ("skin0", "skin1")
     cloth, cloth_s = ("shorts1", "shorts2") if far else ("shorts0", "shorts1")
     sock, sock_s = ("sock1", "sock1") if far else ("sock0", "sock1")
@@ -1100,10 +1132,7 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
         if t > 0.62:
             return sock_s if lit(ox, oy) < -0.4 else sock
         tag = skin_s if lit(ox, oy) < -0.3 else skin
-        # tall socks and trousers; cowboy-boot shafts with a top band
-        regs = ["pl"] + (["sh"] if t > 0.18 else []) + (["bt"] if t > 0.42 else []) + \
-            (["bb"] if 0.42 < t <= 0.5 else [])
-        return wear(tag, *regs)
+        return wear(tag, "pl", "sh") if t > 0.18 else wear(tag, "pl")      # trousers, tall socks
     layer.capsule(knee, ankle, B["shin_r"], shin_fn)
 
     def thigh_fn(t, ox, oy):
@@ -1135,7 +1164,59 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far):
             return "shoe1"
         return upper
     layer.capsule(heel, toe, 1.55, shoe_fn)
+    if boot:
+        draw_boot(layer, knee, ankle, sd, heel, toe, fwd, down, far)
     return ankle
+
+
+def draw_boot(layer, knee, ankle, sd, heel, toe, fwd, down, far):
+    """Cowboy boot over the leg and sneaker: a shaft that flares out to a
+    scalloped top with pull tabs and stitching, a long pointed toe and a
+    stacked heel. Always covers the whole sneaker (boot_layers diffs it
+    against the plain render)."""
+    shade = 0.15 if far else 0.3
+    # the side of the leg the toe points to (the shin's front)
+    front = (-sd[1], sd[0]) if -sd[1] * fwd[0] + sd[0] * fwd[1] > 0 else (sd[1], -sd[0])
+    top = add(knee, vec_from(sd, B["shin"] * 0.42))
+
+    def shaft_fn(t, ox, oy):
+        s_ = ox * front[0] + oy * front[1]                  # -1 back .. 1 front
+        # V-dipped top edge with a dark collar; pull tabs stand up front and back
+        dip = 0.16 * (1 - abs(s_))
+        if t < dip:
+            return None
+        if t < dip + 0.17:
+            return "bsb"
+        if abs(s_ - 0.1) < 0.24 and 0.42 < t < 0.9:
+            return "bst"                                     # stitched seam down the side
+        return "bs1" if lit(ox, oy) < -shade else "bs0"
+    layer.cone(top, add(ankle, vec_from(sd, 0.4)), B["shin_r"] + 1.05, B["shin_r"] + 0.45, shaft_fn)
+
+    tip = add(toe, (fwd[0] * 2.0 + down[0] * 0.75, fwd[1] * 2.0 + down[1] * 0.75))
+
+    def vamp_fn(t, ox, oy, toe_part=False):
+        side = ox * down[0] + oy * down[1]
+        if side > (0.5 if toe_part else 0.42):
+            return "bh0"                                     # thin sole
+        lt = lit(ox, oy)
+        if toe_part and lt > 0.3 and 0.15 < t < 0.6 and not far:
+            return "bvh"
+        return "bv1" if lt < -shade or (far and side < -0.5) else "bv0"
+    layer.capsule(heel, toe, 1.6, vamp_fn)
+    layer.cone(toe, tip, 1.5, 0.45, lambda t, ox, oy: vamp_fn(t, ox, oy, True))
+    # stacked heel under the back of the foot, slanting in (a riding heel)
+    h_top = add(heel, (down[0] * 1.0 + fwd[0] * 0.2, down[1] * 1.0 + fwd[1] * 0.2))
+    h_bot = add(heel, (down[0] * 2.3 + fwd[0] * 0.7, down[1] * 2.3 + fwd[1] * 0.7))
+
+    def heel_fn(t, ox, oy):
+        if t > 0.8:
+            return "bh1"                                     # heel cap
+        return "bh2" if lit(ox, oy) > 0.5 and not far else "bh0"
+    layer.cone(h_top, h_bot, 1.25, 1.0, heel_fn)
+
+
+def vec_from(d, length):
+    return (d[0] * length, d[1] * length)
 
 
 def arm_points(shoulder, upper_deg, fore_deg, reach=1.0):
@@ -1312,6 +1393,33 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         return grid, clipped
 
     grid, clipped = compose(head)
+
+    def booted():
+        """The same pose with cowboy boots (see boot_layers)."""
+        swap = {}
+        for leg, side, far in ((far_leg, fl, True), (near_leg, nl, False)):
+            bl = Layer()
+            draw_leg(bl, add(hip, (-0.5 if far else 0.5, 0)), side[0], side[1], side[2] if len(side) > 2 else 0,
+                     far, boot=True)
+            swap[id(leg)] = (bl.outline(), bl.px)
+        g_ = {}
+        for (x, y), tag in smear.items():
+            if 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+                g_[(x, y + dy)] = tag
+        for layer in order:
+            shift = dy_legs if layer in (far_leg, near_leg) else dy
+            srcs = (head.outline(), head.px) if layer is head else swap.get(id(layer), cached.get(id(layer)))
+            for src in srcs:
+                for (x, y), tag in src.items():
+                    if 0 <= x < FRAME_W and 0 <= y + shift < FRAME_H:
+                        g_[(x, y + shift)] = tag
+        if behind:
+            for layer in (far_arm, near_arm):
+                for src in cached[id(layer)]:
+                    for (x, y), tag in src.items():
+                        if y < skull_top and 0 <= x < FRAME_W and 0 <= y + dy < FRAME_H:
+                            g_[(x, y + dy)] = tag
+        return g_
 
     # banana-peel flaps: strips that hang from the waist and curl outward
     # past the legs (only where nothing but legs or empty space is drawn,
@@ -1531,6 +1639,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "car_extras": car_extras,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
+        "booted": booted,
     }
     return grid, info
 
@@ -2984,6 +3093,31 @@ def overlay_layers(bald, styled, slot, where):
 
 
 
+def boot_layers(bald, booted, where):
+    """Cowboy boots = every pixel the booted render changes. Returns a mask
+    per BOOT_SLOTS entry plus a detail layer (shading and outline)."""
+    masks = {sl: {} for sl in BOOT_SLOTS}
+    detail = {}
+    for p, tag in booted.items():
+        if bald.get(p) == tag:
+            continue
+        tag = split_tag(tag)[0]
+        if tag in TINTED and TINTED[tag][0] in masks:
+            _, over, alpha = TINTED[tag]
+            masks[TINTED[tag][0]][p] = (255, 255, 255, alpha)
+            if over:
+                detail[p] = over
+        elif tag in FIXED:
+            detail[p] = FIXED[tag]
+        else:
+            raise ValueError("%s: boot overlay would contain %s" % (where, tag))
+    missing = [p for p in bald if p not in booted]
+    if missing:
+        raise ValueError("%s: boots don't cover %d pixels" % (where, len(missing)))
+    opaque = {p for p, c in detail.items() if c[3] == 255}
+    return [to_mask_res(masks[sl], opaque) for sl in BOOT_SLOTS], detail
+
+
 # ---------------------------------------------------------------- atlas
 def cut_piece(pixels, kind):
     """Trim a layer to its bounding box. Returns (key, size, x0, y0, zbytes)
@@ -3119,6 +3253,9 @@ class Compositor:
             legs_after = []
         layers.append((f["detail"], None))
         layers += legs_after
+        if out.get("boots") and f.get("boots"):
+            # cowboy boots: (foot, shaft, heel) colors over everything on the legs
+            layers += list(zip(f["boots"], list(out["boots"]) + [None]))
         oset, hx, hy = f["head"]
         ids = self.data["overlays"][oset]
         styles = self.data["hairStyles"] + self.data["facialHair"] + self.data["headwear"]
@@ -3188,7 +3325,7 @@ def _pt(p):
 
 STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
 FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift",
-                "shorts", "sock", "shoe", "sole", "wear", "prints", "legPrints"]
+                "shorts", "sock", "shoe", "sole", "wear", "prints", "legPrints", "boots"]
 
 
 def frame_obj(bodies, body, anim, i):
@@ -3245,6 +3382,8 @@ def build_body(body):
                 rec["legPrints"].append(ref(to_mask_res(pix, set() if pname in LEG_PRINTS_OVER else opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
+            bm, bd = boot_layers(bald, info["booted"](), where)
+            rec["boots"] = [ref(m_, "mask", "%s/boots" % body) for m_ in bm] + [ref(bd, "detail", "%s/boots" % body)]
             head = info["head_origin"]
             overlays = []
             for style in HAIR_STYLES:
@@ -3318,7 +3457,8 @@ def build_all():
                             conv(rec["shorts"]), conv(rec["sock"]), conv(rec["shoe"]), conv(rec["sole"]),
                             wear_refs if any(wear_refs) else None,
                             [conv(r) for r in rec["prints"]] if any(rec["prints"]) else None,
-                            [conv(r) for r in rec["legPrints"]] if any(rec["legPrints"]) else None])
+                            [conv(r) for r in rec["legPrints"]] if any(rec["legPrints"]) else None,
+                            [conv(r) for r in rec["boots"]] if any(rec["boots"]) else None])
             frames[body][name] = out
     pages, page_groups, page_scales, rects = atlas.pack()
 
@@ -3347,7 +3487,7 @@ def build_all():
                 rec = list(rec)
                 for k in (0, 1, 2, 3, 10, 11, 12, 13):
                     rec[k] = to_local(rec[k])
-                for k in (14, 15, 16):
+                for k in (14, 15, 16, 17):
                     if rec[k]:
                         rec[k] = [to_local(r) for r in rec[k]]
                 out[name].append(rec)
@@ -3698,8 +3838,9 @@ def write_outfit_preview(data, bodies, pages, palettes):
     fits = [{"headwear": (h, c or "#ffffff")} for h, c in hats]
     fits += [{"shorts": c, "legPrint": "parachute", "sock": c,
               "wear": {"shortsLong": c, "pantsLong": c}} for c in ("#8a3cf0", "#ff4fb3", "#2ee06a", "#ff3b3b")]
-    fits.append({"shoe": "#7a4520", "sole": "#3a2010", "sock": "#7a4520",
-                 "wear": {"bootShaft": "#7a4520", "bootTop": "#4b2a14"}})
+    fits.append({"boots": ("#5c2e14", "#c48a4a", "#24160c")})
+    fits.append({"boots": ("#1e1c22", "#1e1c22", "#121014"), "shorts": "#2a3a6e", "legPrint": "parachute",
+                 "sock": "#2a3a6e", "wear": {"shortsLong": "#2a3a6e", "pantsLong": "#2a3a6e"}})
     cell_w, cell_h = FRAME_W * 3, int(FRAME_H * 3 * 0.66)
     sheet = Image.new("RGBA", (len(fits) * cell_w // 2 + 40, 2 * cell_h), bg)
     for k, outfit in enumerate(fits):
@@ -3708,7 +3849,7 @@ def write_outfit_preview(data, bodies, pages, palettes):
                 "facial": None if "facial" in hide else "goatee", "hairColor": hair_c["black"], "outfit": outfit}
         img = comp.frame(MID_BODY, "idle", 0, look, {"jersey": "#f2f2f4", "trim": "#26262c"})
         img = img.resize((cell_w, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cell_w,
-                                                                       int(FRAME_H * 3 * 0.96)))
+                                                                       FRAME_H * 3))
         col, row = k % ((len(fits) + 1) // 2), k // ((len(fits) + 1) // 2)
         sheet.alpha_composite(img, (col * cell_w, row * cell_h))
     sheet.save(os.path.join(PREVIEW_DIR, "store_items.png"))
@@ -3753,6 +3894,27 @@ def write_outfit_preview(data, bodies, pages, palettes):
                 duration=83, loop=0)
 
 
+def write_boots_preview(comp):
+    """previews/cowboy_boots.png: three colorways (foot, shaft, heel) standing, walking, running."""
+    cells = []
+    for fit in [("#5c2e14", "#c48a4a", "#24160c"), ("#1e1c22", "#1e1c22", "#121014"),
+                ("#e8e4dc", "#b8322c", "#2a1a10")]:
+        for anim, i in [("idle", 0), ("walk", 2), ("run", 3)]:
+            img = comp.frame(MID_BODY, anim, i, {"skin": "#8d5a3b", "hair": "afro", "facial": None,
+                                                 "hairColor": "#1a1618", "outfit": {"boots": fit}},
+                             {"jersey": "#f2f2f4", "trim": "#26262c"})
+            bb = img.getbbox()
+            img = img.crop((bb[0] - 6, bb[1] + (bb[3] - bb[1]) * 2 // 3, bb[2] + 6, bb[3] + 3))
+            cell = Image.new("RGBA", img.size, (200, 214, 230, 255))
+            cell.alpha_composite(img)
+            cells.append(cell.resize((cell.width * 3, cell.height * 3), Image.NEAREST))
+    w, h = max(c.width for c in cells), max(c.height for c in cells)
+    sheet = Image.new("RGBA", (w * 3, h * 3), (255, 255, 255, 255))
+    for k, c in enumerate(cells):
+        sheet.paste(c, ((k % 3) * w, (k // 3) * h))
+    sheet.save(os.path.join(PREVIEW_DIR, "cowboy_boots.png"))
+
+
 def main():
     with open(os.path.join(RN_DIR, "palettes.json")) as f:
         palettes = json.load(f)
@@ -3764,6 +3926,7 @@ def main():
         json.dump(ball_meta, f, indent=2)
     write_previews(data, bodies, pages, palettes)
     write_outfit_preview(data, bodies, pages, palettes)
+    write_boots_preview(Compositor(data, bodies, pages))
     per = {}
     for (w, h), g in zip(data["pages"], data["pageGroups"]):
         per[g] = per.get(g, 0) + w * h * 4 / 1e6

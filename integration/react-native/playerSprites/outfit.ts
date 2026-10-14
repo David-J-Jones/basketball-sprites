@@ -27,6 +27,8 @@ export type OutfitTints = {
   legPrint: number | null;
   /** draw the pants layer after the outline layer (the rocket car body) */
   legPrintOver: boolean;
+  /** cowboy boots: [foot, shaft, heel] tints for FrameData.boots, or null for sneakers */
+  boots: [string, string, string] | null;
 };
 
 const PRINT_INDEX = new Map(SPRITE_DATA.prints.map((p, i) => [p.id, i]));
@@ -130,15 +132,13 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   const pants = o.shorts?.length === 'pants' || !!o.shorts?.style;
   if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
   if (pants) worn.pantsLong = shorts;
-  let sock = pants ? shorts : o.socks?.color ?? d.sock;
+  const sock = pants ? shorts : o.socks?.color ?? d.sock;
   if (o.socks?.tall && !pants) worn.sockTall = sock;
   const shoe = o.shoes?.color ?? d.shoe;
-  if (o.shoes?.style === 'cowboy_boots') {
-    // boots go over the socks (and trouser cuffs) up to mid-shin
-    sock = shoe;
-    worn.bootShaft = shoe;
-    worn.bootTop = o.shoes.topColor ?? darken(shoe, 0.62);
-  }
+  // boots go over the sneakers, socks and trouser cuffs, up to mid-shin
+  const boots: OutfitTints['boots'] = o.shoes?.style === 'cowboy_boots'
+    ? [shoe, o.shoes.topColor ?? shoe, o.shoes.sole ?? darken(shoe, 0.45)]
+    : null;
   let headwear: OutfitTints['headwear'] = o.headband ?? null;
   if (o.hat) {
     const style = (o.hat.style === 'propeller_hat'
@@ -160,6 +160,7 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
     print,
     legPrint: o.shorts?.style ? LEG_PRINT_INDEX.get(o.shorts.style) ?? null : null,
     legPrintOver: !!o.shorts?.style && (SPRITE_DATA.legPrintsOver ?? []).includes(o.shorts.style),
+    boots,
   };
 }
 
@@ -259,7 +260,7 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
   {
     id: 'cowboy',
     label: 'Cowboy boots',
-    outfit: { shoes: { style: 'cowboy_boots', color: '#7a4520', sole: '#3a2010' } },
+    outfit: { shoes: { style: 'cowboy_boots', color: '#5c2e14', topColor: '#c48a4a', sole: '#24160c' } },
     colors: { jersey: '#f2f2f4', trim: '#26262c' },
   },
 ];
