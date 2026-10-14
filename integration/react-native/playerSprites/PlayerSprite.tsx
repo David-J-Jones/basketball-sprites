@@ -4,7 +4,7 @@ import { Image, View } from 'react-native';
 import { hairColor, skinColor } from './appearance';
 import type { BodyKey } from './features';
 import { frameData, headOverlay } from './frames';
-import { outfitTints } from './outfit';
+import { developerNeonColor, outfitTints } from './outfit';
 import { PAGES, SPRITES } from './spriteData';
 import type { AnimName, JerseyColors, Outfit, PlacedPiece, PlayerLook } from './types';
 
@@ -33,12 +33,14 @@ export type PlayerSpriteProps = {
    * the propeller hat). Defaults to the wall clock.
    */
   time?: number;
+  /** Same as `time` (seconds on a continuous game clock); kept for the neon tee. */
+  effectTime?: number;
 };
 
-type PieceProps = { piece: PlacedPiece | null; scale: number; tint?: string };
+type PieceProps = { piece: PlacedPiece | null; scale: number; tint?: string; offsetX?: number; offsetY?: number; opacity?: number };
 
 /** One cropped piece of an atlas page, optionally tinted a flat color. */
-const Piece = ({ piece, scale, tint }: PieceProps) => {
+const Piece = ({ piece, scale, tint, offsetX = 0, offsetY = 0, opacity = 1 }: PieceProps) => {
   if (!piece) return null;
   const [page, sx, sy, w, h, dx, dy] = piece;
   const [pageW, pageH] = SPRITES.pages[page];
@@ -48,8 +50,8 @@ const Piece = ({ piece, scale, tint }: PieceProps) => {
     <View
       style={{
         position: 'absolute',
-        left: dx * scale,
-        top: dy * scale,
+        left: dx * scale + offsetX,
+        top: dy * scale + offsetY,
         width: w * s,
         height: h * s,
         overflow: 'hidden',
@@ -65,10 +67,23 @@ const Piece = ({ piece, scale, tint }: PieceProps) => {
           width: pageW * s,
           height: pageH * s,
           tintColor: tint,
+          opacity,
         }}
       />
     </View>
   );
+};
+
+/** Tight pixel-art glow: eight translucent copies around the shirt mask. */
+const GlowPiece = ({ piece, scale, tint }: PieceProps) => {
+  if (!piece) return null;
+  const d = Math.max(1, SPRITES.scale * scale * 0.45);
+  return <>{[
+    [-d, 0], [d, 0], [0, -d], [0, d],
+    [-d, -d], [d, -d], [-d, d], [d, d],
+  ].map(([offsetX, offsetY], i) => (
+    <Piece key={i} piece={piece} scale={scale} tint={tint} offsetX={offsetX} offsetY={offsetY} opacity={0.24} />
+  ))}</>;
 };
 
 export const PlayerSprite = memo(function PlayerSprite({
@@ -83,9 +98,15 @@ export const PlayerSprite = memo(function PlayerSprite({
   bakedLift = true,
   outfit,
   time,
+  effectTime,
 }: PlayerSpriteProps) {
   const f = frameData(look.body, anim, frame);
-  const wear = outfitTints(outfit, colors.jersey, flip, time ?? Date.now() / 1000);
+  const t = time ?? effectTime ?? Date.now() / 1000;
+  // the neon developer tee: full-spectrum hue cycle with a pixel glow around the shirt
+  const neon = outfit?.shirt?.effect === 'developer_neon';
+  const wear = outfitTints(outfit, neon ? developerNeonColor(t) : colors.jersey, flip, t);
+  const sleeveShort = SPRITES.wearRegions.indexOf('sleeveShort');
+  const sleeveLong = SPRITES.wearRegions.indexOf('sleeveLong');
   const facial = look.facialHair && !wear.hideFacial ? headOverlay(f, look.facialHair) : null;
   const hair = look.hairStyle && !wear.hideHair ? headOverlay(f, look.hairStyle) : null;
   const hairTint = hairColor(look);
@@ -103,12 +124,15 @@ export const PlayerSprite = memo(function PlayerSprite({
         transform: flip ? [{ scaleX: -1 }] : undefined,
       }}
     >
+      {neon && <GlowPiece piece={f.jersey} scale={scale} tint={wear.shirt} />}
+      {neon && f.wear && <GlowPiece piece={f.wear[sleeveShort]} scale={scale} tint={wear.shirt} />}
+      {neon && f.wear && <GlowPiece piece={f.wear[sleeveLong]} scale={scale} tint={wear.shirt} />}
       <Piece piece={f.skin} scale={scale} tint={skinColor(look)} />
       {f.wear?.map((piece, i) =>
         wear.wear[i] ? <Piece key={i} piece={piece} scale={scale} tint={wear.wear[i]!} /> : null,
       )}
       <Piece piece={f.jersey} scale={scale} tint={wear.shirt} />
-      <Piece piece={f.trim} scale={scale} tint={colors.trim} />
+      <Piece piece={f.trim} scale={scale} tint={neon ? wear.shirt : colors.trim} />
       {wear.print !== null && <Piece piece={f.prints?.[wear.print] ?? null} scale={scale} />}
       <Piece piece={f.shorts} scale={scale} tint={wear.shorts} />
       <Piece piece={f.sock} scale={scale} tint={wear.sock} />
