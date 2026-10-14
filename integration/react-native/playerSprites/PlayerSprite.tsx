@@ -138,8 +138,9 @@ export const PlayerSprite = memo(function PlayerSprite({
       <Piece piece={f.sock} scale={scale} tint={wear.sock} />
       <Piece piece={f.shoe} scale={scale} tint={wear.shoe} />
       <Piece piece={f.sole} scale={scale} tint={wear.sole} />
-      {wear.legPrint !== null && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}
+      {wear.legPrint !== null && !wear.legPrintOver && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}
       <Piece piece={f.detail} scale={scale} />
+      {wear.legPrint !== null && wear.legPrintOver && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}
       {facial && <Piece piece={facial[0]} scale={scale} tint={hairTint} />}
       {facial && <Piece piece={facial[1]} scale={scale} />}
       {hair && <Piece piece={hair[0]} scale={scale} tint={hairTint} />}

@@ -25,6 +25,8 @@ export type OutfitTints = {
   print: number | null;
   /** index into FrameData.legPrints, or null */
   legPrint: number | null;
+  /** draw the pants layer after the outline layer (the rocket car body) */
+  legPrintOver: boolean;
 };
 
 const PRINT_INDEX = new Map(SPRITE_DATA.prints.map((p, i) => [p.id, i]));
@@ -157,6 +159,7 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
     hideFacial: hides.includes('facial'),
     print,
     legPrint: o.shorts?.style ? LEG_PRINT_INDEX.get(o.shorts.style) ?? null : null,
+    legPrintOver: !!o.shorts?.style && (SPRITE_DATA.legPrintsOver ?? []).includes(o.shorts.style),
   };
 }
 

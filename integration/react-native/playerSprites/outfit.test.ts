@@ -192,6 +192,8 @@ describe('rocket car', () => {
     const car = OUTFIT_PRESETS.find((p) => p.id === 'rocket_car')!;
     const t = outfitTints(car.outfit, car.colors.jersey);
     expect(t.hideHair && t.hideFacial).toBe(true);
+    expect(t.legPrintOver).toBe(true);
+    expect(outfitTints({ shorts: { style: 'banana_peel' } }, '#fff').legPrintOver).toBe(false);
     for (const f of framesOf('h4-average', 'dribble')) {
       expect(headOverlay(f, 'rocket_car_top')[1]).not.toBeNull();
       expect(f.legPrints?.[t.legPrint!]).toBeTruthy();

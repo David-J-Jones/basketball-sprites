@@ -979,6 +979,9 @@ def legprint_rocket_car(u, v):
     return (52, 54, 64, 255) if math.floor(u) % 3 else (34, 36, 44, 255)
 
 
+# pants layers drawn over the outline/shading layer (they bring their own edges)
+LEG_PRINTS_OVER = {"rocket_car"}
+
 LEG_PRINTS = {
     "parachute": ("Parachute pants", legprint_parachute),
     "rocket_car": ("Rocket car", legprint_rocket_car),
@@ -1388,6 +1391,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     # near arm (that arm holds a front wheel). Roof and windows on the back
     # side, the underside skirt on the front side.
     top_u, bot_u, half = B["neck"] + 2.0, -B["thigh"] * 0.9, 7.0
+    near_arm_line = set(near_arm.outline())
     slab = {}
     for y in range(FRAME_H):
         for x in range(FRAME_W):
@@ -1400,7 +1404,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             cv = min(v_ + half, half - v_)
             if cu < 2.5 and cv < 2.5 and math.hypot(2.5 - cu, 2.5 - cv) > 2.5:
                 continue                                              # rounded tail corners
-            if (x, y - dy) in near_arm.px:
+            if (x, y - dy) in near_arm.px or (x, y - dy) in near_arm_line:
                 continue
             if 2.0 < u_ < top_u and -6.2 < v_ < -2.2:
                 if 6.0 < u_ < 6.9:
@@ -1422,6 +1426,10 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             else:
                 col = (30, 100, 230)
             slab[(x, y)] = col + (255,)
+    for (x, y) in list(slab):                       # crisp dark edge (this layer is drawn over the outlines)
+        if any(n not in slab and (n[0], n[1] - dy) not in near_arm.px and (n[0], n[1] - dy) not in near_arm_line
+               for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))):
+            slab[(x, y)] = (20, 20, 26, 255)
     car_extras.update(slab)
     # boost flame out of the tail, down and back (behind everything)
     def at(u_, v_):
@@ -3106,8 +3114,11 @@ class Compositor:
             legs_after.append((f["legPrints"][[p_["id"] for p_ in self.data["legPrints"]].index(out["legPrint"])],
                                None))
         layers += [(f[k], out[k]) for k in ("shorts", "sock", "shoe", "sole")]
-        layers += legs_after
+        if out.get("legPrint") not in self.data.get("legPrintsOver", []):
+            layers += legs_after
+            legs_after = []
         layers.append((f["detail"], None))
+        layers += legs_after
         oset, hx, hy = f["head"]
         ids = self.data["overlays"][oset]
         styles = self.data["hairStyles"] + self.data["facialHair"] + self.data["headwear"]
@@ -3231,7 +3242,7 @@ def build_body(body):
                     pix.update(info["peel_flaps"])                   # flaps curling out past the legs
                 if pname == "rocket_car":
                     pix.update(info["car_extras"])                   # wheels and boost
-                rec["legPrints"].append(ref(to_mask_res(pix, opaque), "mask",
+                rec["legPrints"].append(ref(to_mask_res(pix, set() if pname in LEG_PRINTS_OVER else opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
             head = info["head_origin"]
@@ -3357,6 +3368,7 @@ def build_all():
         "headwear": list(HEADWEAR),
         "prints": [{"id": k, "label": v[0]} for k, v in PRINTS.items()],
         "legPrints": [{"id": k, "label": v[0]} for k, v in LEG_PRINTS.items()],
+        "legPrintsOver": sorted(LEG_PRINTS_OVER),
         "headwearHides": HEADWEAR_HIDES,
         "wearRegions": [WEAR_NAMES[r] for r in WEAR_REGIONS],
         "defaultOutfit": DEFAULT_OUTFIT,

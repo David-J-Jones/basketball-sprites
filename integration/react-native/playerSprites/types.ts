@@ -165,6 +165,8 @@ export type SpriteData = {
   /** what each piece of headwear hides ('hair', 'facial') */
   headwearHides: Partial<Record<SpriteHeadwear, ('hair' | 'facial')[]>>;
   legPrints: { id: PantsStyle; label: string }[];
+  /** pants styles drawn over the outline layer (they bring their own edges) */
+  legPrintsOver?: PantsStyle[];
   wearRegions: WearRegion[];
   prints: { id: ShirtPrint; label: string }[];
   /** league colors for shorts, socks, shoes and soles */
