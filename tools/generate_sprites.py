@@ -83,7 +83,13 @@ FIXED = {
     "car_grille": (34, 36, 44, 255), "car_grille_hi": (80, 84, 96, 255), "car_light": (255, 246, 190, 255),
     "car_light_glow": (255, 230, 120, 255), "car_bumper": (24, 24, 30, 255), "car_antenna": (150, 150, 160, 255),
     "car_topper": (255, 140, 30, 255),
+    # hot dog
+    "dog": (200, 72, 48, 255), "dog_hi": (236, 118, 84, 255), "dog_sh": (150, 46, 32, 255),
+    "mustard": (255, 210, 40, 255), "mustard_d": (214, 158, 18, 255),
 }
+HOT_DOG = {"dog": (200, 72, 48), "dog_hi": (236, 118, 84), "dog_sh": (150, 46, 32), "mustard": (255, 210, 40),
+           "crust": (212, 146, 66), "crust_hi": (238, 186, 104), "crust_dk": (170, 104, 42),
+           "crumb": (248, 226, 176), "edge": (84, 40, 22)}
 TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha)
     "skin0": ("skin", None, 255),
     "skin1": ("skin", (72, 26, 12, 70), 255),
@@ -754,6 +760,30 @@ def _rocket_car_top():
     return m
 
 
+def _hot_dog_top():
+    """The top of the sausage as a hood: it rounds over the head with the face
+    poking out of a hole, runs down the back of the neck into the body
+    (see the hot_dog pants), with a mustard squiggle over the crown."""
+    m = {}
+    for r in range(-5, 19):
+        for c in range(-1, 16):
+            e = ((c + 0.5 - 6.5) / 7.2) ** 2 + ((r + 0.5 - 7.5) / 10.5) ** 2
+            if e > 1:
+                continue
+            if ((c + 0.5 - 10.8) / 4.6) ** 2 + ((r + 0.5 - 11.0) / 5.6) ** 2 < 1 or (r > 13 and c > 4):
+                continue                                              # face hole, open under the chin
+            # mustard: a squiggle over the crown, inset from the edge
+            if r < 5 and abs(e - (0.6 + 0.1 * math.sin(c * 1.7))) < 0.08:
+                m[(c, r)] = "mustard"
+            elif e > 0.86:
+                m[(c, r)] = "dog_sh" if c > 7 or r > 8 else "dog"
+            elif c < 6 and 0 < r < 6 and e < 0.5:
+                m[(c, r)] = "dog_hi"
+            else:
+                m[(c, r)] = "dog"
+    return m
+
+
 HEADWEAR = {
     "headband": _headwear([8]),
     "wide_headband": _headwear([7, 8]),
@@ -771,6 +801,7 @@ HEADWEAR = {
     "propeller_hat_2": _propeller(2),
     "propeller_hat_3": _propeller(3),
     "rocket_car_top": _rocket_car_top(),
+    "hot_dog_top": _hot_dog_top(),
 }
 # what each piece of headwear hides: hats sit where the hair is
 HEADWEAR_HIDES = {k: ["hair"] for k in ("top_hat", "cap_forward", "cap_backward", "fedora", "fishbowl",
@@ -778,8 +809,9 @@ HEADWEAR_HIDES = {k: ["hair"] for k in ("top_hat", "cap_forward", "cap_backward"
                                          "propeller_hat_3")}
 HEADWEAR_HIDES["goat_head"] = ["hair", "facial"]
 HEADWEAR_HIDES["rocket_car_top"] = ["hair", "facial"]
+HEADWEAR_HIDES["hot_dog_top"] = ["hair"]
 # drawn the same in every frame (arms pass behind it) to keep its memory tiny
-STATIC_HEADWEAR = {"goat_head", "rocket_car_top"}
+STATIC_HEADWEAR = {"goat_head", "rocket_car_top", "hot_dog_top"}
 
 
 # ---------------------------------------------------------------- shirt prints
@@ -937,6 +969,12 @@ def print_rocket_car_body(u, v):
     return (110, 170, 255) if v < -2.4 else (30, 100, 230)
 
 
+def print_hot_dog(u, v):
+    """Under the hot dog's bun (see the hot_dog pants): sausage-colored, so
+    the short sleeves read as part of the costume."""
+    return HOT_DOG["dog_sh"] if v > 2.5 else HOT_DOG["dog"]
+
+
 PRINTS = {
     # id: (label, fn)
     "hawaiian": ("Hawaiian", print_hawaiian),
@@ -954,6 +992,7 @@ PRINTS = {
     "suit_brown": ("Brown suit jacket", print_suit_brown),
     "banana_top": ("Banana", print_banana_top),
     "rocket_car_body": ("Rocket car body", print_rocket_car_body),
+    "hot_dog": ("Hot dog", print_hot_dog),
 }
 
 
@@ -1011,13 +1050,20 @@ def legprint_rocket_car(u, v):
     return (52, 54, 64, 255) if math.floor(u) % 3 else (34, 36, 44, 255)
 
 
+def legprint_hot_dog(u, v):
+    """Below the bun the legs are in the pants color (the store preset uses
+    mustard yellow tights)."""
+    return None
+
+
 # pants layers drawn over the outline/shading layer (they bring their own edges)
-LEG_PRINTS_OVER = {"rocket_car"}
+LEG_PRINTS_OVER = {"rocket_car", "hot_dog"}
 
 LEG_PRINTS = {
     "parachute": ("Parachute pants", legprint_parachute),
     "rocket_car": ("Rocket car", legprint_rocket_car),
     "banana_peel": ("Banana peel", legprint_banana_peel),
+    "hot_dog": ("Hot dog", legprint_hot_dog),
 }
 
 
@@ -1568,6 +1614,58 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             if n not in car_extras and grid.get(n) is None and anywhere(n):
                 car_extras[n] = (20, 20, 26, 255)
 
+    # hot dog: the bun front and back, the sausage between them with a mustard
+    # squiggle, from the neck (where the hood takes over) to mid-thigh. Drawn
+    # over the outlines like the car, behind the near arm.
+    dog_extras = {}
+    bun_top, bun_bot, half, meat = B["shoulder"] + 2.0, -B["thigh"] * 0.55, 8.0, 2.8
+    dog_top, dog_bot = B["neck"] + 1.5, bun_bot - 2.6
+    for y in range(FRAME_H):
+        for x in range(FRAME_W):
+            if (x, y - dy) in near_arm.px or (x, y - dy) in near_arm_line:
+                continue
+            rx, ry = x + 0.5 - hip[0], y - dy + 0.5 - hip[1]
+            u_ = rx * tdir[0] + ry * tdir[1]
+            v_ = rx * fwd_dir[0] + ry * fwd_dir[1]
+            av = abs(v_)
+            col = None
+            if av < meat and dog_bot <= u_ <= dog_top:
+                if u_ < dog_bot + meat and math.hypot(u_ - dog_bot - meat, v_) > meat:
+                    continue                                          # rounded end of the sausage
+                if abs(v_ - 1.3 * math.sin(u_ * 1.25)) < 0.6 and dog_bot + 1.5 < u_ < dog_top - 1:
+                    col = HOT_DOG["mustard"]
+                elif v_ < -1.6:
+                    col = HOT_DOG["dog_hi"]
+                elif v_ > 1.9:
+                    col = HOT_DOG["dog_sh"]
+                else:
+                    col = HOT_DOG["dog"]
+            elif meat <= av <= half and bun_bot <= u_ <= bun_top:
+                # each half is a long loaf: an ellipse across, flat-ish along
+                mid_u, len_u = (bun_top + bun_bot) / 2, (bun_top - bun_bot) / 2
+                wv = (half - meat) / 2
+                cv_ = (av - meat - wv) / wv                           # -1 at the cut .. 1 at the crust
+                cu_ = (u_ - mid_u) / len_u
+                if cu_ ** 4 + max(cv_, 0) ** 2 * (1 + 0.0 * cu_) > 1 or (cv_ < 0 and cu_ ** 4 > 1 - 0.6 * cv_ ** 2):
+                    continue                                          # rounded loaf ends
+                lt = -cu_ * 0.5 - (cv_ if v_ < 0 else -cv_) * 0.3     # light from the upper back
+                if cv_ < -0.55:
+                    col = HOT_DOG["crumb"]                            # the soft inside, cut open
+                elif lt > 0.25:
+                    col = HOT_DOG["crust_hi"]
+                elif lt < -0.35 or cv_ > 0.75:
+                    col = HOT_DOG["crust_dk"]
+                else:
+                    col = HOT_DOG["crust"]
+            if col:
+                dog_extras[(x, y)] = col + (255,)
+    for (x, y) in list(dog_extras):                   # crisp dark edge (drawn over the outline layer)
+        if any(n not in dog_extras and (n[0], n[1] - dy) not in near_arm.px
+               and (n[0], n[1] - dy) not in near_arm_line
+               for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))):
+            dog_extras[(x, y)] = HOT_DOG["edge"] + (255,)
+    dog_extras = {p_: c_ for p_, c_ in dog_extras.items() if anywhere(p_)}
+
     # print coordinates for every visible shirt pixel (torso and short sleeves)
     print_uv = {}
     for (x, y), tag in grid.items():
@@ -1637,6 +1735,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
         "leg_print_uv": leg_print_uv,
         "peel_flaps": peel_flaps,
         "car_extras": car_extras,
+        "dog_extras": dog_extras,
         # same pose with a different hair style / facial hair, without redrawing the body
         "restyle": lambda st, fac, hw=None: compose(make_head(st, fac, hw))[0],
         "booted": booted,
@@ -3379,6 +3478,8 @@ def build_body(body):
                     pix.update(info["peel_flaps"])                   # flaps curling out past the legs
                 if pname == "rocket_car":
                     pix.update(info["car_extras"])                   # wheels and boost
+                if pname == "hot_dog":
+                    pix.update(info["dog_extras"])                   # bun and sausage
                 rec["legPrints"].append(ref(to_mask_res(pix, set() if pname in LEG_PRINTS_OVER else opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
