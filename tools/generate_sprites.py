@@ -3908,6 +3908,19 @@ def write_outfit_preview(data, bodies, pages, palettes):
                                                                       int(FRAME_H * 3 * 0.97)))
             sheet.alpha_composite(img, (c * cw, r * chh))
     sheet.save(os.path.join(PREVIEW_DIR, "banana_suit.png"))
+    # the hot dog suit (OUTFIT_PRESETS.hot_dog in outfit.ts)
+    dog = {"print": "hot_dog", "legPrint": "hot_dog", "shorts": "#ffd228", "sock": "#ffd228",
+           "shoe": "#f2f2f4", "sole": "#3c3c46", "headwear": ("hot_dog_top", "#ffffff"),
+           "wear": {"sleeveShort": "#c84830", "shortsLong": "#ffd228", "pantsLong": "#ffd228"}}
+    sheet = Image.new("RGBA", (len(poses) * cw, 2 * chh), bg)
+    for r, (sk, fac) in enumerate([(skins[1], None), (skins[3], "goatee")]):
+        look = {"skin": sk, "hair": "afro", "facial": fac, "hairColor": hair_c["black"], "outfit": dog}
+        for c, (anim, i) in enumerate(poses):
+            img = comp.frame(MID_BODY, anim, i, look, {"jersey": "#c84830", "trim": "#962e20"})
+            img = img.resize((cw, FRAME_H * 3), Image.NEAREST).crop((0, int(FRAME_H * 3 * 0.3), cw,
+                                                                      int(FRAME_H * 3 * 0.97)))
+            sheet.alpha_composite(img, (c * cw, r * chh))
+    sheet.save(os.path.join(PREVIEW_DIR, "hot_dog_suit.png"))
     # the rocket car (OUTFIT_PRESETS.rocket_car in outfit.ts)
     car = {"print": "rocket_car_body", "legPrint": "rocket_car", "shorts": "#1e64e6", "sock": "#1e64e6",
            "shoe": "#1c1c22", "sole": "#1c1c22", "headwear": ("rocket_car_top", "#ffffff"),

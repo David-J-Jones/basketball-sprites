@@ -174,6 +174,24 @@ describe('hats, parachute pants, cowboy boots, air guitar', () => {
   });
 });
 
+describe('hot dog suit', () => {
+  it('is a bun hood, a sausage shirt and bun pants drawn over the outlines', () => {
+    const h = OUTFIT_PRESETS.find((p) => p.id === 'hot_dog')!;
+    const t = outfitTints(h.outfit, h.colors.jersey);
+    expect(t.print).toBe(SPRITES.prints.findIndex((p) => p.id === 'hot_dog'));
+    expect(t.legPrint).toBe(SPRITES.legPrints.findIndex((p) => p.id === 'hot_dog'));
+    expect(t.legPrintOver).toBe(true);
+    expect(t.headwear?.style).toBe('hot_dog_top');
+    expect(t.hideHair).toBe(true);
+    expect(t.hideFacial).toBe(false);
+    expect(presetsFor(false).some((p) => p.id === 'hot_dog')).toBe(true);
+    for (const f of framesOf('h4-average', 'dribble')) {
+      expect(f.legPrints?.[t.legPrint!]).toBeTruthy();
+      expect(headOverlay(f, 'hot_dog_top')[1]).not.toBeNull();
+    }
+  });
+});
+
 describe('banana suit', () => {
   it('is a banana top with full-length peel pants', () => {
     const b = OUTFIT_PRESETS.find((p) => p.id === 'banana_suit')!;

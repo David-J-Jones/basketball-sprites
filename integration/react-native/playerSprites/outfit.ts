@@ -128,7 +128,7 @@ export function outfitTints(outfit: Outfit | undefined, shirtColor: string, flip
   }
   if (o.wristbands) worn.wristband = o.wristbands.color;
   const shorts = o.shorts?.color ?? d.shorts;
-  // pants styles (parachute, banana peel) are always full length
+  // pants styles (parachute, banana peel, hot dog...) are always full length
   const pants = o.shorts?.length === 'pants' || !!o.shorts?.style;
   if (o.shorts?.length === 'long' || pants) worn.shortsLong = shorts;
   if (pants) worn.pantsLong = shorts;
@@ -256,6 +256,19 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
     },
     colors: { jersey: '#1e64e6', trim: '#ff8c1e' },
     exclusive: 'gift',
+  },
+  {
+    id: 'hot_dog',
+    label: 'Hot dog',
+    // a hot dog costume: a bun hood round the face, bun halves front and back
+    // with the sausage and mustard between them, mustard-yellow tights
+    outfit: {
+      shirt: { print: 'hot_dog' },
+      shorts: { color: '#ffd228', style: 'hot_dog' },
+      shoes: { color: '#f2f2f4', sole: '#3c3c46' },
+      hat: { style: 'hot_dog_top' },
+    },
+    colors: { jersey: '#c84830', trim: '#962e20' },
   },
   {
     id: 'cowboy',
