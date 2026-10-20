@@ -86,6 +86,8 @@ FIXED = {
     # hot dog
     "dog": (200, 72, 48, 255), "dog_hi": (236, 118, 84, 255), "dog_sh": (150, 46, 32, 255),
     "mustard": (255, 210, 40, 255), "mustard_d": (214, 158, 18, 255),
+    "bun": (212, 146, 66, 255), "bun_hi": (238, 186, 104, 255), "bun_dk": (170, 104, 42, 255),
+    "bun_in": (248, 226, 176, 255),
 }
 HOT_DOG = {"dog": (200, 72, 48), "dog_hi": (236, 118, 84), "dog_sh": (150, 46, 32), "mustard": (255, 210, 40),
            "crust": (212, 146, 66), "crust_hi": (238, 186, 104), "crust_dk": (170, 104, 42),
@@ -761,28 +763,29 @@ def _rocket_car_top():
 
 
 def _hot_dog_top():
-    """The top of the sausage as a hood: it rounds over the head with the face
-    poking out of a hole, runs down the back of the neck into the body
-    (see the hot_dog pants), with a mustard squiggle over the crown."""
+    """A soft bun hood: a short, wide toasted cap over the head with a big
+    opening for the face, a mustard zigzag across the crown and a pale cut
+    edge round the face. Rounds into the bun on the body (hot_dog pants)."""
     m = {}
-    for r in range(-5, 19):
+    for r in range(0, 17):
         for c in range(-1, 16):
-            e = ((c + 0.5 - 6.5) / 7.2) ** 2 + ((r + 0.5 - 7.5) / 10.5) ** 2
-            if e > 1:
-                continue
-            if ((c + 0.5 - 10.8) / 4.6) ** 2 + ((r + 0.5 - 11.0) / 5.6) ** 2 < 1 or (r > 13 and c > 4):
-                continue                                              # face hole, open under the chin
-            # mustard: a squiggle over the crown, inset from the edge
-            if r < 5 and abs(e - (0.6 + 0.1 * math.sin(c * 1.7))) < 0.08:
-                m[(c, r)] = "mustard"
-            elif e > 0.86:
-                m[(c, r)] = "dog_sh" if c > 7 or r > 8 else "dog"
-            elif c < 6 and 0 < r < 6 and e < 0.5:
-                m[(c, r)] = "dog_hi"
+            e = ((c + 0.5 - 6.5) / 8.2) ** 2 + ((r + 0.5 - 8.0) / 8.6) ** 2
+            if e > 1 or (r > 12 and c > 3):
+                continue                                              # open below the jaw at the front
+            f = ((c + 0.5 - 10.6) / 4.9) ** 2 + ((r + 0.5 - 11.2) / 5.6) ** 2
+            if f < 1:
+                continue                                              # face opening
+            if f < 1.35:
+                m[(c, r)] = "bun_in"                                  # the soft inside round the face
+            elif 0 <= c <= 11 and r == 3 + abs(c % 4 - 2) - (1 if 3 <= c <= 9 else 0):
+                m[(c, r)] = "mustard"                                 # zigzag over the crown
+            elif e > 0.8 and (c > 6 or r > 9):
+                m[(c, r)] = "bun_dk"
+            elif c < 6 and r < 7 and e < 0.6:
+                m[(c, r)] = "bun_hi"
             else:
-                m[(c, r)] = "dog"
+                m[(c, r)] = "bun"
     return m
-
 
 HEADWEAR = {
     "headband": _headwear([8]),
@@ -1619,7 +1622,7 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     # over the outlines like the car, behind the near arm.
     dog_extras = {}
     bun_top, bun_bot, half, meat = B["shoulder"] + 2.0, -B["thigh"] * 0.55, 8.0, 2.8
-    dog_top, dog_bot = B["neck"] + 1.5, bun_bot - 2.6
+    dog_top, dog_bot = bun_top - 1.2, bun_bot + 1.2
     for y in range(FRAME_H):
         for x in range(FRAME_W):
             if (x, y - dy) in near_arm.px or (x, y - dy) in near_arm_line:
@@ -1630,8 +1633,6 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             av = abs(v_)
             col = None
             if av < meat and dog_bot <= u_ <= dog_top:
-                if u_ < dog_bot + meat and math.hypot(u_ - dog_bot - meat, v_) > meat:
-                    continue                                          # rounded end of the sausage
                 if abs(v_ - 1.3 * math.sin(u_ * 1.25)) < 0.6 and dog_bot + 1.5 < u_ < dog_top - 1:
                     col = HOT_DOG["mustard"]
                 elif v_ < -1.6:
