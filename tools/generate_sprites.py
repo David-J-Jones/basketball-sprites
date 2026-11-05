@@ -62,6 +62,7 @@ BALL_CELL = 11
 FIXED = {
     "outline": (28, 22, 32, 255),
     "eye": (22, 16, 24, 255),
+    "eye_white": (236, 232, 226, 255),
     "smear": (255, 255, 255, 150),
     # hats (park mode)
     "hat_band": (176, 30, 44, 255), "fed_band": (40, 34, 30, 255),
@@ -97,6 +98,8 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "skin1": ("skin", (72, 26, 12, 70), 255),
     "skin2": ("skin", (72, 26, 12, 118), 255),
     "skin3": ("skin", (48, 14, 8, 150), 255),
+    "brow": ("skin", (20, 10, 8, 190), 255),          # dark enough to read on every skin tone
+    "lip": ("skin", (110, 26, 30, 120), 255),
     "jersey0": ("jersey", None, 255),
     "jersey1": ("jersey", (16, 18, 44, 58), 255),
     "trim0": ("trim", None, 255),
@@ -106,6 +109,7 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "hairF": ("hair", None, 140),        # faded sides: see-through hair
     "fh0": ("facial", None, 255),
     "fh1": ("facial", (0, 0, 0, 95), 255),
+    "fh2": ("facial", (255, 255, 255, 64), 255),        # strand highlight, so dark beards show on dark skin
     "stub": ("facial", None, 105),       # stubble: see-through hair color
     # outfit: always tinted, so park-mode cosmetics can recolor them. The
     # league defaults (DEFAULT_OUTFIT) reproduce black shorts, white socks
@@ -277,21 +281,24 @@ def shaded(base, shade, thr=0.3):
 HEAD_GRID_W, HEAD_GRID_H = 15, 19
 HEAD_ANCHOR = (7, 15)     # grid pixel that sits on the neck point
 SKULL_OFF = (2, 4)
+# The face reads at any skin tone: a white of the eye behind the pupil, a
+# brow, the ear, a nose that sticks out past the profile, and the lips.
 SKULL = [
-    "...SSSSS...",
-    ".SSSSSSSSs.",
-    "SSSSSSSSSSs",
-    "SSSSSSSSSSS",
-    "sSSSSSSSSSS",
-    "sSSSSSSeeS.",
-    "ssSSSSSESSS",
-    "sSsSSSSESSS",
-    ".sSSSSSSSS.",
-    "..sSSSSSMS.",
-    "..ssSSSSS..",
-    "....sss....",
+    "...SSSSS....",
+    ".SSSSSSSSs..",
+    "SSSSSSSSSSs.",
+    "SSSSSSSSSSS.",
+    "sSSSSSSSSSS.",
+    "sSSSSSbbbS..",
+    "ssSaaSSWES..",
+    "sSsaaSSSSSN.",
+    ".sSSSSSSSSn.",
+    "..sSSSSSMMS.",
+    "..ssSSSSSs..",
+    "....sss.....",
 ]
-SKULL_TAGS = {"S": "skin0", "s": "skin1", "E": "eye", "e": "skin3", "M": "skin3"}
+SKULL_TAGS = {"S": "skin0", "s": "skin1", "E": "eye", "W": "eye_white", "b": "brow", "a": "skin2",
+              "N": "skin0", "n": "skin2", "M": "lip"}
 
 # Hair and facial hair are painted over the skull on the head grid.
 # Template chars: H hair, h hair shade, f faded (see-through) hair; for
@@ -467,6 +474,112 @@ def _flow():
     return m
 
 
+WAVES_SRC = [
+    "...hHhHh...",
+    ".hHhHhHhh..",
+    "hHhHhHhHh..",
+    "hhHhHhHh...",
+    "hhh........",
+    "hh.........",
+    "h..........",
+]
+MULLET_SRC = [
+    "...hhhhh...",
+    ".hhHHHHHhh.",
+    "hhHHHHHHHHh",
+    "hHHHHHHHHHH",
+    "hHHHHH....h",
+    "hHHH.......",
+    "hHH........",
+    "hHH........",
+    "hHh........",
+]
+SIDE_PART_SRC = [
+    "..hHH.HHHh.",
+    ".hHHH.HHHHh",
+    "hhHHHHHHHHH",
+    "hHHHHHHHHHH",
+    "hhHHHH....H",
+    "hhhH.......",
+    "hh.........",
+    "hh.........",
+    ".h.........",
+]
+
+
+def _spiky():
+    m = _from_src(CREW_SRC)
+    # gelled spikes of different heights, raked back from the brow
+    for r, row in enumerate([
+        "....H..H.......",
+        "...hH.hH.H.....",
+        "..hHHhHHhHH.H..",
+        "..hHHHHHHHHhHh.",
+    ]):
+        for c, ch in enumerate(row):
+            if ch != ".":
+                m[(c, r)] = HAIR_CHARS[ch]
+    return m
+
+
+def _man_bun():
+    m = _from_src(BUZZ_SRC)
+    for (c, r), tag in list(m.items()):                          # pulled back tight: sleek, with a shine line
+        if tag == "hair0" and r == 6:
+            m[(c, r)] = "hair1"
+    for r in range(0, 5):                                        # the bun on top at the back
+        for c in range(1, 6):
+            if (c + 0.5 - 3.4) ** 2 / 4.4 + (r + 0.5 - 2.4) ** 2 / 4.2 <= 1:
+                m[(c, r)] = "hair1" if c <= 2 or r >= 4 or (c + r) % 3 == 0 else "hair0"
+    return m
+
+
+def _braids():
+    m = _from_src(CORNROWS_SRC)
+    for c0 in (1, 3):                                            # box braids down the back, banded
+        for r in range(9, 19):
+            c = c0 - (1 if r > 15 and c0 == 1 else 0)
+            m[(c, r)] = "hair1" if r % 3 == 0 else "hair0"
+            m[(c + 1, r)] = "hair1"
+    m[(1, 18)] = "gold"                                          # a bead at the tip
+    m[(3, 18)] = "gold"
+    return m
+
+
+def _mullet():
+    m = _from_src(MULLET_SRC)
+    for r, c0, c1 in [(13, 1, 3), (14, 1, 4), (15, 2, 4), (16, 2, 4), (17, 3, 4)]:   # business at the back
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "hair1" if c == c1 or r >= 16 or c % 2 == 0 else "hair0"
+    return m
+
+
+def _pompadour():
+    m = _from_src(CREW_SRC)
+    for r, c0, c1 in [(0, 7, 12), (1, 5, 13), (2, 4, 13), (3, 3, 13)]:   # big quiff swept up and forward
+        for c in range(c0, c1 + 1):
+            m[(c, r)] = "hair1" if r == 3 or c == c0 else ("hair0" if (c - r) % 4 else "hair1")
+    return m
+
+
+def _frohawk():
+    m = _from_src(FADE_SRC)
+    for (c, r), tag in list(m.items()):
+        if tag in ("hair0", "hair1") and c <= 6 and r >= 6:
+            m[(c, r)] = "hairF"                                  # faded sides
+    for r in range(0, 6):                                        # a tall rounded ridge of curls
+        for c in range(3, 13):
+            if ((c + 0.5 - 8) / 5.0) ** 2 + ((r + 0.5 - 4.6) / 4.2) ** 2 <= 1:
+                m[(c, r)] = "hair1" if (c * 3 + r * 5) % 7 == 0 or r == 5 else "hair0"
+    return m
+
+
+def _waves():
+    m = _from_src(WAVES_SRC)
+    m[(2, 9)] = "hair1"
+    return m
+
+
 HAIR_STYLES = {
     "buzz": _from_src(BUZZ_SRC),
     "fade": _from_src(FADE_SRC, extra=[(c, 3, "hair1") for c in range(5, 10)]),
@@ -479,6 +592,14 @@ HAIR_STYLES = {
     "twists": _twists(),
     "curly": _curly(),
     "flow": _flow(),
+    "waves": _waves(),
+    "spiky": _spiky(),
+    "man_bun": _man_bun(),
+    "braids": _braids(),
+    "mullet": _mullet(),
+    "pompadour": _pompadour(),
+    "frohawk": _frohawk(),
+    "side_part": _from_src(SIDE_PART_SRC),
 }
 
 # facial hair, in skull coordinates (face on the right, mouth at row 9 col 8)
@@ -539,13 +660,18 @@ LONG_BEARD_SRC = [
     "....bBb....",
     ".....b.....",
 ]
+def _strands(m):
+    """Light strands through full facial hair (every third lit pixel)."""
+    return {p: ("fh2" if t == "fh0" and (p[0] * 2 + p[1]) % 3 == 0 else t) for p, t in m.items()}
+
+
 FACIAL_HAIR = {
     "stubble": _from_src(STUBBLE_SRC, FACIAL_CHARS),
     "mustache": _from_src(MUSTACHE_SRC, FACIAL_CHARS),
-    "goatee": _from_src(GOATEE_SRC, FACIAL_CHARS),
-    "beard": _from_src(BEARD_SRC, FACIAL_CHARS),
-    "chinstrap": _from_src(CHINSTRAP_SRC, FACIAL_CHARS),
-    "long_beard": _from_src(LONG_BEARD_SRC, FACIAL_CHARS),
+    "goatee": _strands(_from_src(GOATEE_SRC, FACIAL_CHARS)),
+    "beard": _strands(_from_src(BEARD_SRC, FACIAL_CHARS)),
+    "chinstrap": _strands(_from_src(CHINSTRAP_SRC, FACIAL_CHARS)),
+    "long_beard": _strands(_from_src(LONG_BEARD_SRC, FACIAL_CHARS)),
 }
 
 

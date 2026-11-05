@@ -10,6 +10,7 @@ export const NOSES = ['narrow', 'medium', 'broad', 'wide', 'aquiline'] as const;
 export const MOUTHS = ['thin', 'medium', 'full', 'smile'] as const;
 export const HAIR_STYLES = [
   'bald', 'buzz', 'fade', 'crew', 'cornrows', 'afro', 'locs', 'mohawk', 'high_top', 'twists', 'curly', 'flow',
+  'waves', 'spiky', 'man_bun', 'braids', 'mullet', 'pompadour', 'frohawk', 'side_part',
 ] as const;
 export const HAIR_COLORS = ['black', 'darkBrown', 'brown', 'auburn', 'blond', 'bleached'] as const;
 export const FACIAL_HAIR = ['none', 'stubble', 'mustache', 'goatee', 'beard', 'chinstrap', 'long_beard'] as const;

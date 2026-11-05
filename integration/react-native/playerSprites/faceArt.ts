@@ -88,10 +88,17 @@ export const BY_SKIN: SkinTable[] = [
     nose: [0.5, 2, 3, 3, 0.5], mouth: [0.8, 2, 3.5, 2] },
 ];
 
-// bald, buzz, fade, crew, cornrows, afro, locs
 // bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow
 const HAIR_WEIGHTS_COILY = [1.2, 2, 2.5, 1, 1.2, 1, 1.3, 0.4, 0.6, 1.2, 0.8, 0.05];
 const HAIR_WEIGHTS_STRAIGHT = [0.8, 2, 2, 3, 0.1, 0, 0.15, 0.4, 0.1, 0.1, 0.8, 1.5];
+// the styles added later (waves .. side_part, from HAIR_STYLES[12]). They come from one
+// extra roll after the rest of the face, so every earlier face stays as it was unless
+// that roll lands (about 1 in 4 players).
+const NEW_HAIR_FROM = 12;
+const NEW_HAIR_CHANCE = 0.26;
+// waves, spiky, man_bun, braids, mullet, pompadour, frohawk, side_part
+const NEW_HAIR_COILY = [2.2, 0.3, 0.5, 1.6, 0.3, 0.2, 1.1, 0.4];
+const NEW_HAIR_STRAIGHT = [0, 1.2, 1.2, 0.15, 0.8, 1, 0.1, 1.6];
 // none, stubble, mustache, goatee, beard
 const FACIAL_WEIGHTS = [6, 2, 0.8, 1.3, 1.6, 0.6, 0.4];
 
@@ -101,7 +108,7 @@ export function faceFromSeed(seed: number): FaceSpec {
   const skin = pick(SKIN_WEIGHTS, r());
   const table = BY_SKIN[skin];
   const coily = r() < table.coily;
-  return {
+  const face = {
     skin,
     hair: pick(coily ? HAIR_WEIGHTS_COILY : HAIR_WEIGHTS_STRAIGHT, r()),
     hairColor: pick(table.hairColor, r()),
@@ -113,6 +120,8 @@ export function faceFromSeed(seed: number): FaceSpec {
     facialHair: pick(FACIAL_WEIGHTS, r()),
     browWeight: Math.round((0.85 + r() * 0.4) * 100) / 100,
   };
+  if (r() < NEW_HAIR_CHANCE) face.hair = NEW_HAIR_FROM + pick(coily ? NEW_HAIR_COILY : NEW_HAIR_STRAIGHT, r());
+  return face;
 }
 
 // ------------------------------------------------------------------ colors
@@ -381,6 +390,27 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
         if (Math.abs(x + 0.5 - CX) <= hw) backHair.add(key(x, y));
       }
     }
+  } else if (hairStyle === 'braids') {
+    // box braids hanging past the shoulders, a gap between each
+    const w = Math.round(maxHw) + 3;
+    for (let x = CX - w; x < CX + w; x++) {
+      if ((x - CX + 40) % 3 === 2) continue;
+      const bottom = 46 + Math.floor(noise(x, 2, seed) * 4);
+      for (let y = top - 1; y <= bottom; y++) {
+        const hw = y < top + 4 ? Math.round(hwAt(y + 1)) + 1 : w;
+        if (Math.abs(x + 0.5 - CX) <= hw) backHair.add(key(x, y));
+      }
+    }
+  } else if (hairStyle === 'mullet') {
+    // short on top, long at the back: falls behind the neck to the shoulders
+    const w = Math.round(maxHw) + 1;
+    for (let x = CX - w; x < CX + w; x++) {
+      const bottom = chin + 6 + Math.floor(noise(x, 3, seed) * 2);
+      for (let y = top; y <= bottom; y++) {
+        const hw = y < top + 4 ? Math.round(hwAt(y + 1)) : w;
+        if (Math.abs(x + 0.5 - CX) <= hw) backHair.add(key(x, y));
+      }
+    }
   } else if (hairStyle === 'locs') {
     const w = Math.round(maxHw) + 3;
     for (let x = CX - w; x < CX + w; x++) {
@@ -395,7 +425,9 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
     const n = noise(x, y, seed);
     const nx = (x + 0.5 - CX) / (maxHw + 5);
     let c = hr.base;
-    if (hairStyle === 'locs') {
+    if (hairStyle === 'braids') {
+      c = y % 3 === 0 ? hr.s1 : (x + y) % 5 === 0 ? hr.hi : hr.base;   // plaits
+    } else if (hairStyle === 'locs') {
       c = x % 3 === 2 ? hr.s2 : (y + 2 * x) % 4 === 0 ? hr.hi : x % 2 ? hr.s1 : hr.base;
     } else if (hairStyle === 'flow') {
       c = x % 4 === 0 ? hr.hi : x % 4 === 2 || nx > 0.45 ? hr.s1 : hr.base;   // long strands
@@ -403,7 +435,7 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
       if (n < 0.2 || nx > 0.45) c = hr.s1;
       if (n > 0.86 && nx < 0.2) c = hr.hi;
     }
-    if (y > eyeY) c = hairStyle === 'locs' && x % 3 !== 2 ? hr.s1 : hr.s2; // behind the head: in shadow
+    if (y > eyeY) c = (hairStyle === 'locs' && x % 3 !== 2) || hairStyle === 'braids' ? hr.s1 : hr.s2; // in shadow
     g.set(x, y, c);
   });
 
@@ -632,7 +664,10 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
   const front: Mask = new Set();
   const scalp = (x: number, y: number) => head.has(key(x, y)) && y < hairline(x, y);
   if (hairStyle !== 'bald') {
-    const volumes: Partial<Record<string, number>> = { crew: 2, fade: 2, locs: 2, twists: 2, curly: 3, flow: 2 };
+    const volumes: Partial<Record<string, number>> = {
+      crew: 2, fade: 2, locs: 2, twists: 2, curly: 3, flow: 2, waves: 1, spiky: 2, mullet: 2, pompadour: 2,
+      side_part: 2, frohawk: 1,
+    };
     const volume = volumes[hairStyle] ?? 0;
     for (let y = top - volume; y < eyeY + 2; y++) {
       for (let x = 0; x < GW; x++) {
@@ -644,7 +679,7 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
         }
         // sideburns down to the top of the ear
         if (!inside && head.has(key(x, y)) && Math.abs(nxOf(x, y)) > 0.84 && y <= eyeY - 1 &&
-            hairStyle !== 'cornrows') inside = true;
+            hairStyle !== 'cornrows' && hairStyle !== 'braids' && hairStyle !== 'man_bun') inside = true;
         if (inside) front.add(key(x, y));
       }
     }
@@ -666,6 +701,44 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
         const w = y === top - 4 ? 1.5 : 2.5;
         for (let x = 0; x < GW; x++) if (Math.abs(x + 0.5 - CX) <= w) front.add(key(x, y));
       }
+    }
+    if (hairStyle === 'spiky') {
+      // gelled spikes of different heights across the top
+      for (let i = -3; i <= 3; i++) {
+        const sx = CX + i * 3 - 1;
+        const h = 3 + Math.floor(noise(i, 9, seed) * 3);
+        for (let k = 0; k < h; k++) {
+          const w = k < h - 2 ? 1 : 0;
+          for (let x = sx - w; x <= sx + w; x++) front.add(key(x, top - 2 - k));
+        }
+      }
+    }
+    if (hairStyle === 'man_bun') {
+      // pulled back flat, with the bun on top
+      for (let y = top - 6; y <= top - 1; y++) {
+        for (let x = CX - 4; x <= CX + 3; x++) {
+          const dx = (x + 0.5 - CX) / 3.6;
+          const dy = (y + 0.5 - (top - 3)) / 3;
+          if (dx * dx + dy * dy <= 1) front.add(key(x, y));
+        }
+      }
+    }
+    if (hairStyle === 'pompadour') {
+      // a tall quiff swept up off the forehead
+      const [x0, x1] = span(hwAt(top + 3));
+      for (let y = top - 6; y < top; y++) {
+        const inset = Math.max(0, (top - 6 + 2) - y) * 2;
+        for (let x = x0 + 2 + inset; x <= x1 - 1 - Math.floor(inset / 2); x++) front.add(key(x, y));
+      }
+    }
+    if (hairStyle === 'frohawk') {
+      // a wide ridge of curls down the middle, faded sides
+      for (let y = top - 6; y < top + 4; y++) {
+        const w = y <= top - 5 ? 3.5 : 5;
+        for (let x = 0; x < GW; x++) if (Math.abs(x + 0.5 - CX) <= w) front.add(key(x, y));
+      }
+      const trim = [...front].filter((k) => ky(k) < top - 2 && edge(front, kx(k), ky(k)) && noise(kx(k), ky(k), seed) < 0.4);
+      trim.forEach((k) => front.delete(k));
     }
     if (hairStyle === 'curly') {
       const trim = [...front].filter((k) => ky(k) < top && edge(front, kx(k), ky(k)) && noise(kx(k), ky(k), seed) < 0.35);
@@ -746,10 +819,48 @@ export function faceSvg(face: FaceSpec, id: number, jersey?: HeadshotJersey, opt
       case 'flow':
         c = (x - Math.floor(y / 2)) % 4 === 0 ? hr.hi : nx > 0.45 ? hr.s1 : hr.base;   // swept strands
         break;
+      case 'waves': {
+        // 360 waves: rings round the crown
+        const ring = Math.floor(Math.hypot((x + 0.5 - CX) * 0.8, y - top + 2) / 1.5);
+        c = ring % 2 ? hr.base : hr.hi;
+        if (nx > 0.6) c = hr.s1;
+        break;
+      }
+      case 'spiky':
+        c = y < top - 1 ? (x % 3 === 0 ? hr.hi : hr.base) : nx > 0.45 ? hr.s1 : hr.base;
+        break;
+      case 'man_bun':
+        c = y < top ? (noise(x, y, seed) < 0.3 ? hr.s1 : hr.base) : (x - CX + 40) % 4 === 0 ? hr.hi : nx > 0.4 ? hr.s1 : hr.base;
+        break;
+      case 'braids': {
+        const stripe = Math.floor((x - CX + 30) / 3);
+        const gap = (x - CX + 30) % 3 === 2;
+        c = gap ? mix(sk.s1, hr.s2, 0.3) : (y + stripe) % 2 ? hr.base : hr.hi;
+        break;
+      }
+      case 'mullet':
+        c = nx > 0.5 ? hr.s1 : (x + y) % 3 === 0 && nx < 0 && y < top + 3 ? hr.hi : hr.base;
+        break;
+      case 'pompadour':
+        c = y < top ? ((x + y) % 4 === 0 ? hr.hi : y === top - 1 ? hr.s1 : hr.base) : nx > 0.5 ? hr.s1 : hr.base;
+        break;
+      case 'frohawk': {
+        const n = noise(x, y, seed + 5);
+        if (Math.abs(x + 0.5 - CX) > 5 && y >= top) c = mix(cur, hr.s1, (x + y) % 2 ? 0.5 : 0.35);   // faded sides
+        else c = n < 0.22 || nx > 0.45 ? hr.s1 : n > 0.84 ? hr.hi : hr.base;
+        break;
+      }
+      case 'side_part':
+        // a clean part on the left, the rest combed over to the right
+        if (x === CX - 4 && y < top + 4) c = mix(sk.base, hr.s1, 0.25);
+        else c = x > CX - 4 && (x - y) % 4 === 0 ? hr.hi : nx > 0.5 ? hr.s1 : hr.base;
+        break;
       default: // crew
         c = nx > 0.5 ? hr.s1 : (x + y) % 3 === 0 && nx < 0 && y < top + 3 ? hr.hi : hr.base;
     }
-    const shaved = hairStyle === 'mohawk' && Math.abs(x + 0.5 - CX) > 3 && y >= top;
+    const shaved = (hairStyle === 'mohawk' && Math.abs(x + 0.5 - CX) > 3 && y >= top) ||
+      (hairStyle === 'frohawk' && Math.abs(x + 0.5 - CX) > 5 && y >= top) ||
+      (hairStyle === 'side_part' && x === CX - 4 && y < top + 4);
     if (bottom && hairStyle !== 'buzz' && !shaved) c = hr.s2;
     g.set(x, y, c);
   });

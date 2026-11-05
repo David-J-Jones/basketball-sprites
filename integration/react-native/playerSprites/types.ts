@@ -46,7 +46,8 @@ export type DunkAnim = 'dunk_basic' | 'dunk_athletic' | 'dunk_hang' | 'dunk_wind
 
 /** Hair styles drawn on the sprite (bald = no hair overlay). */
 export type SpriteHairStyle =
-  | 'buzz' | 'fade' | 'crew' | 'cornrows' | 'afro' | 'locs' | 'mohawk' | 'high_top' | 'twists' | 'curly' | 'flow';
+  | 'buzz' | 'fade' | 'crew' | 'cornrows' | 'afro' | 'locs' | 'mohawk' | 'high_top' | 'twists' | 'curly' | 'flow'
+  | 'waves' | 'spiky' | 'man_bun' | 'braids' | 'mullet' | 'pompadour' | 'frohawk' | 'side_part';
 /** Facial hair drawn on the sprite (none = no overlay). */
 export type SpriteFacialHair = 'stubble' | 'mustache' | 'goatee' | 'beard' | 'chinstrap' | 'long_beard';
 
