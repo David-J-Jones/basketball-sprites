@@ -107,6 +107,7 @@ TINTED = {  # tag -> (slot, shading overlay drawn over the flat tint, mask alpha
     "hair0": ("hair", None, 255),
     "hair1": ("hair", (0, 0, 0, 95), 255),
     "hairF": ("hair", None, 140),        # faded sides: see-through hair
+    "hairL": ("hair", (255, 255, 255, 56), 255),       # lit strands
     "fh0": ("facial", None, 255),
     "fh1": ("facial", (0, 0, 0, 95), 255),
     "fh2": ("facial", (255, 255, 255, 64), 255),        # strand highlight, so dark beards show on dark skin
@@ -303,7 +304,7 @@ SKULL_TAGS = {"S": "skin0", "s": "skin1", "E": "eye", "W": "eye_white", "b": "br
 # Hair and facial hair are painted over the skull on the head grid.
 # Template chars: H hair, h hair shade, f faded (see-through) hair; for
 # facial hair B beard, b beard shade, t stubble. '.' lets the skull show.
-HAIR_CHARS = {"H": "hair0", "h": "hair1", "f": "hairF"}
+HAIR_CHARS = {"H": "hair0", "h": "hair1", "f": "hairF", "L": "hairL"}
 FACIAL_CHARS = {"B": "fh0", "b": "fh1", "t": "stub"}
 
 CREW_SRC = [
@@ -507,19 +508,37 @@ SIDE_PART_SRC = [
 ]
 
 
-def _spiky():
-    m = _from_src(CREW_SRC)
-    # gelled spikes of different heights, raked back from the brow
-    for r, row in enumerate([
-        "....H..H.......",
-        "...hH.hH.H.....",
-        "..hHHhHHhHH.H..",
-        "..hHHHHHHHHhHh.",
-    ]):
+def _grid(rows, r0=0, base=None):
+    """Hair template in head-grid coordinates over an optional base style;
+    '.' keeps the base, '_' clears a pixel (the scalp shows)."""
+    m = dict(base or {})
+    for r, row in enumerate(rows):
         for c, ch in enumerate(row):
-            if ch != ".":
-                m[(c, r)] = HAIR_CHARS[ch]
+            if ch == "_":
+                m.pop((c, r0 + r), None)
+            elif ch != ".":
+                m[(c, r0 + r)] = HAIR_CHARS[ch]
     return m
+
+
+def _crew_open_top():
+    """Crew without its dark top edge, so volume added above it joins on."""
+    m = _from_src(CREW_SRC)
+    for (c, r), t in list(m.items()):
+        if r <= 5 and t == "hair1" and 4 <= c <= 11:
+            m[(c, r)] = "hair0"
+    return m
+
+
+def _spiky():
+    # a few chunky gelled spikes raked back, lit on the leading edge
+    return _grid([
+        ".....H...H.....",
+        "....HL..HL..H..",
+        "...HLH.HLH.HL..",
+        "..HHLHHHLHHLHH.",
+        "..hHHHHHHHHHHh.",
+    ], 0, _crew_open_top())
 
 
 def _man_bun():
@@ -555,22 +574,40 @@ def _mullet():
 
 
 def _pompadour():
-    m = _from_src(CREW_SRC)
-    for r, c0, c1 in [(0, 7, 12), (1, 5, 13), (2, 4, 13), (3, 3, 13)]:   # big quiff swept up and forward
-        for c in range(c0, c1 + 1):
-            m[(c, r)] = "hair1" if r == 3 or c == c0 else ("hair0" if (c - r) % 4 else "hair1")
-    return m
+    # combed up off the forehead into a rounded quiff, swept back over the crown
+    return _grid([
+        "........HHH....",
+        "......HHLLHH...",
+        "....hHHLLHHHH..",
+        "..hHHHLHHHHHHH.",
+    ], 1, _crew_open_top())
 
 
 def _frohawk():
-    m = _from_src(FADE_SRC)
-    for (c, r), tag in list(m.items()):
-        if tag in ("hair0", "hair1") and c <= 6 and r >= 6:
-            m[(c, r)] = "hairF"                                  # faded sides
-    for r in range(0, 6):                                        # a tall rounded ridge of curls
-        for c in range(3, 13):
-            if ((c + 0.5 - 8) / 5.0) ** 2 + ((r + 0.5 - 4.6) / 4.2) ** 2 <= 1:
-                m[(c, r)] = "hair1" if (c * 3 + r * 5) % 7 == 0 or r == 5 else "hair0"
+    # a ridge of curls along the top, short faded sides and back
+    base = _from_src(BUZZ_SRC)
+    for (c, r), t in list(base.items()):
+        if r >= 5:
+            base[(c, r)] = "hairF"                   # the sides are faded down to the skin
+    return _grid([
+        "......HhH......",
+        ".....HLHHHH....",
+        "....HHLHhHLH...",
+        "...hHHHHHLHHh..",
+        "...hHhHHHHhHH..",
+    ], 0, base)
+
+
+def _side_part():
+    # a little height combed over on top, and the side combed down and back
+    # (no part line on the sprite: at this size it read as a stripe)
+    m = _grid([
+        "......HHHH.....",
+        "....HHLLLLHH...",
+        "...HLLHHHHHHH..",
+    ], 2, _crew_open_top())
+    for c, r in ((4, 6), (6, 7), (8, 7), (5, 8)):   # strands angled down the side
+        m[(c, r)] = "hairL"
     return m
 
 
@@ -599,7 +636,7 @@ HAIR_STYLES = {
     "mullet": _mullet(),
     "pompadour": _pompadour(),
     "frohawk": _frohawk(),
-    "side_part": _from_src(SIDE_PART_SRC),
+    "side_part": _side_part(),
 }
 
 # facial hair, in skull coordinates (face on the right, mouth at row 9 col 8)
