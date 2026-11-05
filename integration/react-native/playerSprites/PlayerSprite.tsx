@@ -112,6 +112,10 @@ export const PlayerSprite = memo(function PlayerSprite({
   const hairTint = hairColor(look);
   const band = wear.headwear ? headOverlay(f, wear.headwear.style) : null;
   const drop = bakedLift ? 0 : f.lift * scale;
+  // team uniform pattern (not under a printed park-mode shirt)
+  const uni = colors.pattern && wear.print === null && !neon
+    ? SPRITES.uniformPatterns.findIndex((p) => p.id === colors.pattern)
+    : -1;
   return (
     <View
       pointerEvents="none"
@@ -138,6 +142,12 @@ export const PlayerSprite = memo(function PlayerSprite({
       <Piece piece={f.sock} scale={scale} tint={wear.sock} />
       <Piece piece={f.shoe} scale={scale} tint={wear.shoe} />
       <Piece piece={f.sole} scale={scale} tint={wear.sole} />
+      {uni >= 0 && f.uniforms && (
+        <>
+          <Piece piece={f.uniforms[2 * uni]} scale={scale} tint={colors.accent ?? colors.trim} />
+          <Piece piece={f.uniforms[2 * uni + 1]} scale={scale} tint={colors.accent2 ?? colors.trim} />
+        </>
+      )}
       {wear.legPrint !== null && !wear.legPrintOver && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}
       <Piece piece={f.detail} scale={scale} />
       {wear.legPrint !== null && wear.legPrintOver && <Piece piece={f.legPrints?.[wear.legPrint] ?? null} scale={scale} />}

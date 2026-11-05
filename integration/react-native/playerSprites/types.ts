@@ -102,6 +102,8 @@ export type FrameData = {
   legPrints: (PlacedPiece | null)[] | null;
   /** cowboy boots: [foot mask, shaft mask, heel/sole mask, detail], drawn over the legs */
   boots: [PlacedPiece | null, PlacedPiece | null, PlacedPiece | null, PlacedPiece | null] | null;
+  /** two masks per uniform pattern (SpriteData.uniformPatterns order): accent, then accent2 */
+  uniforms: (PlacedPiece | null)[] | null;
   /** [overlay set, headX, headY]: hair / facial hair are placed at the head (see headOverlay) */
   head: [overlaySet: number, hx: number, hy: number];
   nearHand: [number, number];
@@ -127,6 +129,7 @@ export type CompactFrame = [
   wear: (PieceRef | null)[] | null, prints: (PieceRef | null)[] | null,
   legPrints: (PieceRef | null)[] | null,
   boots: [PieceRef | null, PieceRef | null, PieceRef | null, PieceRef | null] | null,
+  uniforms: (PieceRef | null)[] | null,
 ];
 
 /** One body's own pieces and frames (bodies/<body>.json, loaded on first use). */
@@ -170,6 +173,8 @@ export type SpriteData = {
   legPrints: { id: PantsStyle; label: string }[];
   /** pants styles drawn over the outline layer (they bring their own edges) */
   legPrintsOver?: PantsStyle[];
+  /** uniform patterns, in FrameData.uniforms order (two masks each: accent, accent2) */
+  uniformPatterns: { id: UniformPattern; label: string }[];
   wearRegions: WearRegion[];
   prints: { id: ShirtPrint; label: string }[];
   /** league colors for shorts, socks, shoes and soles */
@@ -193,7 +198,19 @@ export type PlayerLook = {
   facialHair: SpriteFacialHair | null; // null = clean-shaven
 };
 
-export type JerseyColors = { jersey: string; trim: string };
+/** Team uniform patterns: two accent layers over the jersey and shorts (see teamUniforms). */
+export type UniformPattern =
+  | 'classic' | 'retro' | 'chest_band' | 'pinstripes' | 'chevron' | 'yoke' | 'fade' | 'two_tone' | 'spots'
+  | 'skyline' | 'flames' | 'waves' | 'plaid' | 'lightning' | 'stars' | 'honeycomb';
+
+export type JerseyColors = {
+  jersey: string;
+  trim: string;
+  /** a team uniform pattern, drawn in accent / accent2 (ignored under a printed shirt) */
+  pattern?: UniformPattern;
+  accent?: string;
+  accent2?: string;
+};
 
 /**
  * Park-mode cosmetics. Everything is optional; left out, a player wears the

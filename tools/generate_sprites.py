@@ -1070,6 +1070,202 @@ LEG_PRINTS = {
 }
 
 
+
+# ---------------------------------------------------------------- team uniforms
+# Uniform patterns: two tinted accent layers (a, b) over the jersey and shorts
+# colors, so every team can wear any pattern in its own colors (see
+# teamUniforms.ts). A shirt pattern is a function of
+#   h    0 at the hem .. 1 at the shoulders
+#   arc  art px around the body from the centre of the chest (signed; the
+#        side seam is at about +-7.4, the middle of the back at +-14.8)
+# and a shorts pattern of
+#   h    0 at the waistband .. 1 at the hem
+#   s    art px from the side seam (signed)
+# Each returns "a", "b" or None (the base color shows).
+UNI_ARC = math.pi * 4.7             # arc length round half the torso (back centre)
+
+
+def _bayer(i, j):
+    return ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))[j % 4][i % 4] / 16
+
+
+def _side_stripe(h, s):
+    return "a" if abs(s) < 0.55 else "b" if abs(s) < 0.95 else None
+
+
+def _hem(h, s, a=0.8, b=0.9):
+    return "b" if h > b else "a" if h > a else None
+
+
+def uni_classic(h, arc):
+    """Side panels from the arm hole to the hem, piped."""
+    d = abs(abs(arc) - UNI_ARC / 2)
+    return "a" if d < 1.1 else "b" if d < 1.6 else None
+
+
+def uni_retro(h, arc):
+    """Two stripes round the hem, 70s style."""
+    return "a" if 0.07 < h < 0.15 else "b" if 0.19 < h < 0.25 else None
+
+
+def uni_chest_band(h, arc):
+    """A wide band across the chest, edged."""
+    return "a" if 0.56 < h < 0.74 else "b" if 0.5 < h < 0.8 else None
+
+
+def uni_pinstripes(h, arc):
+    return "a" if (abs(arc) % 2.2) < 0.75 else None
+
+
+def uni_chevron(h, arc):
+    """A V across the chest, pointing down."""
+    d = h - 0.5 - 0.28 * min(1.0, abs(arc) / 7.4)
+    return "a" if abs(d) < 0.07 else "b" if abs(d) < 0.11 else None
+
+
+def uni_yoke(h, arc):
+    """Contrast shoulders, piped where they meet the body."""
+    return "a" if h > 0.8 else "b" if h > 0.75 else None
+
+
+def uni_fade(h, arc):
+    """Dithered fade from the hem up."""
+    level = max(0.0, min(1.0, (0.62 - h) / 0.5))
+    return "a" if _bayer(int(math.floor(arc * 1.0 + 40)), int(math.floor(h * 16))) < level else None
+
+
+def uni_two_tone(h, arc):
+    """Bottom half in the accent, split by a stripe."""
+    return "a" if h < 0.44 else "b" if h < 0.5 else None
+
+
+def uni_spots(h, arc):
+    """Big blotches (cow print)."""
+    x, y = arc / 2.6, h * 4.2
+    for cx in (math.floor(x), math.floor(x) + 1):
+        for cy in (math.floor(y), math.floor(y) + 1):
+            if _h(int(cx) + 31, int(cy) + 7) > 0.55:
+                ox, oy = 0.3 + 0.4 * _h(int(cx), int(cy) + 3), 0.3 + 0.4 * _h(int(cx) + 5, int(cy))
+                if math.hypot(x - cx - ox + 0.5, (y - cy - oy + 0.5) * 1.2) < 0.42:
+                    return "a"
+    return None
+
+
+def uni_skyline(h, arc):
+    """A city skyline across the bottom, with lit windows."""
+    col = int(math.floor((arc + 40) / 1.4))
+    top = 0.16 + 0.3 * _h(col, 11)
+    if h < top:
+        if h < top - 0.06 and int(math.floor(h * 22)) % 3 == 1 and int(math.floor((arc + 40) * 1.4)) % 2 == 0:
+            return "b"
+        return "a"
+    return None
+
+
+def uni_flames(h, arc):
+    """Flames licking up from the hem."""
+    top = 0.22 + 0.2 * abs(math.sin(arc * 0.9)) + 0.07 * math.sin(arc * 2.3)
+    return "b" if h < top - 0.12 else "a" if h < top else None
+
+
+def uni_waves(h, arc):
+    """Rolling water across the lower body."""
+    w = 0.36 + 0.05 * math.sin(arc * 1.7)
+    return "a" if h < w - 0.05 else "b" if h < w else None
+
+
+def uni_plaid(h, arc):
+    hb = int(math.floor(h * 10)) % 3 == 0
+    vb = int(math.floor((arc + 40) / 1.5)) % 3 == 0
+    return "b" if hb and vb else "a" if hb or vb else None
+
+
+def uni_lightning(h, arc):
+    """A zigzag bolt down the front."""
+    k = (h * 6) % 2
+    c = 1.4 + (k if k < 1 else 2 - k) * 2.2
+    return "a" if abs(arc - c) < 0.65 else "b" if abs(arc - c) < 1.0 else None
+
+
+def uni_stars(h, arc):
+    """A starry yoke over a striped hem."""
+    if h > 0.76:
+        return "b" if _h(int(math.floor((arc + 40) * 0.9)), int(math.floor(h * 14))) > 0.82 else "a"
+    return "a" if int(math.floor(h * 14)) % 2 == 0 and h < 0.3 else None
+
+
+def uni_honeycomb(h, arc):
+    """Hexagon cells (bees)."""
+    y = h * 7
+    row = int(math.floor(y))
+    x = arc / 1.8 + (0.5 if row % 2 else 0)
+    fx, fy = x - math.floor(x), y - row
+    return "a" if fx < 0.18 or fy < 0.16 else None
+
+
+# shorts that go with each shirt pattern
+def short_classic(h, s):
+    return _side_stripe(h, s)
+
+
+def short_hem(h, s):
+    return _hem(h, s)
+
+
+def short_full(h, s):
+    return "a" if h > 0.15 else None
+
+
+UNIFORM_PATTERNS = {
+    # id: (label, shirt, shorts)
+    "classic": ("Classic", uni_classic, short_classic),
+    "retro": ("Retro stripes", uni_retro, short_hem),
+    "chest_band": ("Chest band", uni_chest_band, short_hem),
+    "pinstripes": ("Pinstripes", uni_pinstripes, short_classic),
+    "chevron": ("Chevron", uni_chevron, short_classic),
+    "yoke": ("Yoke", uni_yoke, short_classic),
+    "fade": ("Fade", uni_fade, short_hem),
+    "two_tone": ("Two-tone", uni_two_tone, short_full),
+    "spots": ("Spots", uni_spots, lambda h, s: uni_spots(h, s * 2.6 + 3)),
+    "skyline": ("Skyline", uni_skyline, short_hem),
+    "flames": ("Flames", uni_flames, lambda h, s: uni_flames(1 - h, s * 2)),
+    "waves": ("Waves", uni_waves, lambda h, s: "a" if h > 0.62 + 0.06 * math.sin(s * 2.4) else None),
+    "plaid": ("Plaid", uni_plaid, lambda h, s: uni_plaid(h * 0.6, s * 2)),
+    "lightning": ("Lightning", uni_lightning, short_classic),
+    "stars": ("Stars", uni_stars, short_hem),
+    "honeycomb": ("Honeycomb", uni_honeycomb, lambda h, s: uni_honeycomb(h * 0.5, s * 2)),
+}
+
+
+def uniform_layers(info, bald):
+    """Per pattern, the a and b masks for one frame: shirt pixels from the
+    print coordinates (jersey only, not the arms), shorts from the pants
+    coordinates (shorts cloth only)."""
+    top = B["shoulder"] + 2.0
+    hem = B["thigh"] * 0.55
+    shirt, shorts = [], []
+    for p, (u, v) in info["print_uv"].items():
+        if split_tag(bald.get(p, ""))[0] in ("jersey0", "jersey1"):
+            h = (u - 2.6) / (top - 2.6)
+            arc = math.acos(max(-1.0, min(1.0, v / B["torso_r"]))) * 4.7
+            shirt.append((p, h, arc))
+    for p, (u, v) in info["leg_print_uv"].items():
+        if split_tag(bald.get(p, ""))[0].startswith("shorts"):
+            shorts.append((p, (u + 1.6) / (hem + 1.6), v))
+    out = []
+    for _, sfn, kfn in UNIFORM_PATTERNS.values():
+        a, b = {}, {}
+        for p, h, arc in shirt:
+            r = sfn(h, arc)
+            if r:
+                (a if r == "a" else b)[p] = WHITE
+        for p, h, s_ in shorts:
+            r = kfn(h, s_)
+            if r:
+                (a if r == "a" else b)[p] = WHITE
+        out.append((a, b))
+    return out
+
 def blit_head(layer, origin, style=None, facial=None, headwear=None):
     ox, oy = origin
     for r, row in enumerate(SKULL):
@@ -3348,6 +3544,10 @@ class Compositor:
             legs_after.append((f["legPrints"][[p_["id"] for p_ in self.data["legPrints"]].index(out["legPrint"])],
                                None))
         layers += [(f[k], out[k]) for k in ("shorts", "sock", "shoe", "sole")]
+        if colors.get("pattern") and f.get("uniforms") and not out.get("print"):
+            # team uniform: the pattern's two accent layers over the jersey and shorts
+            k_ = list(UNIFORM_PATTERNS).index(colors["pattern"])
+            layers += [(f["uniforms"][2 * k_], colors["accent"]), (f["uniforms"][2 * k_ + 1], colors["accent2"])]
         if out.get("legPrint") not in self.data.get("legPrintsOver", []):
             layers += legs_after
             legs_after = []
@@ -3425,7 +3625,8 @@ def _pt(p):
 
 STAND_POSE = P((0, 0, 0), (0, 0, 0), (0, 0), (0, 0), lean=0)
 FRAME_FIELDS = ["skin", "jersey", "trim", "detail", "head", "nearHand", "farHand", "ball", "ballDepth", "lift",
-                "shorts", "sock", "shoe", "sole", "wear", "prints", "legPrints", "boots"]
+                "shorts", "sock", "shoe", "sole", "wear", "prints", "legPrints", "boots",
+                "uniforms"]
 
 
 def frame_obj(bodies, body, anim, i):
@@ -3484,6 +3685,10 @@ def build_body(body):
                 rec["legPrints"].append(ref(to_mask_res(pix, set() if pname in LEG_PRINTS_OVER else opaque), "mask",
                                             "%s/legprint_%s" % (body, pname)))
             rec["detail"] = ref(detail, "detail", group)
+            rec["uniforms"] = []
+            for pname, (a_, b_) in zip(UNIFORM_PATTERNS, uniform_layers(info, bald)):
+                for m_ in (a_, b_):
+                    rec["uniforms"].append(ref(to_mask_res(m_, opaque), "mask", "%s/uniform_%s" % (body, pname)))
             bm, bd = boot_layers(bald, info["booted"](), where)
             rec["boots"] = [ref(m_, "mask", "%s/boots" % body) for m_ in bm] + [ref(bd, "detail", "%s/boots" % body)]
             head = info["head_origin"]
@@ -3560,7 +3765,8 @@ def build_all():
                             wear_refs if any(wear_refs) else None,
                             [conv(r) for r in rec["prints"]] if any(rec["prints"]) else None,
                             [conv(r) for r in rec["legPrints"]] if any(rec["legPrints"]) else None,
-                            [conv(r) for r in rec["boots"]] if any(rec["boots"]) else None])
+                            [conv(r) for r in rec["boots"]] if any(rec["boots"]) else None,
+                            [conv(r) for r in rec["uniforms"]] if any(rec["uniforms"]) else None])
             frames[body][name] = out
     pages, page_groups, page_scales, rects = atlas.pack()
 
@@ -3589,7 +3795,7 @@ def build_all():
                 rec = list(rec)
                 for k in (0, 1, 2, 3, 10, 11, 12, 13):
                     rec[k] = to_local(rec[k])
-                for k in (14, 15, 16, 17):
+                for k in (14, 15, 16, 17, 18):
                     if rec[k]:
                         rec[k] = [to_local(r) for r in rec[k]]
                 out[name].append(rec)
@@ -3611,6 +3817,7 @@ def build_all():
         "prints": [{"id": k, "label": v[0]} for k, v in PRINTS.items()],
         "legPrints": [{"id": k, "label": v[0]} for k, v in LEG_PRINTS.items()],
         "legPrintsOver": sorted(LEG_PRINTS_OVER),
+        "uniformPatterns": [{"id": k, "label": v[0]} for k, v in UNIFORM_PATTERNS.items()],
         "headwearHides": HEADWEAR_HIDES,
         "wearRegions": [WEAR_NAMES[r] for r in WEAR_REGIONS],
         "defaultOutfit": DEFAULT_OUTFIT,

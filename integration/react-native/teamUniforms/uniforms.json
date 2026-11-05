@@ -1,0 +1,962 @@
+{
+  "PHX": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#E56020",
+      "accent": "#E56020",
+      "accent2": "#5A2D12",
+      "shorts": "#F4F1EA",
+      "wordmark": "Buns"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "flames",
+      "jersey": "#5A2D12",
+      "trim": "#E56020",
+      "accent": "#E56020",
+      "accent2": "#F7B733",
+      "shorts": "#5A2D12",
+      "wordmark": "Phoenix"
+    },
+    "city": {
+      "name": "Desert Sunset",
+      "pattern": "fade",
+      "jersey": "#2B1B3D",
+      "trim": "#F7B733",
+      "accent": "#E56020",
+      "accent2": "#F7B733",
+      "shorts": "#2B1B3D",
+      "wordmark": "Desert Sunset"
+    }
+  },
+  "SLC": {
+    "home": {
+      "name": "Home",
+      "pattern": "waves",
+      "jersey": "#F4F1EA",
+      "trim": "#1FA2D6",
+      "accent": "#1FA2D6",
+      "accent2": "#F5E03A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Soakers"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#1FA2D6",
+      "trim": "#F5E03A",
+      "accent": "#F5E03A",
+      "accent2": "#0E5F86",
+      "shorts": "#1FA2D6",
+      "wordmark": "Salt Lake"
+    },
+    "city": {
+      "name": "Great Salt Lake",
+      "pattern": "waves",
+      "jersey": "#E9F4F7",
+      "trim": "#0E5F86",
+      "accent": "#7FC8E8",
+      "accent2": "#0E5F86",
+      "shorts": "#0E5F86",
+      "wordmark": "Great Salt Lake"
+    }
+  },
+  "CHI": {
+    "home": {
+      "name": "Home",
+      "pattern": "spots",
+      "jersey": "#F4F1EA",
+      "trim": "#F4A6B8",
+      "accent": "#1E1E1E",
+      "accent2": "#F4A6B8",
+      "shorts": "#F4F1EA",
+      "wordmark": "Cows"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "pinstripes",
+      "jersey": "#1E1E1E",
+      "trim": "#F4A6B8",
+      "accent": "#3A3A3A",
+      "accent2": "#F4A6B8",
+      "shorts": "#1E1E1E",
+      "wordmark": "Chicago"
+    },
+    "city": {
+      "name": "Windy City",
+      "pattern": "skyline",
+      "jersey": "#1B2A4A",
+      "trim": "#F4A6B8",
+      "accent": "#0E1626",
+      "accent2": "#F4D35E",
+      "shorts": "#1B2A4A",
+      "wordmark": "Windy City"
+    }
+  },
+  "CHA": {
+    "home": {
+      "name": "Home",
+      "pattern": "honeycomb",
+      "jersey": "#FFF6DA",
+      "trim": "#1A1A1A",
+      "accent": "#F2C12E",
+      "accent2": "#1A1A1A",
+      "shorts": "#FFF6DA",
+      "wordmark": "Bees"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "chest_band",
+      "jersey": "#F2C12E",
+      "trim": "#1A1A1A",
+      "accent": "#1A1A1A",
+      "accent2": "#FFF6DA",
+      "shorts": "#1A1A1A",
+      "wordmark": "Charlotte"
+    },
+    "city": {
+      "name": "Queen City",
+      "pattern": "honeycomb",
+      "jersey": "#1A1A1A",
+      "trim": "#F2C12E",
+      "accent": "#F2C12E",
+      "accent2": "#7A4FA0",
+      "shorts": "#1A1A1A",
+      "wordmark": "Queen City"
+    }
+  },
+  "NY": {
+    "home": {
+      "name": "Home",
+      "pattern": "pinstripes",
+      "jersey": "#F4F1EA",
+      "trim": "#D0342C",
+      "accent": "#6E6E78",
+      "accent2": "#D0342C",
+      "shorts": "#F4F1EA",
+      "wordmark": "Rats"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#6E6E78",
+      "trim": "#D0342C",
+      "accent": "#D0342C",
+      "accent2": "#1E1E24",
+      "shorts": "#6E6E78",
+      "wordmark": "New York"
+    },
+    "city": {
+      "name": "Subway",
+      "pattern": "skyline",
+      "jersey": "#101820",
+      "trim": "#D0342C",
+      "accent": "#2A3440",
+      "accent2": "#F2C230",
+      "shorts": "#101820",
+      "wordmark": "Subway"
+    }
+  },
+  "GA": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#F59A6A",
+      "accent": "#F59A6A",
+      "accent2": "#4E9A3A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Peaches"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "fade",
+      "jersey": "#F59A6A",
+      "trim": "#4E9A3A",
+      "accent": "#E86A3A",
+      "accent2": "#4E9A3A",
+      "shorts": "#F59A6A",
+      "wordmark": "Georgia"
+    },
+    "city": {
+      "name": "Peach State",
+      "pattern": "two_tone",
+      "jersey": "#FFE1C9",
+      "trim": "#4E9A3A",
+      "accent": "#F59A6A",
+      "accent2": "#4E9A3A",
+      "shorts": "#F59A6A",
+      "wordmark": "Peach State"
+    }
+  },
+  "BOS": {
+    "home": {
+      "name": "Home",
+      "pattern": "retro",
+      "jersey": "#F4F1EA",
+      "trim": "#2E6B3A",
+      "accent": "#2E6B3A",
+      "accent2": "#E8C44A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Deli"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#2E6B3A",
+      "trim": "#E8C44A",
+      "accent": "#E8C44A",
+      "accent2": "#F4F1EA",
+      "shorts": "#2E6B3A",
+      "wordmark": "Boston"
+    },
+    "city": {
+      "name": "Butcher Paper",
+      "pattern": "plaid",
+      "jersey": "#F2E6C8",
+      "trim": "#8B2E2E",
+      "accent": "#8B2E2E",
+      "accent2": "#2E6B3A",
+      "shorts": "#8B2E2E",
+      "wordmark": "Butcher Paper"
+    }
+  },
+  "ORL": {
+    "home": {
+      "name": "Home",
+      "pattern": "chevron",
+      "jersey": "#F4F1EA",
+      "trim": "#1BB5A6",
+      "accent": "#1BB5A6",
+      "accent2": "#FF5C8A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Tourists"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "waves",
+      "jersey": "#1BB5A6",
+      "trim": "#FF5C8A",
+      "accent": "#FF5C8A",
+      "accent2": "#FFD23F",
+      "shorts": "#1BB5A6",
+      "wordmark": "Orlando"
+    },
+    "city": {
+      "name": "Fireworks",
+      "pattern": "stars",
+      "jersey": "#2A1E5C",
+      "trim": "#FFD23F",
+      "accent": "#3B2A7A",
+      "accent2": "#FFD23F",
+      "shorts": "#2A1E5C",
+      "wordmark": "Fireworks"
+    }
+  },
+  "MIA": {
+    "home": {
+      "name": "Home",
+      "pattern": "waves",
+      "jersey": "#F4F1EA",
+      "trim": "#6EC6F0",
+      "accent": "#6EC6F0",
+      "accent2": "#FF8C5A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Breeze"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "fade",
+      "jersey": "#6EC6F0",
+      "trim": "#FF8C5A",
+      "accent": "#FF8C5A",
+      "accent2": "#F4F1EA",
+      "shorts": "#6EC6F0",
+      "wordmark": "Miami"
+    },
+    "city": {
+      "name": "Vice Nights",
+      "pattern": "fade",
+      "jersey": "#1A1033",
+      "trim": "#3BE8F0",
+      "accent": "#FF4FB3",
+      "accent2": "#3BE8F0",
+      "shorts": "#1A1033",
+      "wordmark": "Vice Nights"
+    }
+  },
+  "NO": {
+    "home": {
+      "name": "Home",
+      "pattern": "yoke",
+      "jersey": "#F4F1EA",
+      "trim": "#4B2A6B",
+      "accent": "#4B2A6B",
+      "accent2": "#7BC043",
+      "shorts": "#F4F1EA",
+      "wordmark": "Voodoo"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "two_tone",
+      "jersey": "#4B2A6B",
+      "trim": "#7BC043",
+      "accent": "#2E1A44",
+      "accent2": "#7BC043",
+      "shorts": "#4B2A6B",
+      "wordmark": "New Orleans"
+    },
+    "city": {
+      "name": "Mardi Gras",
+      "pattern": "plaid",
+      "jersey": "#4B2A6B",
+      "trim": "#F2C230",
+      "accent": "#7BC043",
+      "accent2": "#F2C230",
+      "shorts": "#4B2A6B",
+      "wordmark": "Mardi Gras"
+    }
+  },
+  "PHI": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#1D4FB8",
+      "accent": "#1D4FB8",
+      "accent2": "#FFD23F",
+      "shorts": "#F4F1EA",
+      "wordmark": "Nice People"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "chest_band",
+      "jersey": "#1D4FB8",
+      "trim": "#FFD23F",
+      "accent": "#FFD23F",
+      "accent2": "#F4F1EA",
+      "shorts": "#1D4FB8",
+      "wordmark": "Philadelphia"
+    },
+    "city": {
+      "name": "Liberty Bell",
+      "pattern": "stars",
+      "jersey": "#F4F1EA",
+      "trim": "#D0342C",
+      "accent": "#1D4FB8",
+      "accent2": "#F4F1EA",
+      "shorts": "#1D4FB8",
+      "wordmark": "Liberty Bell"
+    }
+  },
+  "BKN": {
+    "home": {
+      "name": "Home",
+      "pattern": "pinstripes",
+      "jersey": "#F4F1EA",
+      "trim": "#3A3A40",
+      "accent": "#3A3A40",
+      "accent2": "#F4C542",
+      "shorts": "#F4F1EA",
+      "wordmark": "Mice"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "yoke",
+      "jersey": "#3A3A40",
+      "trim": "#F4C542",
+      "accent": "#F4C542",
+      "accent2": "#1E1E22",
+      "shorts": "#3A3A40",
+      "wordmark": "Brooklyn"
+    },
+    "city": {
+      "name": "Swiss Cheese",
+      "pattern": "spots",
+      "jersey": "#F4C542",
+      "trim": "#3A3A40",
+      "accent": "#D99A1B",
+      "accent2": "#3A3A40",
+      "shorts": "#3A3A40",
+      "wordmark": "Swiss Cheese"
+    }
+  },
+  "HOU": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#3B5B8C",
+      "accent": "#3B5B8C",
+      "accent2": "#E8A33A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Pockets"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "retro",
+      "jersey": "#3B5B8C",
+      "trim": "#E8A33A",
+      "accent": "#E8A33A",
+      "accent2": "#F4F1EA",
+      "shorts": "#3B5B8C",
+      "wordmark": "Houston"
+    },
+    "city": {
+      "name": "Space City",
+      "pattern": "stars",
+      "jersey": "#0B1530",
+      "trim": "#E8A33A",
+      "accent": "#1F3A6E",
+      "accent2": "#F4F1EA",
+      "shorts": "#0B1530",
+      "wordmark": "Space City"
+    }
+  },
+  "DET": {
+    "home": {
+      "name": "Home",
+      "pattern": "chest_band",
+      "jersey": "#F4F1EA",
+      "trim": "#9C4A1E",
+      "accent": "#9C4A1E",
+      "accent2": "#B8BCC4",
+      "shorts": "#F4F1EA",
+      "wordmark": "Junkers"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#9C4A1E",
+      "trim": "#B8BCC4",
+      "accent": "#B8BCC4",
+      "accent2": "#2B2B2E",
+      "shorts": "#9C4A1E",
+      "wordmark": "Detroit"
+    },
+    "city": {
+      "name": "Motor City",
+      "pattern": "lightning",
+      "jersey": "#2B2B2E",
+      "trim": "#B8BCC4",
+      "accent": "#B8BCC4",
+      "accent2": "#9C4A1E",
+      "shorts": "#2B2B2E",
+      "wordmark": "Motor City"
+    }
+  },
+  "IND": {
+    "home": {
+      "name": "Home",
+      "pattern": "retro",
+      "jersey": "#F4F1EA",
+      "trim": "#3F7D2B",
+      "accent": "#3F7D2B",
+      "accent2": "#F2C230",
+      "shorts": "#F4F1EA",
+      "wordmark": "Corn"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "two_tone",
+      "jersey": "#3F7D2B",
+      "trim": "#F2C230",
+      "accent": "#F2C230",
+      "accent2": "#F4F1EA",
+      "shorts": "#3F7D2B",
+      "wordmark": "Indiana"
+    },
+    "city": {
+      "name": "Cornfield",
+      "pattern": "pinstripes",
+      "jersey": "#F2C230",
+      "trim": "#3F7D2B",
+      "accent": "#3F7D2B",
+      "accent2": "#3F7D2B",
+      "shorts": "#3F7D2B",
+      "wordmark": "Cornfield"
+    }
+  },
+  "SF": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#5B2A86",
+      "accent": "#5B2A86",
+      "accent2": "#6DB33F",
+      "shorts": "#F4F1EA",
+      "wordmark": "Fruit"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "fade",
+      "jersey": "#5B2A86",
+      "trim": "#6DB33F",
+      "accent": "#6DB33F",
+      "accent2": "#F4F1EA",
+      "shorts": "#5B2A86",
+      "wordmark": "San Francisco"
+    },
+    "city": {
+      "name": "Fog City",
+      "pattern": "waves",
+      "jersey": "#C9CED6",
+      "trim": "#E8592A",
+      "accent": "#5B2A86",
+      "accent2": "#E8592A",
+      "shorts": "#5B2A86",
+      "wordmark": "Fog City"
+    }
+  },
+  "LAC": {
+    "home": {
+      "name": "Home",
+      "pattern": "lightning",
+      "jersey": "#F4F1EA",
+      "trim": "#D22630",
+      "accent": "#D22630",
+      "accent2": "#C0C6CF",
+      "shorts": "#F4F1EA",
+      "wordmark": "Cars"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#D22630",
+      "trim": "#C0C6CF",
+      "accent": "#C0C6CF",
+      "accent2": "#1E1E22",
+      "shorts": "#D22630",
+      "wordmark": "Los Angeles"
+    },
+    "city": {
+      "name": "Hot Rod",
+      "pattern": "flames",
+      "jersey": "#141414",
+      "trim": "#D22630",
+      "accent": "#D22630",
+      "accent2": "#F7B733",
+      "shorts": "#141414",
+      "wordmark": "Hot Rod"
+    }
+  },
+  "LAB": {
+    "home": {
+      "name": "Home",
+      "pattern": "yoke",
+      "jersey": "#F4F1EA",
+      "trim": "#2C4F7C",
+      "accent": "#2C4F7C",
+      "accent2": "#C9C3B5",
+      "shorts": "#F4F1EA",
+      "wordmark": "Bridges"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "chevron",
+      "jersey": "#2C4F7C",
+      "trim": "#C9C3B5",
+      "accent": "#C9C3B5",
+      "accent2": "#F08A4B",
+      "shorts": "#2C4F7C",
+      "wordmark": "Los Angeles"
+    },
+    "city": {
+      "name": "City of Angels",
+      "pattern": "fade",
+      "jersey": "#2C4F7C",
+      "trim": "#F4D35E",
+      "accent": "#F08A4B",
+      "accent2": "#F4D35E",
+      "shorts": "#2C4F7C",
+      "wordmark": "City of Angels"
+    }
+  },
+  "DC": {
+    "home": {
+      "name": "Home",
+      "pattern": "pinstripes",
+      "jersey": "#F4F1EA",
+      "trim": "#14213D",
+      "accent": "#14213D",
+      "accent2": "#C9A227",
+      "shorts": "#F4F1EA",
+      "wordmark": "Lawyers"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "chest_band",
+      "jersey": "#14213D",
+      "trim": "#C9A227",
+      "accent": "#C9A227",
+      "accent2": "#F4F1EA",
+      "shorts": "#14213D",
+      "wordmark": "DC"
+    },
+    "city": {
+      "name": "Capitol",
+      "pattern": "stars",
+      "jersey": "#F4F1EA",
+      "trim": "#C9A227",
+      "accent": "#14213D",
+      "accent2": "#F4F1EA",
+      "shorts": "#14213D",
+      "wordmark": "Capitol"
+    }
+  },
+  "DEN": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#B8733A",
+      "accent": "#B8733A",
+      "accent2": "#2B2B2B",
+      "shorts": "#F4F1EA",
+      "wordmark": "Miners"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "yoke",
+      "jersey": "#B8733A",
+      "trim": "#2B2B2B",
+      "accent": "#2B2B2B",
+      "accent2": "#F2C230",
+      "shorts": "#B8733A",
+      "wordmark": "Denver"
+    },
+    "city": {
+      "name": "Mile High",
+      "pattern": "chevron",
+      "jersey": "#1F3A5F",
+      "trim": "#F4F1EA",
+      "accent": "#F4F1EA",
+      "accent2": "#B8733A",
+      "shorts": "#1F3A5F",
+      "wordmark": "Mile High"
+    }
+  },
+  "DAL": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#4A5568",
+      "accent": "#4A5568",
+      "accent2": "#C0C6CF",
+      "shorts": "#F4F1EA",
+      "wordmark": "Losers"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "two_tone",
+      "jersey": "#4A5568",
+      "trim": "#C0C6CF",
+      "accent": "#2D3442",
+      "accent2": "#C0C6CF",
+      "shorts": "#4A5568",
+      "wordmark": "Dallas"
+    },
+    "city": {
+      "name": "Lone Star",
+      "pattern": "stars",
+      "jersey": "#1A2238",
+      "trim": "#E94F37",
+      "accent": "#C0C6CF",
+      "accent2": "#E94F37",
+      "shorts": "#1A2238",
+      "wordmark": "Lone Star"
+    }
+  },
+  "SAC": {
+    "home": {
+      "name": "Home",
+      "pattern": "retro",
+      "jersey": "#F4F1EA",
+      "trim": "#6B4226",
+      "accent": "#6B4226",
+      "accent2": "#E8A23A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Bears"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#6B4226",
+      "trim": "#E8A23A",
+      "accent": "#E8A23A",
+      "accent2": "#F4F1EA",
+      "shorts": "#6B4226",
+      "wordmark": "Sacramento"
+    },
+    "city": {
+      "name": "Gold Rush",
+      "pattern": "fade",
+      "jersey": "#2D5A3D",
+      "trim": "#E8A23A",
+      "accent": "#E8A23A",
+      "accent2": "#6B4226",
+      "shorts": "#2D5A3D",
+      "wordmark": "Gold Rush"
+    }
+  },
+  "MIL": {
+    "home": {
+      "name": "Home",
+      "pattern": "yoke",
+      "jersey": "#F4F1EA",
+      "trim": "#1F5A33",
+      "accent": "#1F5A33",
+      "accent2": "#7A4E2A",
+      "shorts": "#F4F1EA",
+      "wordmark": "Trees"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "pinstripes",
+      "jersey": "#1F5A33",
+      "trim": "#7A4E2A",
+      "accent": "#174628",
+      "accent2": "#C9A26A",
+      "shorts": "#1F5A33",
+      "wordmark": "Milwaukee"
+    },
+    "city": {
+      "name": "Northwoods",
+      "pattern": "plaid",
+      "jersey": "#B8322B",
+      "trim": "#1A1A1A",
+      "accent": "#1A1A1A",
+      "accent2": "#F2C230",
+      "shorts": "#1A1A1A",
+      "wordmark": "Northwoods"
+    }
+  },
+  "POR": {
+    "home": {
+      "name": "Home",
+      "pattern": "chevron",
+      "jersey": "#F4F1EA",
+      "trim": "#B8322B",
+      "accent": "#B59B6A",
+      "accent2": "#B8322B",
+      "shorts": "#F4F1EA",
+      "wordmark": "Tents"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#B59B6A",
+      "trim": "#B8322B",
+      "accent": "#B8322B",
+      "accent2": "#3A2E1E",
+      "shorts": "#B59B6A",
+      "wordmark": "Portland"
+    },
+    "city": {
+      "name": "Rain City",
+      "pattern": "waves",
+      "jersey": "#2F3E46",
+      "trim": "#B8322B",
+      "accent": "#6C8EA0",
+      "accent2": "#B8322B",
+      "shorts": "#2F3E46",
+      "wordmark": "Rain City"
+    }
+  },
+  "OKC": {
+    "home": {
+      "name": "Home",
+      "pattern": "stars",
+      "jersey": "#F4F1EA",
+      "trim": "#3B8FD6",
+      "accent": "#3B8FD6",
+      "accent2": "#F4F1EA",
+      "shorts": "#F4F1EA",
+      "wordmark": "Texans"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#3B8FD6",
+      "trim": "#D32F2F",
+      "accent": "#D32F2F",
+      "accent2": "#F4F1EA",
+      "shorts": "#3B8FD6",
+      "wordmark": "Oklahoma"
+    },
+    "city": {
+      "name": "Thunder Alley",
+      "pattern": "lightning",
+      "jersey": "#1B1B3A",
+      "trim": "#F2C230",
+      "accent": "#F2C230",
+      "accent2": "#3B8FD6",
+      "shorts": "#1B1B3A",
+      "wordmark": "Thunder Alley"
+    }
+  },
+  "SA": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#1B9AAA",
+      "accent": "#1B9AAA",
+      "accent2": "#C0C6CF",
+      "shorts": "#F4F1EA",
+      "wordmark": "Spoons"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "fade",
+      "jersey": "#1B9AAA",
+      "trim": "#C0C6CF",
+      "accent": "#C0C6CF",
+      "accent2": "#14707C",
+      "shorts": "#1B9AAA",
+      "wordmark": "San Antonio"
+    },
+    "city": {
+      "name": "Fiesta",
+      "pattern": "retro",
+      "jersey": "#F4F1EA",
+      "trim": "#E94F8A",
+      "accent": "#E94F8A",
+      "accent2": "#1B9AAA",
+      "shorts": "#1B9AAA",
+      "wordmark": "Fiesta"
+    }
+  },
+  "MIN": {
+    "home": {
+      "name": "Home",
+      "pattern": "waves",
+      "jersey": "#F4F1EA",
+      "trim": "#2A6FDB",
+      "accent": "#2A6FDB",
+      "accent2": "#BDE3F5",
+      "shorts": "#F4F1EA",
+      "wordmark": "Water"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "yoke",
+      "jersey": "#2A6FDB",
+      "trim": "#BDE3F5",
+      "accent": "#BDE3F5",
+      "accent2": "#14408A",
+      "shorts": "#2A6FDB",
+      "wordmark": "Minnesota"
+    },
+    "city": {
+      "name": "Northern Lights",
+      "pattern": "fade",
+      "jersey": "#0E1B2E",
+      "trim": "#3BE8A0",
+      "accent": "#3BE8A0",
+      "accent2": "#7A5CFA",
+      "shorts": "#0E1B2E",
+      "wordmark": "Northern Lights"
+    }
+  },
+  "CLE": {
+    "home": {
+      "name": "Home",
+      "pattern": "retro",
+      "jersey": "#F4F1EA",
+      "trim": "#7A1F3D",
+      "accent": "#7A1F3D",
+      "accent2": "#F2DDB0",
+      "shorts": "#F4F1EA",
+      "wordmark": "Pierogies"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "classic",
+      "jersey": "#7A1F3D",
+      "trim": "#F2DDB0",
+      "accent": "#F2DDB0",
+      "accent2": "#F4F1EA",
+      "shorts": "#7A1F3D",
+      "wordmark": "Cleveland"
+    },
+    "city": {
+      "name": "Polka Party",
+      "pattern": "spots",
+      "jersey": "#F2DDB0",
+      "trim": "#7A1F3D",
+      "accent": "#7A1F3D",
+      "accent2": "#7A1F3D",
+      "shorts": "#7A1F3D",
+      "wordmark": "Polka Party"
+    }
+  },
+  "MEM": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#8B2E16",
+      "accent": "#8B2E16",
+      "accent2": "#B0A89E",
+      "shorts": "#F4F1EA",
+      "wordmark": "Ribs"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "flames",
+      "jersey": "#8B2E16",
+      "trim": "#B0A89E",
+      "accent": "#E8742A",
+      "accent2": "#F7B733",
+      "shorts": "#8B2E16",
+      "wordmark": "Memphis"
+    },
+    "city": {
+      "name": "Blues City",
+      "pattern": "pinstripes",
+      "jersey": "#1E2A5A",
+      "trim": "#6EA3D8",
+      "accent": "#2E3E7A",
+      "accent2": "#F2C230",
+      "shorts": "#1E2A5A",
+      "wordmark": "Blues City"
+    }
+  },
+  "TOR": {
+    "home": {
+      "name": "Home",
+      "pattern": "classic",
+      "jersey": "#F4F1EA",
+      "trim": "#D52B1E",
+      "accent": "#D52B1E",
+      "accent2": "#1E1E22",
+      "shorts": "#F4F1EA",
+      "wordmark": "Sorries"
+    },
+    "away": {
+      "name": "Away",
+      "pattern": "chest_band",
+      "jersey": "#D52B1E",
+      "trim": "#F5F5F5",
+      "accent": "#F5F5F5",
+      "accent2": "#1E1E22",
+      "shorts": "#D52B1E",
+      "wordmark": "Toronto"
+    },
+    "city": {
+      "name": "Lumberjack",
+      "pattern": "plaid",
+      "jersey": "#D52B1E",
+      "trim": "#1A1A1A",
+      "accent": "#1A1A1A",
+      "accent2": "#F5F5F5",
+      "shorts": "#1A1A1A",
+      "wordmark": "Lumberjack"
+    }
+  }
+}

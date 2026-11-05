@@ -63,6 +63,34 @@ import { LEAGUE_TEAMS, TEAM_LOGOS } from './teamLogos';
 
 Three teams are placeholders because your list didn't cover them: **Cleveland Pierogies, Memphis Ribs and Toronto Sorries**. Orlando is the **Tourists**, because Mickey is still a Disney trademark. To rename or redraw a team, edit its row in `TEAMS` and its `icon_*` function, then rerun.
 
+## Team uniforms (career mode)
+
+![jersey cards](previews/uniforms.png)
+
+Every league team has three uniforms, in **`integration/react-native/teamUniforms/`**:
+- **Home:** light, in the team's colors.
+- **Away:** the team color.
+- **City edition:** themed on the city, with its own name, for example Phoenix "Desert Sunset", Chicago "Windy City", Miami "Vice Nights", Brooklyn "Swiss Cheese", Toronto "Lumberjack".
+
+No two city editions are alike, and each team's three uniforms all differ.
+
+**On court** a uniform is a jersey and trim color, shorts color, and one of 16 **uniform patterns** drawn in two accent colors over the jersey and shorts: classic side panels, retro hem stripes, chest band, pinstripes, chevron, contrast yoke, dithered fade, two-tone, spots, city skyline, flames, waves, plaid, lightning bolt, stars and honeycomb. Each pattern is a pair of tint masks per frame, in its own page group per body, so it only loads when a team wearing it is on court. Patterns are skipped under printed park-mode shirts.
+
+![uniforms on court](previews/uniform_sprites.png)
+
+**In menus** each uniform has a jersey card (`png/<ID>_<kind>.png`, 512 × 320): the front with the wordmark (team name at home, city away, the edition name for city), the team logo and a number, and the back with a big number.
+
+```tsx
+import { getUniform, uniformSprite, UNIFORM_CARDS } from './teamUniforms';
+
+const u = getUniform('MIA', 'city')!;              // { name: 'Vice Nights', pattern: 'fade', jersey, trim, accent, accent2, shorts, wordmark }
+const { colors, outfit } = uniformSprite(u);
+<PlayerSprite look={look} colors={colors} outfit={outfit} anim="run" frame={f} x={x} y={y} scale={s} />
+<Image source={UNIFORM_CARDS.MIA.city} style={{ width: 256, height: 160 }} />
+```
+
+To change a uniform, edit its row in `T` in `tools/generate_uniforms.py` and run it; it rewrites the cards, `uniforms.json`, `index.ts` and the previews. New patterns go in `UNIFORM_PATTERNS` in `generate_sprites.py` (a shirt function of height and position round the body, and a shorts function), which needs a sprite rebuild.
+
 ## Files
 
 Everything the app needs is in **`integration/react-native/playerSprites/`**, plus **`integration/react-native/ballTrails/`** for the ball effects.
@@ -468,6 +496,7 @@ python3 tools/generate_sprites.py      # ~6 min
 python3 tools/generate_trails.py       # the ball and its trails, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
 python3 tools/generate_feature_graphic.py  # Play feature graphic, a second
+python3 tools/generate_uniforms.py     # team uniforms: jersey cards and uniforms.json (after the sprites)
 ```
 
 The first rewrites the atlas, `spriteData.*`, `bodyData.ts`, `bodies/`, and the sprite previews in `previews/` (including `outfits.png` and `headbands.png`). The second rewrites `ballTrails/` and `previews/trails.png` / `previews/trails/*.gif`.
