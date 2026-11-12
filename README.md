@@ -93,6 +93,31 @@ const { colors, outfit } = uniformSprite(u);
 
 To change a uniform, edit its row in `T` in `tools/generate_uniforms.py` and run it; it rewrites the cards, `uniforms.json`, `index.ts` and the previews. New patterns go in `UNIFORM_PATTERNS` in `generate_sprites.py` (a shirt function of height and position round the body, and a shorts function), which needs a sprite rebuild.
 
+## Coach pop-up (menus)
+
+![coach pop-up](previews/coach_popup.png) ![coach talking](previews/coach_talking.gif)
+
+The coach is a front-view pixel portrait in the headshot style: an old-school coach with a ball cap, a team polo, a whistle on a red cord, grey sideburns and a grey mustache. He talks while his line types out (four mouth shapes), closes his mouth on the pauses after punctuation, and blinks when he's quiet. The cap and polo are tint masks, so he wears the team's colors. Everything is in **`integration/react-native/coach/`**.
+
+```tsx
+import { CoachPopup, coachMessage } from './coach';
+
+<CoachPopup
+  visible={showCoach}
+  messages={coachMessage('more_minutes', { name: player.lastName, seed: game.id })}
+  capColor={team.jersey}
+  shirtColor={team.jersey}
+  onClose={() => setShowCoach(false)}
+/>
+```
+
+- **Box:** a retro dialog box slides up over the menu with the portrait on the left and a name plate. Tap once to finish the line, and again to go to the next message (pass an array) or close.
+- **Lines:** `coachMessage(kind, { name, seed })` picks a line for `playing_well`, `more_minutes`, `starting_lineup`, `contract_extension`, `all_star`, `slump`, `bench` or `trade_rumors`. There are a few variants of each, and the same seed always gives the same line. You can also pass any text you like.
+- **Font:** `fontFamily` takes your app's pixel font. It defaults to a monospace font.
+- **Portrait only:** `<CoachPortrait size frame capColor shirtColor />` draws just the portrait, for anywhere else in the menus.
+
+To change his look, edit `tools/generate_coach.py` and run it. It rewrites the images and `previews/coach*.png` / `.gif`.
+
 ## Files
 
 Everything the app needs is in **`integration/react-native/playerSprites/`**, plus **`integration/react-native/ballTrails/`** for the ball effects.
@@ -499,6 +524,7 @@ python3 tools/generate_trails.py       # the ball and its trails, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
 python3 tools/generate_feature_graphic.py  # Play feature graphic, a second
 python3 tools/generate_uniforms.py     # team uniforms: jersey cards and uniforms.json (after the sprites)
+python3 tools/generate_coach.py        # the coach portrait for the menu pop-up
 ```
 
 The first rewrites the atlas, `spriteData.*`, `bodyData.ts`, `bodies/`, and the sprite previews in `previews/` (including `outfits.png` and `headbands.png`). The second rewrites `ballTrails/` and `previews/trails.png` / `previews/trails/*.gif`.
