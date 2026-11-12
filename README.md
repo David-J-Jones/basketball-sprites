@@ -29,7 +29,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **Faces on court** read at every skin tone: a white of the eye behind the pupil, a dark brow, the ear, a nose that sticks out past the profile, and the lips. Full facial hair has light strands, so a black beard still shows on the deepest skin tone.
 - **New hair styles keep existing faces:** the eight newer styles come from one extra roll after the rest of the face, so about 1 in 4 players picks one up and everyone else looks exactly as before.
 - **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
-- **League look:** tank top in team colors, black shorts, white socks, grey shoes.
+- **League look:** tank top in team colors tucked into long basketball shorts (straight legs, square hem), white socks, grey shoes. Legs taper from the hip to the knee, with a calf and a slim ankle.
 - **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), a brown wedding-style suit with a white tie (`OUTFIT_PRESETS`), shorts (any color, standard, long or full-length trousers), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
 - **Store add-ons:** hats (top hat, ball cap forward and backwards, halo, cat ears, fedora, goat head, fishbowl with a goldfish, spinning propeller hat), parachute pants, cowboy boots.
 - **Developer-only:** a color-shifting tee (`developer_tee`).
@@ -465,7 +465,7 @@ Each player is drawn from tinted layers: skin, any worn wear masks, jersey, trim
   A typical game with ~7 distinct bodies starts around 65 MB and grows toward ~130 MB as moves and finishes get used. The outfit layers added about 10% to each group.
 - **Knob:** `SCALE` in the generator is 3. `SCALE = 4` gives sharper outlines, for about 70% more body memory.
 - **Data size:** the frame data is split. `spriteData.json` (~1.2 MB) holds what every body shares, and `bodies/<body>.json` (~0.65 MB each) holds one body's frames. Body files are required lazily, so only bodies actually drawn are parsed. Frames are stored as compact arrays and each hair / beard placement is stored once. Read them through `frameData(body, anim, i)` / `framesOf(body, anim)` and `headOverlay(frame, style)` from `frames.ts`. These return pieces ready to draw (`[page, sx, sy, w, h, dx, dy]`). The atlas PNGs are ~34 MB on disk (the shirt prints are about half of that), 1,929 pages.
-- **Build:** the generator uses every CPU core. All 35 bodies take about 6 minutes on 4 cores.
+- **Build:** the generator uses every CPU core. All 35 bodies take about 15 minutes on 4 cores. Pieces stay compressed and atlas pages are drawn and saved one at a time, so the build fits in about 8 GB of RAM.
 
 ## Tests
 

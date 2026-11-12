@@ -259,6 +259,29 @@ class Layer:
                     if c is not None:
                         self.px[(x, y)] = c
 
+    def limb(self, a, b, rfn, color_fn, cap_a=True, cap_b=True):
+        """A limb from a to b whose radius follows rfn(t) (t 0 at a .. 1 at
+        b). An end without a cap is cut off square (a shorts hem)."""
+        ax, ay = a
+        bx, by = b
+        dx, dy = bx - ax, by - ay
+        seg2 = dx * dx + dy * dy
+        r = max(rfn(i / 8) for i in range(9))
+        for y in range(int(math.floor(min(ay, by) - r)) - 1, int(math.ceil(max(ay, by) + r)) + 2):
+            for x in range(int(math.floor(min(ax, bx) - r)) - 1, int(math.ceil(max(ax, bx) + r)) + 2):
+                px, py = x + 0.5, y + 0.5
+                tr = 0.0 if seg2 == 0 else ((px - ax) * dx + (py - ay) * dy) / seg2
+                if (tr < 0 and not cap_a) or (tr > 1 and not cap_b):
+                    continue
+                t = max(0.0, min(1.0, tr))
+                rt = rfn(t)
+                ox, oy = px - (ax + dx * t), py - (ay + dy * t)
+                if math.hypot(ox, oy) <= rt:
+                    self.pos = (px, py)
+                    c = color_fn(t, ox / rt, oy / rt)
+                    if c is not None:
+                        self.px[(x, y)] = c
+
     def outline(self):
         out = {}
         glow = getattr(self, "no_outline", ())
@@ -1541,20 +1564,32 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far, boot=False):
             return sock_s if lit(ox, oy) < -0.4 else sock
         tag = skin_s if lit(ox, oy) < -0.3 else skin
         return wear(tag, "pl", "sh") if t > 0.18 else wear(tag, "pl")      # trousers, tall socks
-    layer.capsule(knee, ankle, B["shin_r"], shin_fn)
+    def shin_r(t):
+        # the calf swells below the knee, then the leg slims to the ankle
+        if t < 0.6:
+            return B["shin_r"] * (0.92 + 0.2 * math.sin(math.pi * t / 0.6 * 0.75))
+        return B["shin_r"] * (0.92 + 0.2 * math.sin(math.pi * 0.75) + (0.72 - 0.92 - 0.2 * math.sin(math.pi * 0.75))
+                              * (t - 0.6) / 0.4)
+    layer.limb(knee, ankle, shin_r, shin_fn)
 
     def thigh_fn(t, ox, oy):
         leg_uv(t * B["thigh"], td, ox, oy, B["thigh_r"])
         if t < 0.55:
             return cloth_s if lit(ox, oy) < -0.2 else cloth
         return wear(skin_s if lit(ox, oy) < -0.3 else skin, "tl")     # long shorts
-    layer.capsule(hip, knee, B["thigh_r"], thigh_fn)
+    # the thigh tapers from the hip to a slimmer knee
+    layer.limb(hip, knee, lambda t: B["thigh_r"] * (1.08 - 0.26 * t), thigh_fn)
 
-    # shorts leg opening is a touch wider than the thigh
+    # basketball shorts: a straight, slightly flared leg with a square hem
+    hem = B["thigh"] * 0.68
+
     def opening_fn(t, ox, oy):
-        leg_uv(t * B["thigh"] * 0.5, td, ox, oy, B["thigh_r"] + 0.6)
+        leg_uv(t * hem, td, ox, oy, B["thigh_r"] + 0.7)
+        if t > 0.86:
+            return cloth_s                           # the hem
         return cloth_s if lit(ox, oy) < -0.2 else cloth
-    layer.capsule(hip, add(hip, vec(thigh_deg, B["thigh"] * 0.5)), B["thigh_r"] + 0.6, opening_fn)
+    layer.limb(hip, add(hip, vec(thigh_deg, hem)), lambda t: B["thigh_r"] + 0.5 + 0.4 * t, opening_fn,
+               cap_b=False)
     # shoe
     fr = math.radians(foot_rot)
     fwd = (math.cos(fr), math.sin(fr))
@@ -1687,6 +1722,9 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
     def jersey_fn(t, ox, oy):
         if t > 0.93 and abs(ox) < 0.45:
             return "trim0"          # collar / arm-hole trim
+        px, py = body.pos
+        if (px - hip[0]) * tdir[0] + (py - hip[1]) * tdir[1] < 1.0:
+            return None             # tucked in: the shorts take over below the waistband
         torso_uv()
         return "jersey1" if lit(ox, oy) < -0.35 else "jersey0"
     body.capsule(chest_lo, chest_hi, B["torso_r"], jersey_fn)
@@ -1706,8 +1744,10 @@ def render(pose, style=None, stand_hip_y=None, facial=None):
             return "trim0"          # waistband
         body.mark_uv(-along, (px - hip[0]) * fwd_dir[0] + (py - hip[1]) * fwd_dir[1], body.leg_uv)
         return "shorts1" if lit(ox, oy) < -0.35 else "shorts0"
-    body.capsule(add(hip, (tdir[0] * -1.0, tdir[1] * -1.0)), add(hip, (tdir[0] * 1.5, tdir[1] * 1.5)),
-                 B["hip_r"], shorts_fn)
+    # the seat of the shorts: straight sides, cut square at the bottom (the
+    # legs of the shorts carry on below it), so the hips don't read as an egg
+    body.limb(add(hip, (tdir[0] * -1.2, tdir[1] * -1.2)), add(hip, (tdir[0] * 1.5, tdir[1] * 1.5)),
+              lambda t: B["hip_r"] * (0.94 + 0.06 * t), shorts_fn, cap_a=False)
     body.capsule(shoulder, add(shoulder, (tdir[0] * 1.2, tdir[1] * 1.2)), 2.0,
                  lambda t, ox, oy: torso_uv() or "jersey0")
     # neck + head (rebuilt cheaply for each hair / facial-hair variant)
@@ -3606,52 +3646,94 @@ class Atlas:
     PER_UNIT = {"detail": 1, "mask": MASK_RES}    # stored units per art pixel
 
     def __init__(self):
-        self.images = []
+        self.sizes = []     # pieces stay zlib-compressed until their page is drawn
+        self.zdata = []
         self.keys = []      # (group, kind)
         self.index = {}
 
     def put(self, group, kind, key, size, zbytes):
         k = (group, kind, key)
         if k not in self.index:
-            self.index[k] = len(self.images)
-            self.images.append(Image.frombytes("RGBA", size, zlib.decompress(zbytes)))
+            self.index[k] = len(self.sizes)
+            self.sizes.append(tuple(size))
+            self.zdata.append(zbytes)
             self.keys.append((group, kind))
         return self.index[k]
 
     def pack(self):
-        """Shelf-pack pieces into pages. Returns (page images, page groups,
-        page scales, rects); a page scale says how many frame pixels one page
-        pixel covers."""
-        rects = [None] * len(self.images)
+        """Shelf-pack pieces into pages. Returns (pages, page groups, page
+        scales, rects): pages is a PackedPages that draws one page at a time
+        (all of them at once no longer fit in memory); a page scale says how
+        many frame pixels one page pixel covers."""
+        rects = [None] * len(self.sizes)
         pages, page_groups, page_scales = [], [], []
         for group, kind in dict.fromkeys(self.keys):
             limit = PAGE_PX // self.UPSCALE[kind]
             order = sorted((i for i, g in enumerate(self.keys) if g == (group, kind)),
-                           key=lambda i: -self.images[i].height)
+                           key=lambda i: -self.sizes[i][1])
             page = None
             x = y = shelf_h = 0
             for i in order:
-                w, h = self.images[i].size
+                w, h = self.sizes[i]
                 if page is not None and x + w + PAD > limit:
                     x, y, shelf_h = PAD, y + shelf_h + PAD, 0
                 if page is None or y + h + PAD > limit:
                     page = len(pages)
-                    pages.append([0, 0, kind])
+                    pages.append([0, 0, kind, []])
                     page_groups.append(group)
                     page_scales.append(SCALE / (self.PER_UNIT[kind] * self.UPSCALE[kind]))
                     x, y, shelf_h = PAD, PAD, 0
                 rects[i] = (page, x, y, w, h)
+                pages[page][3].append(i)
                 pages[page][0] = max(pages[page][0], x + w + PAD)
                 pages[page][1] = max(pages[page][1], y + h + PAD)
                 x += w + PAD
                 shelf_h = max(shelf_h, h)
-        out = [Image.new("RGBA", (pw, ph), (0, 0, 0, 0)) for pw, ph, _ in pages]
-        for i, (page, px, py, w, h) in enumerate(rects):
-            out[page].paste(self.images[i], (px, py))
-        ups = [self.UPSCALE[kind] for _, _, kind in pages]
-        out = [im.resize((im.width * u, im.height * u), Image.NEAREST) for im, u in zip(out, ups)]
-        rects = [[p, px * ups[p], py * ups[p], w * ups[p], h * ups[p]] for p, px, py, w, h in rects]
-        return out, page_groups, page_scales, rects
+        ups = [self.UPSCALE[kind] for _, _, kind, _ in pages]
+        out_rects = [[p, px * ups[p], py * ups[p], w * ups[p], h * ups[p]] for p, px, py, w, h in rects]
+        return PackedPages(self, pages, rects, ups), page_groups, page_scales, out_rects
+
+
+class PackedPages:
+    """Atlas pages, drawn on demand: pages[i] builds page i from its
+    compressed pieces. len() and .sizes need no drawing."""
+
+    def __init__(self, atlas, specs, rects, ups):
+        self.atlas, self.specs, self.rects, self.ups = atlas, specs, rects, ups
+        self.sizes = [[pw * u, ph * u] for (pw, ph, _, _), u in zip(specs, ups)]
+
+    def __len__(self):
+        return len(self.specs)
+
+    def __getitem__(self, i):
+        pw, ph, _, members = self.specs[i]
+        img = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
+        for j in members:
+            _, px, py, w, h = self.rects[j]
+            img.paste(Image.frombytes("RGBA", (w, h), zlib.decompress(self.atlas.zdata[j])), (px, py))
+        u = self.ups[i]
+        return img.resize((pw * u, ph * u), Image.NEAREST) if u != 1 else img
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+
+class DiskPages:
+    """Atlas pages read back from the written PNGs as previews need them."""
+
+    def __init__(self, atlas_dir, n):
+        self.dir, self.n, self.cache = atlas_dir, n, {}
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, i):
+        if i not in self.cache:
+            if len(self.cache) > 400:
+                self.cache.clear()
+            self.cache[i] = Image.open(os.path.join(self.dir, "page%d.png" % i)).convert("RGBA")
+        return self.cache[i]
 
 
 # ---------------------------------------------------------------- previews (emulate the app)
@@ -3970,7 +4052,7 @@ def build_all():
         "frameHeight": FRAME_H * SCALE,
         "anchorX": ANCHOR_X * SCALE,
         "anchorY": ANCHOR_Y * SCALE,
-        "pages": [[p.width, p.height] for p in pages],
+        "pages": pages.sizes,
         "pageGroups": page_groups,
         "pageScale": page_scales,
         "pieces": [rects[g] for g in sorted(shared, key=shared.get)],
@@ -4405,6 +4487,7 @@ def main():
         palettes = json.load(f)
     data, bodies, pages = build_all()
     write_rn(data, bodies, pages)
+    pages = DiskPages(os.path.join(RN_DIR, "atlas"), len(pages))     # previews read the written pages back
     ball, ball_meta = build_ball_sheet()
     ball.save(os.path.join(SPRITE_DIR, "ball.png"))
     with open(os.path.join(SPRITE_DIR, "ball.json"), "w") as f:
