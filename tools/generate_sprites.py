@@ -1599,17 +1599,54 @@ def draw_leg(layer, hip, thigh_deg, shin_deg, foot_rot, far, boot=False):
     toe = add(base, (fwd[0] * 3.2, fwd[1] * 3.2))
     upper = "shoe1" if far else "shoe0"
 
-    def shoe_fn(t, ox, oy):
-        side = ox * down[0] + oy * down[1]
-        if side > 0.35:
-            return "sole"
-        if side < -0.5 and t < 0.5:
-            return "shoe1"
+    def shoe_fn(a, h, top):
+        if h > SHOE_SOLE:
+            return "sole"                                   # a thick, flat cupsole
+        if SHOE_LACES[0] < a < SHOE_LACES[1] and h < top + 0.9 and int(math.floor(a * 1.4)) % 2 == 0:
+            return "sole"                                   # laces across the instep
+        if a < -1.0 and h > -0.3:
+            return "shoe1"                                  # heel counter
         return upper
-    layer.capsule(heel, toe, 1.55, shoe_fn)
+    draw_sneaker(layer, base, fwd, down, shoe_fn)
     if boot:
         draw_boot(layer, knee, ankle, sd, heel, toe, fwd, down, far)
     return ankle
+
+
+SHOE_BACK, SHOE_FRONT, SHOE_BOTTOM = -2.2, 4.1, 1.5
+SHOE_SOLE = 0.55                 # sole from here down (art px below the ankle base)
+SHOE_LACES = (0.9, 2.7)
+
+
+def shoe_top(a):
+    """Top edge of the sneaker in foot coordinates (negative is up): a high
+    heel counter and collar, then the instep sloping down to the toe box."""
+    if a < 0.5:
+        return -1.7
+    return -1.7 + (a - 0.5) / (SHOE_FRONT - 0.5) * 1.6
+
+
+def draw_sneaker(layer, base, fwd, down, fn):
+    """A side-view sneaker around `base` (just under the ankle): flat sole,
+    raised heel, sloping instep, rounded toe. fn(a, h, top) gives the tag,
+    with a along the foot (+ toward the toe) and h downward."""
+    for y in range(int(base[1]) - 7, int(base[1]) + 8):
+        for x in range(int(base[0]) - 7, int(base[0]) + 8):
+            px, py = x + 0.5 - base[0], y + 0.5 - base[1]
+            a = px * fwd[0] + py * fwd[1]
+            h = px * down[0] + py * down[1]
+            top = shoe_top(a)
+            if not (SHOE_BACK <= a <= SHOE_FRONT and top <= h <= SHOE_BOTTOM):
+                continue
+            # rounded toe box and heel; the sole keeps a flat bottom
+            if a > SHOE_FRONT - 1.1 and h < 0.9 and \
+                    math.hypot((a - (SHOE_FRONT - 1.1)) / 1.1, (h - 0.9) / (0.9 - top)) > 1:
+                continue
+            if a < SHOE_BACK + 0.6 and h < -1.0 and \
+                    math.hypot((a - (SHOE_BACK + 0.6)) / 0.6, (h + 1.0) / 0.7) > 1:
+                continue
+            layer.pos = (x + 0.5, y + 0.5)
+            layer.px[(x, y)] = fn(a, h, top)
 
 
 def draw_boot(layer, knee, ankle, sd, heel, toe, fwd, down, far):
@@ -1646,6 +1683,9 @@ def draw_boot(layer, knee, ankle, sd, heel, toe, fwd, down, far):
             return "bvh"
         return "bv1" if lt < -shade or (far and side < -0.5) else "bv0"
     layer.capsule(heel, toe, 1.6, vamp_fn)
+    base = add(heel, (fwd[0] * 1.5, fwd[1] * 1.5))
+    draw_sneaker(layer, base, fwd, down,                     # the boot covers every sneaker pixel
+                 lambda a, h, top: "bh0" if h > SHOE_SOLE else ("bv1" if far else "bv0"))
     layer.cone(toe, tip, 1.5, 0.45, lambda t, ox, oy: vamp_fn(t, ox, oy, True))
     # stacked heel under the back of the foot, slanting in (a riding heel)
     h_top = add(heel, (down[0] * 1.0 + fwd[0] * 0.2, down[1] * 1.0 + fwd[1] * 0.2))
