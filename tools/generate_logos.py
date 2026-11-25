@@ -599,10 +599,262 @@ def icon_only(team):
     return L
 
 
+# ------------------------------------------------------------------ retro icons
+# The image each franchise used "back in the day": its retro logo prints one
+# of these instead of today's icon, the way real teams changed mascots.
+# Drawn in the same box as the main icons; the roundel reprints them in its
+# three faded inks, so the colors here only set light and dark.
+
+def top_half(cx, cy, rx, ry):
+    return {p for p in ellipse(cx, cy, rx, ry) if p[1] <= cy}
+
+
+def r_phx(L, t):        # the original Buns mascot: a grinning bun
+    L.part(top_half(32, 24, 15, 12), "#d98a3a")
+    L.part(rect(17, 25, 47, 27), "#7bc043", shade=False)
+    L.part(poly([(17, 29), (47, 29), (44, 36), (20, 36)]), "#d98a3a")
+    L.dots([(22, 16), (30, 13), (38, 15), (43, 20), (25, 21)], "#fff3d6")
+    L.paint(rect(27, 18, 28, 19) | rect(36, 18, 37, 19), OUTLINE)
+    L.paint(arc(32, 19, 4, 20, 160, 1), OUTLINE)
+
+
+def r_slc(L, t):        # a sloshing bucket
+    L.part(ellipse(24, 12, 2, 3) | ellipse(32, 9, 2, 3) | ellipse(40, 12, 2, 3), "#58b8f0")
+    L.part(arc(32, 22, 12, 200, 340, 1.5), "#8a8a92", shade=False)
+    L.part(poly([(19, 20), (45, 20), (41, 42), (23, 42)]), "#9aa4b0")
+    L.part(rect(18, 18, 46, 21), "#c0c6cf")
+    L.paint(rect(21, 19, 43, 20), "#58b8f0")
+    L.paint(rect(21, 30, 43, 31), "#6e7884")
+
+
+def r_chi(L, t):        # a glass milk bottle
+    L.part(rect(27, 8, 37, 11), "#f4a6b8")
+    L.part(rect(28, 11, 36, 18), "#f4f4f0")
+    L.part(poly([(28, 18), (36, 18), (41, 24), (41, 43), (23, 43), (23, 24)]), "#f4f4f0")
+    L.part(rect(23, 28, 41, 36), "#f4a6b8")
+    L.paint(ellipse(28, 31, 1.5, 1.5) | ellipse(35, 33, 2, 1.5), "#2a2a2a")
+
+
+def r_cha(L, t):        # a straw beehive
+    for i, (y, rx) in enumerate(((14, 6), (19, 10), (24, 13), (29, 15), (34, 16), (39, 16))):
+        L.part(ellipse(32, y, rx, 3.2), "#e2a93a" if i % 2 else "#f2c12e")
+    L.part(ellipse(32, 37, 4, 3), "#3a2a1a", shade=False)
+    L.part(ellipse(47, 14, 2.5, 2), "#f2c12e")
+    L.paint({(46, 14), (48, 14)}, "#2a2a2a")
+
+
+def r_ny(L, t):         # a slice, before it had a rat on it
+    L.part(poly([(19, 13), (45, 13), (32, 43)]), "#f2c14e")
+    L.part(rect(18, 10, 46, 14), "#c77a2e")
+    for x, y in ((27, 19), (37, 20), (32, 29), (31, 37)):
+        L.part(ellipse(x, y, 2.6, 2.6), "#d0342c")
+
+
+def r_ga(L, t):         # peach pie
+    L.part(ellipse(32, 15, 1, 3) | ellipse(26, 16, 1, 3) | ellipse(38, 16, 1, 3), "#e8e8e8", shade=False)
+    L.part(ellipse(32, 33, 18, 7), "#b0b8c0")
+    L.part(ellipse(32, 29, 15, 6), "#e8a050")
+    for x in range(22, 44, 5):
+        L.paint({p for p in line((x, 24), (x - 3, 34), 1) if p in ellipse(32, 29, 14, 5)}, "#c06a2a")
+    L.paint({p for p in rect(18, 28, 46, 29) if p in ellipse(32, 29, 14, 5)}, "#c06a2a")
+
+
+def r_bos(L, t):        # the original Deli mascot: a pickle
+    L.part(ellipse(32, 26, 8, 16), "#5a9a3a")
+    L.dots([(27, 16), (36, 20), (28, 33), (37, 36), (31, 40), (35, 12)], "#a8d878")
+    L.paint(rect(28, 22, 29, 23) | rect(35, 22, 36, 23), OUTLINE)
+    L.paint(arc(32, 25, 3, 20, 160, 1), OUTLINE)
+
+
+def r_orl(L, t):        # a tourist's camera
+    L.part(line((14, 24), (20, 12), 1.2) | line((50, 24), (44, 12), 1.2), "#2a2a2a", shade=False, outline=False)
+    L.part(rect(22, 15, 30, 19), "#3a3a40")
+    L.part(rect(15, 18, 49, 38), "#3a3a40")
+    L.part(ellipse(32, 28, 9, 9), "#9aa4b0")
+    L.part(ellipse(32, 28, 5, 5), "#1a1a20")
+    L.paint(rect(30, 25, 31, 26), "#ffffff")
+    L.part(rect(41, 21, 46, 24), "#ff5c8a")
+
+
+def r_mia(L, t):        # the sun in shades
+    for a in range(0, 360, 45):
+        L.part(line((32 + 13 * math.cos(math.radians(a)), 26 + 13 * math.sin(math.radians(a))),
+                    (32 + 17 * math.cos(math.radians(a)), 26 + 17 * math.sin(math.radians(a))), 2.2), "#ff8c5a")
+    L.part(ellipse(32, 26, 11, 11), "#ffd23f")
+    L.part(rect(23, 22, 30, 26) | rect(34, 22, 41, 26), "#1a1a20", shade=False)
+    L.paint(rect(30, 23, 34, 23), "#1a1a20")
+    L.paint(arc(32, 29, 4, 20, 160, 1), OUTLINE)
+
+
+def r_no(L, t):         # a crystal ball
+    L.part(poly([(22, 42), (42, 42), (38, 35), (26, 35)]), "#c9a227")
+    L.part(ellipse(32, 23, 12, 12), "#9a7ad0")
+    L.paint(ellipse(28, 19, 3, 3), "#e0d0ff")
+    L.dots([(36, 26), (34, 29), (38, 22)], "#7bc043")
+    L.part(ellipse(15, 14, 1, 2) | ellipse(49, 16, 1, 2), "#ffd23f")
+
+
+def r_phi(L, t):        # a big heart
+    L.part(ellipse(24, 21, 9, 9) | ellipse(40, 21, 9, 9) | poly([(15, 23), (49, 23), (32, 42)]), "#d0342c")
+    L.paint(ellipse(22, 18, 3, 2.5), "#ff9a9a")
+
+
+def r_bkn(L, t):        # a wedge of swiss
+    L.part(poly([(13, 38), (51, 38), (51, 24), (20, 16)]), "#f4c542")
+    for x, y, r in ((26, 28, 3), (38, 31, 2.5), (45, 27, 2), (33, 24, 1.6), (21, 34, 1.6)):
+        L.paint(ellipse(x, y, r, r), "#7a5410")
+
+
+def r_hou(L, t):        # lucky coin from the pocket
+    L.part(ellipse(32, 26, 15, 15), "#e8a33a")
+    L.paint(ellipse(32, 26, 15, 15) - ellipse(32, 26, 12.5, 12.5), "#b8761a")
+    star = poly([(32, 14), (35, 23), (44, 23), (37, 29), (40, 38), (32, 32), (24, 38), (27, 29), (20, 23), (29, 23)])
+    L.part(star, "#fff0b0")
+
+
+def r_det(L, t):        # a tire
+    L.part(ellipse(32, 26, 16, 16), "#2a2a2e")
+    for a in range(0, 360, 30):
+        L.paint({(int(32 + 14.5 * math.cos(math.radians(a))), int(26 + 14.5 * math.sin(math.radians(a))))}, "#6a6a72")
+    L.part(ellipse(32, 26, 8, 8), "#b8bcc4")
+    L.part(ellipse(32, 26, 3, 3), "#4a4a52")
+
+
+def r_ind(L, t):        # a popcorn box
+    for x, y in ((22, 15), (28, 12), (34, 12), (40, 14), (25, 19), (32, 17), (39, 19), (45, 18), (19, 19)):
+        L.part(ellipse(x, y, 3.5, 3), "#fff3c0")
+    box = poly([(18, 20), (46, 20), (42, 43), (22, 43)])
+    L.part(box, "#f4f4f0")
+    for x in (22, 30, 38):
+        L.paint({p for p in box if x <= p[0] - (p[1] - 20) * 0.0 <= x + 3}, "#d0342c")
+
+
+def r_sf(L, t):         # cherries
+    L.part(line((26, 32), (34, 13), 1.2) | line((40, 32), (34, 13), 1.2), "#4e7a2a", shade=False)
+    L.part(ellipse(39, 13, 6, 3), "#6db33f")
+    L.part(ellipse(25, 35, 7, 7) | ellipse(40, 35, 7, 7), "#c8203a")
+    L.paint(ellipse(23, 33, 1.5, 1.5) | ellipse(38, 33, 1.5, 1.5), "#ffb0b0")
+
+
+def r_lac(L, t):        # a traffic light
+    L.part(rect(25, 7, 39, 45), "#2a2a2e")
+    for y, c in ((14, "#d22630"), (26, "#f2c230"), (38, "#4caf50")):
+        L.part(ellipse(32, y, 4.5, 4.5), c)
+
+
+def r_lab(L, t):        # the old arch bridge
+    L.part(rect(10, 34, 54, 41), "#5aa0e0", shade=False)
+    L.paint(line((12, 38), (20, 38), 1) | line((28, 39), (38, 39), 1) | line((44, 37), (52, 37), 1), "#ffffff")
+    L.part(arc(32, 34, 19, 180, 360, 4), "#c9c3b5", shade=False)
+    for x in (20, 26, 32, 38, 44):
+        L.part(rect(x, 34 - int(math.sqrt(max(0, 17 ** 2 - (x - 32) ** 2))), x, 31), "#8a8478", shade=False,
+               outline=False)
+    L.part(rect(10, 29, 54, 32), "#8a8478")
+
+
+def r_dc(L, t):         # scales of justice
+    L.part(rect(22, 40, 42, 43), "#c9a227")
+    L.part(rect(31, 12, 33, 40), "#c9a227")
+    L.part(line((15, 15), (49, 15), 2), "#c9a227", shade=False)
+    L.part(ellipse(32, 11, 2.5, 2.5), "#c9a227")
+    for cx in (18, 46):
+        L.part(line((cx, 15), (cx - 6, 29), 1) | line((cx, 15), (cx + 6, 29), 1), "#8a7020", shade=False,
+               outline=False)
+        L.part({p for p in ellipse(cx, 29, 8, 5) if p[1] >= 29}, "#e8c84a")
+
+
+def r_den(L, t):        # a mine cart of gold
+    for x, y in ((24, 20), (31, 18), (38, 20), (28, 15), (35, 15)):
+        L.part(ellipse(x, y, 4, 3), "#f2c230")
+    L.part(poly([(15, 22), (49, 22), (45, 37), (19, 37)]), "#6a6a72")
+    L.paint(rect(17, 27, 47, 28), "#4a4a52")
+    L.part(ellipse(24, 39, 3.5, 3.5) | ellipse(40, 39, 3.5, 3.5), "#2b2b2b")
+
+
+def r_dal(L, t):        # the participation trophy
+    L.part(rect(22, 39, 42, 43), "#6a5a3a")
+    L.part(rect(29, 31, 35, 39), "#c0a040")
+    L.part(arc(19, 18, 5, 90, 270, 1.5) | arc(45, 18, 5, -90, 90, 1.5), "#c0a040", shade=False)
+    L.part(poly([(20, 10), (44, 10), (41, 26), (35, 31), (29, 31), (23, 26)]), "#e0c050")
+    L.paint(rect(27, 15, 37, 18), "#c0c6cf")
+
+
+def r_sac(L, t):        # a paw print
+    L.part(ellipse(32, 33, 10, 8), "#6b4226")
+    for x, y in ((20, 22), (27, 15), (37, 15), (44, 22)):
+        L.part(ellipse(x, y, 4, 4.5), "#6b4226")
+
+
+def r_mil(L, t):        # a pinecone
+    L.part(poly([(30, 6), (34, 6), (36, 12), (28, 12)]), "#3f7d2b")
+    cone = ellipse(32, 27, 10, 15)
+    L.part(cone, "#8a5a2a")
+    L.paint({(x, y) for (x, y) in cone if (x + y) % 6 == 0 or (x - y) % 6 == 0}, "#2a1808")
+
+
+def r_por(L, t):        # a campfire
+    L.part(poly([(32, 8), (42, 24), (40, 34), (24, 34), (22, 24)]), "#e8742a")
+    L.part(poly([(32, 16), (38, 27), (36, 34), (28, 34), (26, 27)]), "#f7d040")
+    L.part(line((17, 41), (47, 33), 4) | line((17, 33), (47, 41), 4), "#7a4e2a")
+
+
+def r_okc(L, t):        # a ten-gallon hat
+    L.part(ellipse(32, 33, 19, 5), "#c9a26a")
+    L.part(poly([(21, 32), (23, 14), (32, 18), (41, 14), (43, 32)]), "#c9a26a")
+    L.part(rect(22, 26, 42, 29), "#d32f2f")
+
+
+def r_sa(L, t):         # a bowl of soup and its spoon
+    L.part(line((38, 26), (50, 8), 2), "#c0c6cf", shade=False)
+    L.part(ellipse(50, 8, 2.5, 3), "#c0c6cf")
+    L.part({p for p in ellipse(32, 28, 17, 13) if p[1] >= 28}, "#1b9aaa")
+    L.part(ellipse(32, 28, 17, 4), "#e8a050")
+    L.dots([(26, 28), (33, 27), (38, 29)], "#7bc043")
+
+
+def r_min(L, t):        # a fishing bobber
+    L.part(rect(14, 37, 50, 41), "#5aa0e0", shade=False)                       # the lake
+    L.paint(line((16, 39), (24, 39), 1) | line((40, 39), (48, 39), 1), "#ffffff")
+    L.part(rect(31, 8, 33, 16), "#2a2a2a", shade=False)
+    L.part(ellipse(32, 27, 11, 11), "#f4f4f0")
+    L.paint({p for p in ellipse(32, 27, 11, 11) if p[1] <= 26}, "#d32f2f")
+    L.paint(rect(21, 26, 43, 27), "#1a1a20")                                     # the seam
+
+
+def r_cle(L, t):        # a frying pan of pierogies
+    L.part(line((40, 26), (54, 16), 3.5), "#3a2a20")
+    L.part(ellipse(28, 30, 15, 9), "#3a3a40")
+    for x, y in ((22, 29), (31, 27), (28, 33)):
+        L.part(top_half(x, y + 2, 5.5, 4), "#f2ddb0")
+
+
+def r_mem(L, t):        # a bottle of sauce
+    L.part(rect(28, 7, 36, 10), "#2a2a2a")
+    L.part(rect(29, 10, 35, 17), "#8b2e16")
+    L.part(poly([(29, 17), (35, 17), (40, 22), (40, 44), (24, 44), (24, 22)]), "#8b2e16")
+    L.part(rect(24, 27, 40, 37), "#f2ddb0")
+    L.part(poly([(32, 28), (36, 33), (34, 36), (30, 36), (28, 33)]), "#e8742a")
+
+
+def r_tor(L, t):        # just a polite little word
+    L.part(ellipse(32, 23, 18, 11) | poly([(22, 30), (30, 32), (18, 40)]), "#f5f5f5")
+    txt = text_pixels("SORRY", 32 - (text_width("SORRY") + 1) // 2, 21)
+    L.paint(txt, "#d52b1e")
+
+
+RETRO_ICONS = {
+    "PHX": r_phx, "SLC": r_slc, "CHI": r_chi, "CHA": r_cha, "NY": r_ny, "GA": r_ga, "BOS": r_bos, "ORL": r_orl,
+    "MIA": r_mia, "NO": r_no, "PHI": r_phi, "BKN": r_bkn, "HOU": r_hou, "DET": r_det, "IND": r_ind, "SF": r_sf,
+    "LAC": r_lac, "LAB": r_lab, "DC": r_dc, "DEN": r_den, "DAL": r_dal, "SAC": r_sac, "MIL": r_mil, "POR": r_por,
+    "OKC": r_okc, "SA": r_sa, "MIN": r_min, "CLE": r_cle, "MEM": r_mem, "TOR": r_tor,
+}
+
+
 # ------------------------------------------------------------------ alternate logos
 # Three more marks per team, built around the same icon, for menus, a
 # locker / store screen, or as unlockable cosmetics:
-#   retro    a vintage screen-print roundel: three faded inks, arched lettering
+#   retro    a vintage screen-print roundel around the team's old-era image
+#            (RETRO_ICONS), in three faded inks, with arched lettering
 #   simple   a monogram: the team's initial as a chunky letter on a plain disc
 #   current  a modern shield holding the full icon, with a name bar under it
 LOGO_STYLES = ("retro", "simple", "current")
@@ -667,6 +919,7 @@ def retro_roundel(team):
     name arched under the bottom, stars at the sides, the icon reprinted in
     the same three inks."""
     tid, city, name, jersey, trim, icon = team
+    team = team[:5] + (RETRO_ICONS.get(tid, icon),)     # the old-era image, not today's icon
     paper = "#efe2c0"
     dark = fade(mix(jersey, "#2a1a14", 0.5), 0.2)
     band = darken_until(fade(jersey, 0.3), 0.5)

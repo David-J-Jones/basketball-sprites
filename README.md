@@ -74,7 +74,7 @@ Every team also has three more logos built around the same icon, for menus, a te
 | Style | Look |
 |---|---|
 | `classic` | The round badge above, with the ribbon banner |
-| `retro` | A vintage screen-print roundel: the icon reprinted in three faded inks in the team's colors, the city arched over the top, the name along the bottom, stars at the sides (long cities shorten: Philly, Nola, San Fran, L.A., S.A.) |
+| `retro` | A vintage screen-print roundel around the franchise's **old-era image** (DC's scales of justice, Detroit's tire, Indiana's popcorn, Toronto's "SORRY" bubble...), printed in three faded inks in the team's colors, the city arched over the top, the name along the bottom, stars at the sides (long cities shorten: Philly, Nola, San Fran, L.A., S.A.) |
 | `simple` | A monogram: the team's initial as a chunky block letter with a drop shadow on a plain team-color disc. Reads at tiny sizes (scoreboards, notifications) |
 | `current` | A modern shield, two-tone with a diagonal split, holding the full icon flat-shaded, with a bold name bar hung under the point |
 
@@ -83,7 +83,7 @@ import { teamLogo, LOGO_STYLES, LOGO_STYLE_LABELS } from './teamLogos';
 <Image source={teamLogo('PHX', 'retro')} style={{ width: 64, height: 64 }} />   // 'classic' | 'retro' | 'simple' | 'current'
 ```
 
-Each style is one function in `tools/generate_logos.py` (`retro_roundel`, `monogram`, `current_shield`); redrawing a team's icon updates the retro and current logos too. Monogram letters live in `BIG`.
+Each style is one function in `tools/generate_logos.py` (`retro_roundel`, `monogram`, `current_shield`). The old-era images are `r_<team>` functions listed in `RETRO_ICONS`; the current shield uses today's icon, and monogram letters live in `BIG`.
 
 Three teams are placeholders because your list didn't cover them: **Cleveland Pierogies, Memphis Ribs and Toronto Sorries**. Orlando is the **Tourists**, because Mickey is still a Disney trademark. To rename or redraw a team, edit its row in `TEAMS` and its `icon_*` function, then rerun.
 
