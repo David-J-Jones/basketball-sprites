@@ -9,7 +9,9 @@ import {
   WHITE_JERSEY,
 } from './appearance';
 import { faceFromSeed } from './faceArt';
-import { crossoverFor, dribbleAnim, handAfter, handSwitch, hesitationFor, shotFor } from './moves';
+import {
+  CROSSOVER_STYLES, crossoverFor, dribbleAnim, HAND_SWITCH_MOVES, handAfter, handSwitch, hesitationFor, insideOutFor, shotFor, stealAnims,
+} from './moves';
 import { BODY_KEYS, FACIAL_HAIR, HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from './features';
 import { BODY_LOADERS } from './bodyData';
 import { framesOf, headOverlay, SPRITE_DATA as SPRITES } from './frames';
@@ -122,8 +124,38 @@ describe('sprite data', () => {
       expect(up[up.length - 1]).toBe(-1);
       expect(down[0]).toBe(-1);
       expect(down[down.length - 1]).toBe(1);
+      for (const move of HAND_SWITCH_MOVES) {
+        const u = framesOf(body, handSwitch(move, -1)).map((f) => f.ballDepth ?? 0);
+        const d = framesOf(body, handSwitch(move, 1)).map((f) => f.ballDepth ?? 0);
+        expect([u[0], u[u.length - 1], d[0], d[d.length - 1]]).toEqual([1, -1, -1, 1]);
+      }
+      // the double crossover really goes across three times
+      const dbl = framesOf(body, 'crossover_double_up').map((f) => Math.sign(f.ballDepth ?? 0)).filter((x) => x !== 0);
+      expect(dbl.filter((x, i) => i > 0 && x !== dbl[i - 1]).length).toBe(3);
+      // the inside-out fakes it toward the middle and keeps the ball in the same hand
+      const io = framesOf(body, 'inside_out').map((f) => f.ballDepth ?? 0);
+      expect(Math.min(...io)).toBeLessThan(0.5);
+      expect(io[io.length - 1]).toBe(1);
+      expect(framesOf(body, 'inside_out_far').map((f) => f.ballDepth ?? 0).pop()).toBe(-1);
       expect(framesOf(body, 'dribble_far').every((f) => (f.ballDepth ?? 0) < 0)).toBe(true);
       expect(framesOf(body, 'dribble_run_far').every((f) => (f.ballDepth ?? 0) < 0)).toBe(true);
+    }
+  });
+
+  it('wins the ball on a successful steal, and the ball handler loses it', () => {
+    const ev = SPRITES.anims.steal_success.events;
+    expect(ev.poke).toBeLessThan(ev.loose);
+    expect(ev.loose).toBeLessThan(ev.catch);
+    expect(ev.catch).toBeLessThan(ev.secure);
+    expect(ev.secure).toBeLessThan(ev.burst);
+    for (const body of BODY_KEYS) {
+      const won = framesOf(body, 'steal_success');
+      expect(won[0].ball).toBeNull();                         // he doesn't have it to start
+      expect(won[ev.poke].ball).not.toBeNull();
+      expect(won[won.length - 1].ballDepth).toBe(1);         // and leaves dribbling with the near hand
+      const lost = framesOf(body, 'stripped');
+      expect(lost[0].ball).not.toBeNull();
+      expect(lost.slice(SPRITES.anims.stripped.events.lose + 1).every((f) => f.ball === null)).toBe(true);
     }
   });
 
@@ -156,6 +188,22 @@ describe('direction helpers', () => {
     expect(crossoverFor(2)).toBe('crossover_down');
     expect(handAfter('crossover_up')).toBe('far');
     expect(handAfter('crossover_down')).toBe('near');
+  });
+
+  it('picks crossover variants by style, all of them switching hands', () => {
+    expect(crossoverFor(-1, 'wide')).toBe('crossover_wide_up');
+    expect(crossoverFor(1, 'double')).toBe('crossover_double_down');
+    expect(crossoverFor(1, 'classic')).toBe('crossover_down');
+    for (const move of Object.values(CROSSOVER_STYLES)) {
+      expect(handAfter(handSwitch(move, -1))).toBe('far');
+      expect(handAfter(handSwitch(move, 1))).toBe('near');
+    }
+    expect(handAfter('inside_out')).toBeNull();
+    expect(insideOutFor('far')).toBe('inside_out_far');
+    expect(hesitationFor('near')).toBe('hesitation');
+    expect(stealAnims(true)).toEqual({ defender: 'steal_success', handler: 'stripped' });
+    expect(stealAnims(false)).toEqual({ defender: 'steal', handler: null });
+    expect(handAfter('steal_success')).toBe('near');
   });
 
   it('picks the dribble for the ball hand', () => {

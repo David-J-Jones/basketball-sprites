@@ -29,6 +29,36 @@
       "accent2": "#F7B733",
       "shorts": "#2B1B3D",
       "wordmark": "Desert Sunset"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#CE6D37",
+      "trim": "#512F1A",
+      "accent": "#512F1A",
+      "accent2": "#8A5A2B",
+      "shorts": "#CE6D37",
+      "wordmark": "Phoenix"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#E54A00",
+      "trim": "#8C3500",
+      "accent": "#8C3500",
+      "accent2": "#FFFFFF",
+      "shorts": "#E54A00",
+      "wordmark": "Buns"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#381B0D",
+      "trim": "#E54A00",
+      "accent": "#E54A00",
+      "accent2": "#2EC4B6",
+      "shorts": "#381B0D",
+      "wordmark": "Buns"
     }
   },
   "SLC": {
@@ -61,6 +91,36 @@
       "accent2": "#0E5F86",
       "shorts": "#0E5F86",
       "wordmark": "Great Salt Lake"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#F2E6C8",
+      "trim": "#35C1A2",
+      "accent": "#35C1A2",
+      "accent2": "#8A5A2B",
+      "shorts": "#F2E6C8",
+      "wordmark": "Salt Lake"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#0099D6",
+      "accent": "#0099D6",
+      "accent2": "#F5D900",
+      "shorts": "#FFFFFF",
+      "wordmark": "Soakers"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "flames",
+      "jersey": "#0D2C38",
+      "trim": "#009BD9",
+      "accent": "#009BD9",
+      "accent2": "#FF3EA5",
+      "shorts": "#0D2C38",
+      "wordmark": "Soakers"
     }
   },
   "CHI": {
@@ -93,6 +153,36 @@
       "accent2": "#F4D35E",
       "shorts": "#1B2A4A",
       "wordmark": "Windy City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#342720",
+      "trim": "#F2E6C8",
+      "accent": "#DC989F",
+      "accent2": "#F2E6C8",
+      "shorts": "#342720",
+      "wordmark": "Chicago"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "chevron",
+      "jersey": "#1E1E1E",
+      "trim": "#F47A96",
+      "accent": "#F47A96",
+      "accent2": "#FFFFFF",
+      "shorts": "#1E1E1E",
+      "wordmark": "Cows"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "fade",
+      "jersey": "#151418",
+      "trim": "#F47A96",
+      "accent": "#F47A96",
+      "accent2": "#2EC4B6",
+      "shorts": "#151418",
+      "wordmark": "Cows"
     }
   },
   "CHA": {
@@ -125,6 +215,36 @@
       "accent2": "#7A4FA0",
       "shorts": "#1A1A1A",
       "wordmark": "Queen City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#F2E6C8",
+      "trim": "#DAAD43",
+      "accent": "#DAAD43",
+      "accent2": "#8A5A2B",
+      "shorts": "#F2E6C8",
+      "wordmark": "Charlotte"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "chevron",
+      "jersey": "#FFFFFF",
+      "trim": "#F2B500",
+      "accent": "#F2B500",
+      "accent2": "#1A1A1A",
+      "shorts": "#FFFFFF",
+      "wordmark": "Bees"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "chevron",
+      "jersey": "#382E0F",
+      "trim": "#F2B500",
+      "accent": "#F2B500",
+      "accent2": "#8E44E8",
+      "shorts": "#382E0F",
+      "wordmark": "Bees"
     }
   },
   "NY": {
@@ -157,6 +277,36 @@
       "accent2": "#F2C230",
       "shorts": "#101820",
       "wordmark": "Subway"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#655E6C",
+      "trim": "#F2E6C8",
+      "accent": "#BB4D3D",
+      "accent2": "#F2E6C8",
+      "shorts": "#655E6C",
+      "wordmark": "New York"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#6E6E78",
+      "trim": "#D00A00",
+      "accent": "#D00A00",
+      "accent2": "#FFFFFF",
+      "shorts": "#6E6E78",
+      "wordmark": "Rats"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "waves",
+      "jersey": "#151418",
+      "trim": "#D90B00",
+      "accent": "#D90B00",
+      "accent2": "#2EC4B6",
+      "shorts": "#151418",
+      "wordmark": "Rats"
     }
   },
   "GA": {
@@ -189,6 +339,36 @@
       "accent2": "#4E9A3A",
       "shorts": "#F59A6A",
       "wordmark": "Peach State"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#F2E6C8",
+      "trim": "#DC976E",
+      "accent": "#DC976E",
+      "accent2": "#8A5A2B",
+      "shorts": "#F2E6C8",
+      "wordmark": "Georgia"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "chevron",
+      "jersey": "#FFFFFF",
+      "trim": "#F5732F",
+      "accent": "#F5732F",
+      "accent2": "#2F9A13",
+      "shorts": "#FFFFFF",
+      "wordmark": "Peaches"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#38251B",
+      "trim": "#F5732F",
+      "accent": "#F5732F",
+      "accent2": "#2EC4B6",
+      "shorts": "#38251B",
+      "wordmark": "Peaches"
     }
   },
   "BOS": {
@@ -221,6 +401,36 @@
       "accent2": "#2E6B3A",
       "shorts": "#8B2E2E",
       "wordmark": "Butcher Paper"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#356030",
+      "trim": "#F2E6C8",
+      "accent": "#D1AE55",
+      "accent2": "#F2E6C8",
+      "shorts": "#356030",
+      "wordmark": "Boston"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#1A8C31",
+      "trim": "#E8B60B",
+      "accent": "#E8B60B",
+      "accent2": "#FFFFFF",
+      "shorts": "#1A8C31",
+      "wordmark": "Deli"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#1B3821",
+      "trim": "#29D94B",
+      "accent": "#29D94B",
+      "accent2": "#FF3EA5",
+      "shorts": "#1B3821",
+      "wordmark": "Deli"
     }
   },
   "ORL": {
@@ -253,6 +463,36 @@
       "accent2": "#FFD23F",
       "shorts": "#2A1E5C",
       "wordmark": "Fireworks"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#2DA364",
+      "trim": "#F2E6C8",
+      "accent": "#E66578",
+      "accent2": "#F2E6C8",
+      "shorts": "#2DA364",
+      "wordmark": "Orlando"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#00B5A3",
+      "accent": "#00B5A3",
+      "accent2": "#FF1A5A",
+      "shorts": "#FFFFFF",
+      "wordmark": "Tourists"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "flames",
+      "jersey": "#0D3834",
+      "trim": "#00D9C4",
+      "accent": "#00D9C4",
+      "accent2": "#FF3EA5",
+      "shorts": "#0D3834",
+      "wordmark": "Tourists"
     }
   },
   "MIA": {
@@ -285,6 +525,36 @@
       "accent2": "#3BE8F0",
       "shorts": "#1A1033",
       "wordmark": "Vice Nights"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#70D8C4",
+      "trim": "#E68F64",
+      "accent": "#E68F64",
+      "accent2": "#8A5A2B",
+      "shorts": "#70D8C4",
+      "wordmark": "Miami"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#36B4F0",
+      "trim": "#FF5D17",
+      "accent": "#FF5D17",
+      "accent2": "#FFFFFF",
+      "shorts": "#36B4F0",
+      "wordmark": "Breeze"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#1D2F38",
+      "trim": "#36B4F0",
+      "accent": "#36B4F0",
+      "accent2": "#FF3EA5",
+      "shorts": "#1D2F38",
+      "wordmark": "Breeze"
     }
   },
   "NO": {
@@ -317,6 +587,36 @@
       "accent2": "#F2C230",
       "shorts": "#4B2A6B",
       "wordmark": "Mardi Gras"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#592D60",
+      "trim": "#F2E6C8",
+      "accent": "#8AAD4B",
+      "accent2": "#F2E6C8",
+      "shorts": "#592D60",
+      "wordmark": "New Orleans"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#FFFFFF",
+      "trim": "#51148C",
+      "accent": "#51148C",
+      "accent2": "#5FC011",
+      "shorts": "#FFFFFF",
+      "wordmark": "Voodoo"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "chevron",
+      "jersey": "#291938",
+      "trim": "#7D1ED9",
+      "accent": "#7D1ED9",
+      "accent2": "#C6F432",
+      "shorts": "#291938",
+      "wordmark": "Voodoo"
     }
   },
   "PHI": {
@@ -349,6 +649,36 @@
       "accent2": "#F4F1EA",
       "shorts": "#1D4FB8",
       "wordmark": "Liberty Bell"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#442FA6",
+      "trim": "#F2E6C8",
+      "accent": "#E6BB51",
+      "accent2": "#F2E6C8",
+      "shorts": "#442FA6",
+      "wordmark": "Philadelphia"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#003BB8",
+      "trim": "#FFC300",
+      "accent": "#FFC300",
+      "accent2": "#FFFFFF",
+      "shorts": "#003BB8",
+      "wordmark": "Nice People"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#0E1B38",
+      "trim": "#0046D9",
+      "accent": "#0046D9",
+      "accent2": "#C6F432",
+      "shorts": "#0E1B38",
+      "wordmark": "Nice People"
     }
   },
   "BKN": {
@@ -381,6 +711,36 @@
       "accent2": "#3A3A40",
       "shorts": "#3A3A40",
       "wordmark": "Swiss Cheese"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#35323A",
+      "trim": "#F2E6C8",
+      "accent": "#DCB151",
+      "accent2": "#F2E6C8",
+      "shorts": "#35323A",
+      "wordmark": "Brooklyn"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "chevron",
+      "jersey": "#FFFFFF",
+      "trim": "#3A3A40",
+      "accent": "#3A3A40",
+      "accent2": "#F4B400",
+      "shorts": "#FFFFFF",
+      "wordmark": "Mice"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "stars",
+      "jersey": "#151418",
+      "trim": "#F4B400",
+      "accent": "#F4B400",
+      "accent2": "#8E44E8",
+      "shorts": "#151418",
+      "wordmark": "Mice"
     }
   },
   "HOU": {
@@ -413,6 +773,36 @@
       "accent2": "#F4F1EA",
       "shorts": "#0B1530",
       "wordmark": "Space City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#453E7E",
+      "trim": "#F2E6C8",
+      "accent": "#D1984A",
+      "accent2": "#F2E6C8",
+      "shorts": "#453E7E",
+      "wordmark": "Houston"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#19468C",
+      "trim": "#E88C00",
+      "accent": "#E88C00",
+      "accent2": "#FFFFFF",
+      "shorts": "#19468C",
+      "wordmark": "Pockets"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "fade",
+      "jersey": "#1B2638",
+      "trim": "#266DD9",
+      "accent": "#266DD9",
+      "accent2": "#C6F432",
+      "shorts": "#1B2638",
+      "wordmark": "Pockets"
     }
   },
   "DET": {
@@ -445,6 +835,36 @@
       "accent2": "#9C4A1E",
       "shorts": "#2B2B2E",
       "wordmark": "Motor City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#8C502C",
+      "trim": "#F2E6C8",
+      "accent": "#A19DB0",
+      "accent2": "#F2E6C8",
+      "shorts": "#8C502C",
+      "wordmark": "Detroit"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#9C3600",
+      "accent": "#9C3600",
+      "accent2": "#B8BCC4",
+      "shorts": "#FFFFFF",
+      "wordmark": "Junkers"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "waves",
+      "jersey": "#381E0F",
+      "trim": "#D94C00",
+      "accent": "#D94C00",
+      "accent2": "#2EC4B6",
+      "shorts": "#381E0F",
+      "wordmark": "Junkers"
     }
   },
   "IND": {
@@ -477,6 +897,36 @@
       "accent2": "#3F7D2B",
       "shorts": "#3F7D2B",
       "wordmark": "Cornfield"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#4F7030",
+      "trim": "#F2E6C8",
+      "accent": "#DAAE45",
+      "accent2": "#F2E6C8",
+      "shorts": "#4F7030",
+      "wordmark": "Indiana"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "classic",
+      "jersey": "#2B8C0B",
+      "trim": "#F2B600",
+      "accent": "#F2B600",
+      "accent2": "#FFFFFF",
+      "shorts": "#2B8C0B",
+      "wordmark": "Corn"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "fade",
+      "jersey": "#1F3817",
+      "trim": "#42D911",
+      "accent": "#42D911",
+      "accent2": "#8E44E8",
+      "shorts": "#1F3817",
+      "wordmark": "Corn"
     }
   },
   "SF": {
@@ -509,6 +959,36 @@
       "accent2": "#E8592A",
       "shorts": "#5B2A86",
       "wordmark": "Fog City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#703179",
+      "trim": "#F2E6C8",
+      "accent": "#7DA146",
+      "accent2": "#F2E6C8",
+      "shorts": "#703179",
+      "wordmark": "San Francisco"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#FFFFFF",
+      "trim": "#4D068C",
+      "accent": "#4D068C",
+      "accent2": "#51B310",
+      "shorts": "#FFFFFF",
+      "wordmark": "Fruit"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "stars",
+      "jersey": "#281538",
+      "trim": "#7809D9",
+      "accent": "#7809D9",
+      "accent2": "#C6F432",
+      "shorts": "#281538",
+      "wordmark": "Fruit"
     }
   },
   "LAC": {
@@ -541,6 +1021,36 @@
       "accent2": "#F7B733",
       "shorts": "#141414",
       "wordmark": "Hot Rod"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#BD3E39",
+      "trim": "#F2E6C8",
+      "accent": "#A7A5BA",
+      "accent2": "#F2E6C8",
+      "shorts": "#BD3E39",
+      "wordmark": "Los Angeles"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#D2000C",
+      "trim": "#C0C6CF",
+      "accent": "#C0C6CF",
+      "accent2": "#FFFFFF",
+      "shorts": "#D2000C",
+      "wordmark": "Cars"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "fade",
+      "jersey": "#380F11",
+      "trim": "#D9000D",
+      "accent": "#D9000D",
+      "accent2": "#2EC4B6",
+      "shorts": "#380F11",
+      "wordmark": "Cars"
     }
   },
   "LAB": {
@@ -573,6 +1083,36 @@
       "accent2": "#F4D35E",
       "shorts": "#2C4F7C",
       "wordmark": "City of Angels"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#363170",
+      "trim": "#F2E6C8",
+      "accent": "#B5AC9C",
+      "accent2": "#F2E6C8",
+      "shorts": "#363170",
+      "wordmark": "Los Angeles"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "classic",
+      "jersey": "#FFFFFF",
+      "trim": "#0D458C",
+      "accent": "#0D458C",
+      "accent2": "#C9C3B5",
+      "shorts": "#FFFFFF",
+      "wordmark": "Bridges"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "flames",
+      "jersey": "#182638",
+      "trim": "#146AD9",
+      "accent": "#146AD9",
+      "accent2": "#C6F432",
+      "shorts": "#182638",
+      "wordmark": "Bridges"
     }
   },
   "DC": {
@@ -605,6 +1145,36 @@
       "accent2": "#F4F1EA",
       "shorts": "#14213D",
       "wordmark": "Capitol"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#342720",
+      "trim": "#F2E6C8",
+      "accent": "#B59138",
+      "accent2": "#F2E6C8",
+      "shorts": "#342720",
+      "wordmark": "DC"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#08328C",
+      "trim": "#C99900",
+      "accent": "#C99900",
+      "accent2": "#FFFFFF",
+      "shorts": "#08328C",
+      "wordmark": "Lawyers"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "chevron",
+      "jersey": "#162138",
+      "trim": "#D9A500",
+      "accent": "#D9A500",
+      "accent2": "#8E44E8",
+      "shorts": "#162138",
+      "wordmark": "Lawyers"
     }
   },
   "DEN": {
@@ -637,6 +1207,36 @@
       "accent2": "#B8733A",
       "shorts": "#1F3A5F",
       "wordmark": "Mile High"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#F2E6C8",
+      "trim": "#A67043",
+      "accent": "#A67043",
+      "accent2": "#F2E6C8",
+      "shorts": "#F2E6C8",
+      "wordmark": "Denver"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#B85808",
+      "accent": "#B85808",
+      "accent2": "#2B2B2B",
+      "shorts": "#FFFFFF",
+      "wordmark": "Miners"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "stars",
+      "jersey": "#382516",
+      "trim": "#D9670A",
+      "accent": "#D9670A",
+      "accent2": "#2EC4B6",
+      "shorts": "#382516",
+      "wordmark": "Miners"
     }
   },
   "DAL": {
@@ -669,6 +1269,36 @@
       "accent2": "#E94F37",
       "shorts": "#1A2238",
       "wordmark": "Lone Star"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#47435E",
+      "trim": "#F2E6C8",
+      "accent": "#A7A5BA",
+      "accent2": "#F2E6C8",
+      "shorts": "#47435E",
+      "wordmark": "Dallas"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#4C638C",
+      "trim": "#C0C6CF",
+      "accent": "#C0C6CF",
+      "accent2": "#FFFFFF",
+      "shorts": "#4C638C",
+      "wordmark": "Losers"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#2A2F38",
+      "trim": "#759AD9",
+      "accent": "#759AD9",
+      "accent2": "#C6F432",
+      "shorts": "#2A2F38",
+      "wordmark": "Losers"
     }
   },
   "SAC": {
@@ -701,6 +1331,36 @@
       "accent2": "#6B4226",
       "shorts": "#2D5A3D",
       "wordmark": "Gold Rush"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#60412A",
+      "trim": "#F2E6C8",
+      "accent": "#D1984A",
+      "accent2": "#F2E6C8",
+      "shorts": "#60412A",
+      "wordmark": "Sacramento"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#FFFFFF",
+      "trim": "#8C410D",
+      "accent": "#8C410D",
+      "accent2": "#E88B00",
+      "shorts": "#FFFFFF",
+      "wordmark": "Bears"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "flames",
+      "jersey": "#382518",
+      "trim": "#D96414",
+      "accent": "#D96414",
+      "accent2": "#2EC4B6",
+      "shorts": "#382518",
+      "wordmark": "Bears"
     }
   },
   "MIL": {
@@ -733,6 +1393,36 @@
       "accent2": "#F2C230",
       "shorts": "#1A1A1A",
       "wordmark": "Northwoods"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#235123",
+      "trim": "#F2E6C8",
+      "accent": "#6E4C2F",
+      "accent2": "#F2E6C8",
+      "shorts": "#235123",
+      "wordmark": "Milwaukee"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "classic",
+      "jersey": "#0B8C37",
+      "trim": "#8C450B",
+      "accent": "#8C450B",
+      "accent2": "#FFFFFF",
+      "shorts": "#0B8C37",
+      "wordmark": "Trees"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "waves",
+      "jersey": "#173822",
+      "trim": "#11D955",
+      "accent": "#11D955",
+      "accent2": "#FF3EA5",
+      "shorts": "#173822",
+      "wordmark": "Trees"
     }
   },
   "POR": {
@@ -765,6 +1455,36 @@
       "accent2": "#B8322B",
       "shorts": "#2F3E46",
       "wordmark": "Rain City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#F2E6C8",
+      "trim": "#A38B64",
+      "accent": "#A38B64",
+      "accent2": "#F2E6C8",
+      "shorts": "#F2E6C8",
+      "wordmark": "Portland"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#B58E45",
+      "accent": "#B58E45",
+      "accent2": "#B80900",
+      "shorts": "#FFFFFF",
+      "wordmark": "Tents"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "stars",
+      "jersey": "#383123",
+      "trim": "#D9AA53",
+      "accent": "#D9AA53",
+      "accent2": "#2EC4B6",
+      "shorts": "#383123",
+      "wordmark": "Tents"
     }
   },
   "OKC": {
@@ -797,6 +1517,36 @@
       "accent2": "#3B8FD6",
       "shorts": "#1B1B3A",
       "wordmark": "Thunder Alley"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#48C1B7",
+      "trim": "#BE4A3F",
+      "accent": "#BE4A3F",
+      "accent2": "#F2E6C8",
+      "shorts": "#48C1B7",
+      "wordmark": "Oklahoma"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#0074D6",
+      "trim": "#D30000",
+      "accent": "#D30000",
+      "accent2": "#FFFFFF",
+      "shorts": "#0074D6",
+      "wordmark": "Texans"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "flames",
+      "jersey": "#142738",
+      "trim": "#0075D9",
+      "accent": "#0075D9",
+      "accent2": "#C6F432",
+      "shorts": "#142738",
+      "wordmark": "Texans"
     }
   },
   "SA": {
@@ -829,6 +1579,36 @@
       "accent2": "#1B9AAA",
       "shorts": "#1B9AAA",
       "wordmark": "Fiesta"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#2B9971",
+      "trim": "#F2E6C8",
+      "accent": "#A7A5BA",
+      "accent2": "#F2E6C8",
+      "shorts": "#2B9971",
+      "wordmark": "San Antonio"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#FFFFFF",
+      "trim": "#0097AA",
+      "accent": "#0097AA",
+      "accent2": "#C0C6CF",
+      "shorts": "#FFFFFF",
+      "wordmark": "Spoons"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "lightning",
+      "jersey": "#0E3338",
+      "trim": "#00C0D9",
+      "accent": "#00C0D9",
+      "accent2": "#FF3EA5",
+      "shorts": "#0E3338",
+      "wordmark": "Spoons"
     }
   },
   "MIN": {
@@ -861,6 +1641,36 @@
       "accent2": "#7A5CFA",
       "shorts": "#0E1B2E",
       "wordmark": "Northern Lights"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "retro",
+      "jersey": "#4E3DC5",
+      "trim": "#A8DCD3",
+      "accent": "#A8DCD3",
+      "accent2": "#8A5A2B",
+      "shorts": "#4E3DC5",
+      "wordmark": "Minnesota"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "classic",
+      "jersey": "#0055DB",
+      "trim": "#96D7F5",
+      "accent": "#96D7F5",
+      "accent2": "#FFFFFF",
+      "shorts": "#0055DB",
+      "wordmark": "Water"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "chevron",
+      "jersey": "#0F1F38",
+      "trim": "#0055DB",
+      "accent": "#0055DB",
+      "accent2": "#C6F432",
+      "shorts": "#0F1F38",
+      "wordmark": "Water"
     }
   },
   "CLE": {
@@ -893,6 +1703,36 @@
       "accent2": "#7A1F3D",
       "shorts": "#7A1F3D",
       "wordmark": "Polka Party"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#6E2734",
+      "trim": "#F2E6C8",
+      "accent": "#DAC59E",
+      "accent2": "#F2E6C8",
+      "shorts": "#6E2734",
+      "wordmark": "Cleveland"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "pinstripes",
+      "jersey": "#FFFFFF",
+      "trim": "#8C002E",
+      "accent": "#8C002E",
+      "accent2": "#F2D087",
+      "shorts": "#FFFFFF",
+      "wordmark": "Pierogies"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "chevron",
+      "jersey": "#38121F",
+      "trim": "#D90047",
+      "accent": "#D90047",
+      "accent2": "#2EC4B6",
+      "shorts": "#38121F",
+      "wordmark": "Pierogies"
     }
   },
   "MEM": {
@@ -925,6 +1765,36 @@
       "accent2": "#F2C230",
       "shorts": "#1E2A5A",
       "wordmark": "Blues City"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "chest_band",
+      "jersey": "#7D3A23",
+      "trim": "#F2E6C8",
+      "accent": "#F2E6C8",
+      "accent2": "#E0A030",
+      "shorts": "#7D3A23",
+      "wordmark": "Memphis"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "two_tone",
+      "jersey": "#8C1D00",
+      "trim": "#B0A89E",
+      "accent": "#B0A89E",
+      "accent2": "#FFFFFF",
+      "shorts": "#8C1D00",
+      "wordmark": "Ribs"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "waves",
+      "jersey": "#38160E",
+      "trim": "#D92C00",
+      "accent": "#D92C00",
+      "accent2": "#2EC4B6",
+      "shorts": "#38160E",
+      "wordmark": "Ribs"
     }
   },
   "TOR": {
@@ -957,6 +1827,36 @@
       "accent2": "#F5F5F5",
       "shorts": "#1A1A1A",
       "wordmark": "Lumberjack"
+    },
+    "retro70": {
+      "name": "'70s Throwback",
+      "pattern": "yoke",
+      "jersey": "#C04834",
+      "trim": "#F2E6C8",
+      "accent": "#F2E6C8",
+      "accent2": "#8A5A2B",
+      "shorts": "#C04834",
+      "wordmark": "Toronto"
+    },
+    "retro80": {
+      "name": "'80s Throwback",
+      "pattern": "chevron",
+      "jersey": "#FFFFFF",
+      "trim": "#D50F00",
+      "accent": "#D50F00",
+      "accent2": "#F5F5F5",
+      "shorts": "#FFFFFF",
+      "wordmark": "Sorries"
+    },
+    "retro90": {
+      "name": "'90s Throwback",
+      "pattern": "stars",
+      "jersey": "#38100D",
+      "trim": "#D90F00",
+      "accent": "#D90F00",
+      "accent2": "#2EC4B6",
+      "shorts": "#38100D",
+      "wordmark": "Sorries"
     }
   }
 }

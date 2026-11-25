@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Team uniforms for career mode: home, away and city edition for each of
-the 30 league teams.
+the 30 league teams, plus three unlockable throwbacks ('70s, '80s, '90s).
 
 On court a uniform is the jersey and trim colors plus one of the generator's
 uniform patterns (UNIFORM_PATTERNS in generate_sprites.py) in two accent
@@ -10,11 +10,12 @@ same pixel art as the logos.
 
 Writes integration/react-native/teamUniforms/:
   png/<ID>_<kind>.png   jersey card, front and back, 512 x 320
-  uniforms.json         every team's three uniforms
+  uniforms.json         every team's six uniforms
   index.ts              types, getUniform(), UNIFORM_CARDS require map
-and previews/uniforms.png (all 90 cards).
+and previews/uniforms.png (all 180 cards) and previews/retro_uniforms.png.
 Run generate_sprites.py first if the patterns changed.
 """
+import colorsys
 import json
 import math
 import os
@@ -28,7 +29,9 @@ import generate_logos as lg  # noqa: E402
 import generate_sprites as g  # noqa: E402
 
 OUT = os.path.join(g.ROOT, "integration", "react-native", "teamUniforms")
-KINDS = ("home", "away", "city")
+KINDS = ("home", "away", "city", "retro70", "retro80", "retro90")
+BASE_KINDS = KINDS[:3]
+RETRO_KINDS = KINDS[3:]
 WHITE = "#F4F1EA"
 
 # id -> {kind: (pattern, jersey, trim, accent, accent2, shorts[, name])}
@@ -128,19 +131,103 @@ T = {
 }
 
 
+# ------------------------------------------------------------------ throwbacks
+# The '70s, '80s and '90s editions are derived from each team's own jersey and
+# trim colors with an era recipe, so all 30 teams get them without 90 more
+# hand-written rows. A row in RETRO_OVERRIDES replaces the derived one.
+ERAS = {
+    # kind: (name, patterns in order of preference, card lettering)
+    "retro70": ("'70s Throwback", ("retro", "chest_band", "yoke"), "double"),
+    "retro80": ("'80s Throwback", ("pinstripes", "two_tone", "classic", "chevron"), "shadow"),
+    "retro90": ("'90s Throwback", ("lightning", "flames", "fade", "chevron", "waves", "stars"), "slant"),
+}
+CREAM = "#F2E6C8"
+SEVENTIES = ("#E0A030", "#C8642A", "#8A5A2B")              # mustard, burnt orange, brown
+NINETIES = ("#2EC4B6", "#8E44E8", "#C6F432", "#FF3EA5")    # teal, purple, lime, hot pink
+RETRO_OVERRIDES = {}   # id -> {kind: (pattern, jersey, trim, accent, accent2, shorts)}
+
+
+def hsv(hexc):
+    return colorsys.rgb_to_hsv(*(v / 255 for v in hexrgb(hexc)))
+
+
+def from_hsv(h, s_, v):
+    r, g_, b = colorsys.hsv_to_rgb(h % 1.0, max(0.0, min(1.0, s_)), max(0.0, min(1.0, v)))
+    return "#%02X%02X%02X" % (round(r * 255), round(g_ * 255), round(b * 255))
+
+
+def hue_gap(a, b):
+    d = abs(hsv(a)[0] - hsv(b)[0]) % 1.0
+    return min(d, 1 - d)
+
+
+def warm(hexc, k=1.0):
+    """Faded '70s color: pulled toward orange-brown, less saturated, a bit darker."""
+    h, s_, v = hsv(hexc)
+    target = 0.08
+    d = ((target - h + 0.5) % 1.0) - 0.5
+    return from_hsv(h + d * 0.18 * k, s_ * 0.78 + 0.06, v * 0.9)
+
+
+def punch(hexc, v_min=0.0):
+    """Saturated '80s / '90s color."""
+    h, s_, v = hsv(hexc)
+    if s_ < 0.12:                                         # greys and blacks stay neutral
+        return from_hsv(h, s_, max(v, v_min))
+    return from_hsv(h, min(1.0, s_ * 1.25 + 0.1), max(v, v_min, 0.55))
+
+
+def pick_pattern(prefs, avoid, i):
+    """The era pattern for team i, skipping ones the team already wears."""
+    free = [p for p in prefs if p not in avoid] or list(prefs)
+    return free[i % len(free)]
+
+
+def retro_rows(tid, i, team, kinds):
+    jersey, trim = team[3], team[4]
+    avoid = {kinds[k][0] for k in BASE_KINDS}
+    rows = {}
+    # '70s: faded team colors with cream, stripes at the hems or across the chest
+    base = warm(jersey) if hsv(jersey)[2] > 0.25 else warm("#3A2A22")
+    dark = sum(hexrgb(base)) < 330
+    a = warm(trim) if hue_gap(warm(trim), base) > 0.06 or abs(hsv(trim)[2] - hsv(base)[2]) > 0.3 else CREAM
+    b = max((c for c in SEVENTIES + (CREAM,) if c != a), key=lambda c: hue_gap(c, a) + abs(hsv(c)[2] - hsv(base)[2]))
+    if i % 2 and not dark:
+        base, a = CREAM, warm(jersey)                     # every other team goes cream at home
+    rows["retro70"] = (pick_pattern(ERAS["retro70"][1], avoid, i), base, CREAM if dark else a, a, b, base)
+    # '80s: clean and high contrast, saturated team colors
+    j80 = punch(jersey)
+    t80 = punch(trim)
+    if i % 2:
+        rows["retro80"] = (pick_pattern(ERAS["retro80"][1], avoid, i), "#FFFFFF", j80, j80, t80, "#FFFFFF")
+    else:
+        rows["retro80"] = (pick_pattern(ERAS["retro80"][1], avoid, i), j80, t80, t80, "#FFFFFF", j80)
+    # '90s: loud. A dark base, the team color bright, and a neon to clash with it
+    h, s_, v = hsv(jersey)
+    bright = punch(jersey if s_ > 0.2 and v > 0.3 else trim, v_min=0.85)
+    base90 = from_hsv(h, s_ * 0.9, 0.22) if s_ > 0.2 else "#151418"
+    neon = max(NINETIES, key=lambda c: hue_gap(c, bright))
+    rows["retro90"] = (pick_pattern(ERAS["retro90"][1], avoid, i), base90, bright, bright, neon, base90)
+    rows.update(RETRO_OVERRIDES.get(tid, {}))
+    return rows
+
+
 def uniforms():
     teams = {t[0]: t for t in lg.TEAMS}
     out = {}
-    for tid, kinds in T.items():
+    for i, (tid, base_kinds) in enumerate(T.items()):
         team = teams[tid]
+        kinds = dict(base_kinds)
+        for k, row in retro_rows(tid, i, team, base_kinds).items():
+            kinds[k] = row + (ERAS[k][0],)
         out[tid] = {}
         for kind in KINDS:
             pat, jersey, trim, a, b, shorts = kinds[kind][:6]
             name = kinds[kind][6] if len(kinds[kind]) > 6 else ("Home" if kind == "home" else "Away")
             assert pat in g.UNIFORM_PATTERNS, pat
+            word = team[1] if kind in ("away", "retro70") else name if kind == "city" else team[2]
             out[tid][kind] = {"name": name, "pattern": pat, "jersey": jersey, "trim": trim, "accent": a,
-                              "accent2": b, "shorts": shorts,
-                              "wordmark": (team[1] if kind == "away" else name if kind == "city" else team[2])}
+                              "accent2": b, "shorts": shorts, "wordmark": word}
     return out
 
 
@@ -234,39 +321,55 @@ DIGITS = {
 lg.FONT.update(DIGITS)
 
 
-def blit_text(px, text, cx, y0, scale, color, shadow, bounds):
+RING = ((1, 1), (1, 0), (0, 1), (-1, 0), (0, -1), (-1, -1), (1, -1), (-1, 1))
+
+
+def blit_text(px, text, cx, y0, scale, color, shadow, bounds, style=None, extra=None):
+    """Lettering with an outline, readable over any pattern. Throwback styles:
+    'double' ('70s) adds a second outline ring in `extra`, 'shadow' ('80s) a
+    block drop shadow, 'slant' ('90s) leans the letters forward."""
     w = lg.text_width(text) * scale
     x0 = cx - w // 2
-    for (x, y) in lg.text_pixels(text, 0, 0):
-        for i in range(scale):
-            for j in range(scale):
-                for ddx, ddy in ((1, 1), (1, 0), (0, 1), (-1, 0), (0, -1), (-1, -1), (1, -1), (-1, 1)):
-                    q = (x0 + x * scale + i + ddx, y0 + y * scale + j + ddy)
-                    if q in bounds:
-                        px[q] = shadow                                # outline, readable over any pattern
-    for (x, y) in lg.text_pixels(text, 0, 0):
-        for i in range(scale):
-            for j in range(scale):
-                p = (x0 + x * scale + i, y0 + y * scale + j)
-                if p in bounds:
-                    px[p] = color
+    glyph = [(x * scale + i, y * scale + j) for (x, y) in lg.text_pixels(text, 0, 0)
+             for i in range(scale) for j in range(scale)]
+    if style == "slant":
+        top = max(y for _, y in glyph)
+        glyph = [(x + int((top - y) * 0.4) - int(top * 0.2), y) for x, y in glyph]
+    glyph = {(x0 + x, y0 + y) for x, y in glyph}
+
+    def paint(pts, c):
+        for q in pts:
+            if q in bounds:
+                px[q] = c
+    if style == "double":
+        paint({(x + 2 * dx, y + 2 * dy) for x, y in glyph for dx, dy in RING}, extra or shadow)
+    if style == "shadow":
+        k = max(1, scale // 2 + 1)
+        paint({(x + dx + k, y + dy + k) for x, y in glyph for dx, dy in RING + ((0, 0),)}, extra or shadow)
+    paint({(x + dx, y + dy) for x, y in glyph for dx, dy in RING}, shadow)
+    paint(glyph, color)
 
 
 def contrast(c):
     return (28, 22, 32) if sum(c) > 470 else (244, 235, 208)
 
 
-def card(team, u, number):
+def card(team, u, number, style=None):
     front = card_side(u, False)
     back = card_side(u, True)
     base = hexrgb(u["jersey"])
     ink = hexrgb(u["trim"]) if abs(sum(hexrgb(u["trim"])) - sum(base)) > 160 else contrast(base)
     sh = (28, 22, 32) if sum(ink) > 360 else (244, 235, 208)
+    extra = None
+    if style == "double":
+        extra = hexrgb(u["accent2"]) if abs(sum(hexrgb(u["accent2"])) - sum(sh)) > 120 else hexrgb(u["accent"])
+    elif style == "shadow":
+        extra = shade(base, 0.45) if sum(base) > 200 else (8, 6, 10)
     # front: wordmark across the chest, the team logo under it, a small number
     word = u["wordmark"].upper()
     scale = 2 if lg.text_width(word) * 2 <= 2 * HW - 12 else 1
     fb = set(front)
-    blit_text(front, word, CW // 2, 34, scale, ink, sh, fb)
+    blit_text(front, word, CW // 2, 34, scale, ink, sh, fb, style if style != "shadow" else None, extra)
     logo = lg.icon_only(team).px
     lx = [x for x, _ in logo]
     ly = [y for _, y in logo]
@@ -276,10 +379,10 @@ def card(team, u, number):
         p = (x + ox, y + oy)
         if p in fb:
             front[p] = hexrgb(c)
-    blit_text(front, str(number), CW // 2 + 26, 84, 2, ink, sh, fb)
+    blit_text(front, str(number), CW // 2 + 26, 84, 2, ink, sh, fb, style, extra)
     # back: the number, big
     bb = set(back)
-    blit_text(back, str(number), CW // 2, 40, 6, ink, sh, bb)
+    blit_text(back, str(number), CW // 2, 40, 6, ink, sh, bb, style, extra)
     img = Image.new("RGBA", (CW * 2, CH), (0, 0, 0, 0))
     for side, off in ((outline_and_shade(front), 0), (outline_and_shade(back), CW)):
         for (x, y), c in side.items():
@@ -295,11 +398,38 @@ def write_ts(data):
         "import type { JerseyColors, Outfit, UniformPattern } from '../playerSprites/types';",
         "import uniforms from './uniforms.json';",
         "",
-        "export type UniformKind = 'home' | 'away' | 'city';",
-        "export const UNIFORM_KINDS: UniformKind[] = ['home', 'away', 'city'];",
+        "export type UniformKind = 'home' | 'away' | 'city' | 'retro70' | 'retro80' | 'retro90';",
+        "export const UNIFORM_KINDS: UniformKind[] = ['home', 'away', 'city', 'retro70', 'retro80', 'retro90'];",
+        "/** The throwbacks: unlockable cosmetics, not part of a team's regular set. */",
+        "export type RetroKind = 'retro70' | 'retro80' | 'retro90';",
+        "export const RETRO_KINDS: RetroKind[] = ['retro70', 'retro80', 'retro90'];",
+        "",
+        "export type UniformUnlock = {",
+        "  /** shown on a locker / store screen */",
+        "  label: string;",
+        "  /** a suggested way to earn it; the game decides what actually unlocks it */",
+        "  hint: string;",
+        "  /** true for home / away / city */",
+        "  unlockedByDefault: boolean;",
+        "};",
+        "",
+        "export const UNIFORM_UNLOCKS: Record<UniformKind, UniformUnlock> = {",
+        "  home: { label: 'Home', hint: 'Team issue', unlockedByDefault: true },",
+        "  away: { label: 'Away', hint: 'Team issue', unlockedByDefault: true },",
+        "  city: { label: 'City Edition', hint: 'Team issue', unlockedByDefault: true },",
+        "  retro70: { label: \"'70s Throwback\", hint: 'Win 10 games with the team', unlockedByDefault: false },",
+        "  retro80: { label: \"'80s Throwback\", hint: 'Make the playoffs with the team', unlockedByDefault: false },",
+        "  retro90: { label: \"'90s Throwback\", hint: 'Win a title with the team', unlockedByDefault: false },",
+        "};",
+        "",
+        "/** The uniforms a team can wear right now, given the throwbacks the player has unlocked for it. */",
+        "export function availableUniforms(unlocked: Iterable<RetroKind> = []): UniformKind[] {",
+        "  const have = new Set<UniformKind>(unlocked);",
+        "  return UNIFORM_KINDS.filter((k) => UNIFORM_UNLOCKS[k].unlockedByDefault || have.has(k));",
+        "}",
         "",
         "export type TeamUniform = {",
-        "  /** 'Home', 'Away', or the city edition's name */",
+        "  /** 'Home', 'Away', the city edition's name, or \"'70s Throwback\" etc. */",
         "  name: string;",
         "  pattern: UniformPattern;",
         "  jersey: string;",
@@ -369,7 +499,7 @@ def write_sprite_preview(data):
         cell = Image.new("RGBA", (cw, ch), (226, 228, 236, 255))
         cell.alpha_composite(c, ((cw - c.width) // 2, ch - 4 - c.height))
         cells[i] = cell
-    cols = 15                                                         # five teams per row
+    cols = len(KINDS) * 3                                             # three teams per row
     sheet = Image.new("RGBA", (cw * cols, ch * ((len(cells) + cols - 1) // cols)), (255, 255, 255, 255))
     for i, c in enumerate(cells):
         sheet.alpha_composite(c, ((i % cols) * cw, (i // cols) * ch))
@@ -384,23 +514,26 @@ def main():
     cards = []
     for n, (tid, kinds) in enumerate(data.items()):
         for k in KINDS:
-            img = card(teams[tid], kinds[k], (n * 7 + 3) % 50 + 1)
+            img = card(teams[tid], kinds[k], (n * 7 + 3) % 50 + 1, ERAS[k][2] if k in ERAS else None)
             img.save(os.path.join(OUT, "png", "%s_%s.png" % (tid, k)), optimize=True)
             cards.append((tid, k, kinds[k]["name"], img))
     with open(os.path.join(OUT, "uniforms.json"), "w") as f:
         json.dump(data, f, indent=2)
     write_ts(data)
-    # preview: one row per team, home / away / city
-    cw, ch = 256, 160
-    sheet = Image.new("RGB", (cw * 3 + 70, ch * len(data)), (236, 236, 242))
-    d = ImageDraw.Draw(sheet)
-    for i, (tid, k, name, img) in enumerate(cards):
-        r, c = i // 3, i % 3
-        sheet.paste(img.resize((cw, ch), Image.NEAREST), (70 + c * cw, r * ch), img.resize((cw, ch), Image.NEAREST))
-        d.text((70 + c * cw + 4, r * ch + 2), "%s %s" % (k, "" if k != "city" else "- " + name), fill=(40, 40, 50))
-        if c == 0:
-            d.text((6, r * ch + ch // 2 - 6), tid, fill=(40, 40, 50))
-    sheet.save(os.path.join(g.PREVIEW_DIR, "uniforms.png"))
+    # previews: one row per team; home / away / city, and the throwbacks on their own sheet
+    for fname, ks in (("uniforms.png", BASE_KINDS), ("retro_uniforms.png", RETRO_KINDS)):
+        cw, ch = 256, 160
+        sheet = Image.new("RGB", (cw * len(ks) + 70, ch * len(data)), (236, 236, 242))
+        d = ImageDraw.Draw(sheet)
+        rows = [c for c in cards if c[1] in ks]
+        for i, (tid, k, name, img) in enumerate(rows):
+            r, c = i // len(ks), i % len(ks)
+            im = img.resize((cw, ch), Image.NEAREST)
+            sheet.paste(im, (70 + c * cw, r * ch), im)
+            d.text((70 + c * cw + 4, r * ch + 2), k if k in ("home", "away") else name, fill=(40, 40, 50))
+            if c == 0:
+                d.text((6, r * ch + ch // 2 - 6), tid, fill=(40, 40, 50))
+        sheet.save(os.path.join(g.PREVIEW_DIR, fname))
     write_sprite_preview(data)
     print("wrote", OUT, len(cards), "cards")
 

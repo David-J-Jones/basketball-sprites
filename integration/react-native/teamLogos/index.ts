@@ -72,3 +72,172 @@ export const TEAM_ICONS: Record<string, ImageSourcePropType> = {
   "MEM": require('./png/MEM_icon.png'),
   "TOR": require('./png/TOR_icon.png'),
 };
+
+/** Logo looks: the classic round badge plus three alternates. */
+export type LogoStyle = 'classic' | 'retro' | 'simple' | 'current';
+export const LOGO_STYLES: LogoStyle[] = ['classic', 'retro', 'simple', 'current'];
+export const LOGO_STYLE_LABELS: Record<LogoStyle, string> = {
+  classic: 'Classic badge',
+  retro: 'Retro roundel',
+  simple: 'Monogram',
+  current: 'Current shield',
+};
+
+/** Alternate logos (512 x 512), by team and style. */
+export const TEAM_LOGO_STYLES: Record<string, Record<Exclude<LogoStyle, 'classic'>, ImageSourcePropType>> = {
+  "PHX": {
+    retro: require('./png/PHX_retro.png'),
+    simple: require('./png/PHX_simple.png'),
+    current: require('./png/PHX_current.png'),
+  },
+  "SLC": {
+    retro: require('./png/SLC_retro.png'),
+    simple: require('./png/SLC_simple.png'),
+    current: require('./png/SLC_current.png'),
+  },
+  "CHI": {
+    retro: require('./png/CHI_retro.png'),
+    simple: require('./png/CHI_simple.png'),
+    current: require('./png/CHI_current.png'),
+  },
+  "CHA": {
+    retro: require('./png/CHA_retro.png'),
+    simple: require('./png/CHA_simple.png'),
+    current: require('./png/CHA_current.png'),
+  },
+  "NY": {
+    retro: require('./png/NY_retro.png'),
+    simple: require('./png/NY_simple.png'),
+    current: require('./png/NY_current.png'),
+  },
+  "GA": {
+    retro: require('./png/GA_retro.png'),
+    simple: require('./png/GA_simple.png'),
+    current: require('./png/GA_current.png'),
+  },
+  "BOS": {
+    retro: require('./png/BOS_retro.png'),
+    simple: require('./png/BOS_simple.png'),
+    current: require('./png/BOS_current.png'),
+  },
+  "ORL": {
+    retro: require('./png/ORL_retro.png'),
+    simple: require('./png/ORL_simple.png'),
+    current: require('./png/ORL_current.png'),
+  },
+  "MIA": {
+    retro: require('./png/MIA_retro.png'),
+    simple: require('./png/MIA_simple.png'),
+    current: require('./png/MIA_current.png'),
+  },
+  "NO": {
+    retro: require('./png/NO_retro.png'),
+    simple: require('./png/NO_simple.png'),
+    current: require('./png/NO_current.png'),
+  },
+  "PHI": {
+    retro: require('./png/PHI_retro.png'),
+    simple: require('./png/PHI_simple.png'),
+    current: require('./png/PHI_current.png'),
+  },
+  "BKN": {
+    retro: require('./png/BKN_retro.png'),
+    simple: require('./png/BKN_simple.png'),
+    current: require('./png/BKN_current.png'),
+  },
+  "HOU": {
+    retro: require('./png/HOU_retro.png'),
+    simple: require('./png/HOU_simple.png'),
+    current: require('./png/HOU_current.png'),
+  },
+  "DET": {
+    retro: require('./png/DET_retro.png'),
+    simple: require('./png/DET_simple.png'),
+    current: require('./png/DET_current.png'),
+  },
+  "IND": {
+    retro: require('./png/IND_retro.png'),
+    simple: require('./png/IND_simple.png'),
+    current: require('./png/IND_current.png'),
+  },
+  "SF": {
+    retro: require('./png/SF_retro.png'),
+    simple: require('./png/SF_simple.png'),
+    current: require('./png/SF_current.png'),
+  },
+  "LAC": {
+    retro: require('./png/LAC_retro.png'),
+    simple: require('./png/LAC_simple.png'),
+    current: require('./png/LAC_current.png'),
+  },
+  "LAB": {
+    retro: require('./png/LAB_retro.png'),
+    simple: require('./png/LAB_simple.png'),
+    current: require('./png/LAB_current.png'),
+  },
+  "DC": {
+    retro: require('./png/DC_retro.png'),
+    simple: require('./png/DC_simple.png'),
+    current: require('./png/DC_current.png'),
+  },
+  "DEN": {
+    retro: require('./png/DEN_retro.png'),
+    simple: require('./png/DEN_simple.png'),
+    current: require('./png/DEN_current.png'),
+  },
+  "DAL": {
+    retro: require('./png/DAL_retro.png'),
+    simple: require('./png/DAL_simple.png'),
+    current: require('./png/DAL_current.png'),
+  },
+  "SAC": {
+    retro: require('./png/SAC_retro.png'),
+    simple: require('./png/SAC_simple.png'),
+    current: require('./png/SAC_current.png'),
+  },
+  "MIL": {
+    retro: require('./png/MIL_retro.png'),
+    simple: require('./png/MIL_simple.png'),
+    current: require('./png/MIL_current.png'),
+  },
+  "POR": {
+    retro: require('./png/POR_retro.png'),
+    simple: require('./png/POR_simple.png'),
+    current: require('./png/POR_current.png'),
+  },
+  "OKC": {
+    retro: require('./png/OKC_retro.png'),
+    simple: require('./png/OKC_simple.png'),
+    current: require('./png/OKC_current.png'),
+  },
+  "SA": {
+    retro: require('./png/SA_retro.png'),
+    simple: require('./png/SA_simple.png'),
+    current: require('./png/SA_current.png'),
+  },
+  "MIN": {
+    retro: require('./png/MIN_retro.png'),
+    simple: require('./png/MIN_simple.png'),
+    current: require('./png/MIN_current.png'),
+  },
+  "CLE": {
+    retro: require('./png/CLE_retro.png'),
+    simple: require('./png/CLE_simple.png'),
+    current: require('./png/CLE_current.png'),
+  },
+  "MEM": {
+    retro: require('./png/MEM_retro.png'),
+    simple: require('./png/MEM_simple.png'),
+    current: require('./png/MEM_current.png'),
+  },
+  "TOR": {
+    retro: require('./png/TOR_retro.png'),
+    simple: require('./png/TOR_simple.png'),
+    current: require('./png/TOR_current.png'),
+  },
+};
+
+/** A team's logo in a style (classic = the round badge). */
+export function teamLogo(teamId: string, style: LogoStyle = 'classic'): ImageSourcePropType | undefined {
+  return style === 'classic' ? TEAM_LOGOS[teamId] : TEAM_LOGO_STYLES[teamId]?.[style];
+}

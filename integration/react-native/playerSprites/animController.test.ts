@@ -177,6 +177,17 @@ describe('PlayerAnimator walking, defense and idles', () => {
     expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble_far', hand: 'far' });
     a.play('between_legs_down');
     expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble', hand: 'near' });
+    for (const [move, hand] of [['crossover_wide_up', 'far'], ['crossover_double_down', 'near'],
+      ['crossover_hesi_up', 'far'], ['crossover_quick_down', 'near']] as const) {
+      a.play(move);
+      expect(run(a, 1.5, 0, true).pop()).toMatchObject({ hand });
+    }
+    const d = new PlayerAnimator('right');
+    run(d, 0.3, 0);
+    d.play('steal_success');
+    expect(run(d, 1.5, 10, true).pop()).toMatchObject({ anim: 'dribble_run', hand: 'near' });
+    a.play('inside_out');
+    expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble', hand: 'near' });
   });
 });
 

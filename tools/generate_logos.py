@@ -11,12 +11,13 @@ the team name.
 Outputs (integration/react-native/teamLogos/):
     png/<ID>.png        badge, 512 x 512 (8 px per art pixel)
     png/<ID>_icon.png   icon only, transparent, 384 x 384
-    svg/<ID>.svg        badge as crisp vector squares
+    png/<ID>_<style>.png  alternate logos (retro patch, simple mark, current shield), 512 x 512
+    svg/<ID>.svg        badge as crisp vector squares (svg/<ID>_<style>.svg for the alternates)
     teams.json          ids, names, colors
     index.ts            require() map for React Native
 It also writes the same 30 teams into playerSprites/palettes.json so the
 in-game jerseys match the logos. Team colors are defined here, in TEAMS.
-plus previews/logos.png.
+plus previews/logos.png and previews/logo_styles.png.
 
 Run:  python3 tools/generate_logos.py
 """
@@ -120,10 +121,12 @@ class Logo:
     """Parts are painted in order. Each part gets its own outline, so parts
     painted later are outlined against the ones below (retro cel look)."""
 
-    def __init__(self):
+    def __init__(self, flat_all=False):
         self.px = {}
+        self.flat_all = flat_all      # modern flat look: no 3-tone shading anywhere
 
     def part(self, pixels, color, shade=True, outline=True, flat=False):
+        flat = flat or self.flat_all
         pixels = set(pixels)
         if not pixels:
             return
@@ -161,11 +164,13 @@ class Logo:
 FONT = {
     "A": "010101111101101", "B": "110101110101110", "C": "011100100100011", "D": "110101101101110",
     "E": "111100110100111", "F": "111100110100100", "G": "011100101101011", "H": "101101111101101",
-    "I": "111010010010111", "J": "001001001101010", "K": "101101110101101", "L": "100100100100111",
+    "I": "111010010010111", "J": "001001001101010", "K": "101110100110101", "L": "100100100100111",
     "M": "101111111101101", "N": "110101101101101", "O": "010101101101010", "P": "110101110100100",
     "Q": "010101101110011", "R": "110101110101101", "S": "011100010001110", "T": "111010010010010",
     "U": "101101101101111", "V": "101101101101010", "W": "101101111111101", "X": "101101010101101",
     "Y": "101101010010010", "Z": "111001010100111", " ": "000000000000000", "'": "010010000000000",
+    ".": "000000000000010",
+    "!": "010010010000010",
 }
 
 
@@ -595,6 +600,512 @@ def icon_only(team):
     return L
 
 
+# ------------------------------------------------------------------ retro icons
+# The image each franchise used "back in the day": its retro logo prints one
+# of these instead of today's icon, the way real teams changed mascots.
+# Drawn in the same box as the main icons; the roundel reprints them in its
+# three faded inks, so the colors here only set light and dark.
+
+def top_half(cx, cy, rx, ry):
+    return {p for p in ellipse(cx, cy, rx, ry) if p[1] <= cy}
+
+
+def r_phx(L, t):        # the original Buns mascot: a grinning bun
+    L.part(top_half(32, 24, 15, 12), "#d98a3a")
+    L.part(rect(17, 25, 47, 27), "#7bc043", shade=False)
+    L.part(poly([(17, 29), (47, 29), (44, 36), (20, 36)]), "#d98a3a")
+    L.dots([(22, 16), (30, 13), (38, 15), (43, 20), (25, 21)], "#fff3d6")
+    L.paint(rect(27, 18, 28, 19) | rect(36, 18, 37, 19), OUTLINE)
+    L.paint(arc(32, 19, 4, 20, 160, 1), OUTLINE)
+
+
+def r_slc(L, t):        # a sloshing bucket
+    L.part(ellipse(24, 12, 2, 3) | ellipse(32, 9, 2, 3) | ellipse(40, 12, 2, 3), "#58b8f0")
+    L.part(arc(32, 22, 12, 200, 340, 1.5), "#8a8a92", shade=False)
+    L.part(poly([(19, 20), (45, 20), (41, 42), (23, 42)]), "#9aa4b0")
+    L.part(rect(18, 18, 46, 21), "#c0c6cf")
+    L.paint(rect(21, 19, 43, 20), "#58b8f0")
+    L.paint(rect(21, 30, 43, 31), "#6e7884")
+
+
+def r_chi(L, t):        # the old Cows mascot: a whole cow, side on
+    L.part(line((18, 23), (15, 31), 1), "#2a2a2a", shade=False)                  # tail
+    for x in (21, 25, 33, 37):
+        L.part(rect(x, 32, x + 2, 40), "#f4f4f0")
+        L.paint(rect(x, 39, x + 2, 40), "#2a2a2a")
+    L.part(ellipse(29, 27, 11, 7), "#f4f4f0")
+    L.paint(ellipse(25, 25, 3.5, 2.5) | ellipse(33, 29, 3, 2), "#2a2a2a")
+    L.part(ellipse(29, 34, 2.5, 1.8), "#f4a6b8")                                  # udder
+    L.part(poly([(39, 13), (41, 16), (40, 17)]) | poly([(46, 13), (44, 16), (45, 17)]), "#efe3c2")
+    L.part(ellipse(42, 21, 5, 5), "#f4f4f0")
+    L.part(ellipse(44, 24, 3.5, 2.5), "#f4a6b8")
+    L.dots([(41, 19), (41, 20)], OUTLINE)
+
+
+def r_cha(L, t):        # a straw beehive
+    for i, (y, rx) in enumerate(((14, 6), (19, 10), (24, 13), (29, 15), (34, 16), (39, 16))):
+        L.part(ellipse(32, y, rx, 3.2), "#e2a93a" if i % 2 else "#f2c12e")
+    L.part(ellipse(32, 37, 4, 3), "#3a2a1a", shade=False)
+    L.part(ellipse(47, 14, 2.5, 2), "#f2c12e")
+    L.paint({(46, 14), (48, 14)}, "#2a2a2a")
+
+
+def r_ny(L, t):         # the old Rats mascot: a rat face, front on
+    for cx in (20, 44):
+        L.part(ellipse(cx, 15, 7, 7), "#8a8a92")
+        L.paint(ellipse(cx, 15, 4, 4), "#e79aa6")
+    L.part(ellipse(32, 26, 12, 11), "#8a8a92")
+    L.part(ellipse(32, 32, 6, 5), "#b8b8c0")
+    L.part(ellipse(32, 29, 2, 1.5), "#e79aa6")
+    L.paint(rect(31, 36, 33, 39), "#ffffff")
+    L.paint(line((31, 36), (31, 39), 1), "#ffffff")
+    L.dots([(27, 23), (27, 24), (37, 23), (37, 24)], OUTLINE)
+    L.part(line((22, 31), (12, 29), 1) | line((22, 33), (12, 35), 1) | line((42, 31), (52, 29), 1)
+           | line((42, 33), (52, 35), 1), "#5a5a62", shade=False, outline=False)
+
+
+def r_ga(L, t):         # the old Peaches mascot: a smiling peach
+    L.part(line((32, 15), (33, 9), 1.5), "#6b4226", shade=False)
+    L.part(ellipse(39, 10, 6, 3), "#4e9a3a")
+    L.part(ellipse(32, 28, 14, 13), "#f59a6a")
+    L.paint(arc(28, 28, 12, -60, 60, 1), "#d8704a")                               # crease
+    L.paint(rect(26, 25, 27, 26) | rect(37, 25, 38, 26), OUTLINE)
+    L.paint(arc(32, 29, 5, 20, 160, 1), OUTLINE)
+    L.paint(ellipse(23, 30, 2, 1.5) | ellipse(41, 30, 2, 1.5), "#e86a6a")
+
+
+def r_bos(L, t):        # the original Deli mascot: a pickle
+    L.part(ellipse(32, 26, 8, 16), "#5a9a3a")
+    L.dots([(27, 16), (36, 20), (28, 33), (37, 36), (31, 40), (35, 12)], "#a8d878")
+    L.paint(rect(28, 22, 29, 23) | rect(35, 22, 36, 23), OUTLINE)
+    L.paint(arc(32, 25, 3, 20, 160, 1), OUTLINE)
+
+
+def r_orl(L, t):        # a tourist's camera
+    L.part(line((14, 24), (20, 12), 1.2) | line((50, 24), (44, 12), 1.2), "#2a2a2a", shade=False, outline=False)
+    L.part(rect(22, 15, 30, 19), "#3a3a40")
+    L.part(rect(15, 18, 49, 38), "#3a3a40")
+    L.part(ellipse(32, 28, 9, 9), "#9aa4b0")
+    L.part(ellipse(32, 28, 5, 5), "#1a1a20")
+    L.paint(rect(30, 25, 31, 26), "#ffffff")
+    L.part(rect(41, 21, 46, 24), "#ff5c8a")
+
+
+def r_mia(L, t):        # the old Breeze mascot: a cloud puffing out a breeze
+    L.part(ellipse(24, 26, 9, 8) | ellipse(33, 21, 10, 9) | ellipse(39, 29, 7, 6) | rect(17, 29, 42, 34),
+           "#f4f4f0")
+    L.dots([(27, 22), (27, 23), (35, 22), (35, 23)], OUTLINE)
+    L.part(ellipse(40, 27, 2.5, 2.5), "#ff8c5a")                                  # puckered lips
+    for y, x1 in ((22, 54), (27, 58), (32, 54)):
+        L.part(line((45, y), (x1, y), 1.4), "#6ec6f0", shade=False, outline=False)
+
+
+def r_no(L, t):         # the old Voodoo mascot: a grinning skull in a top hat
+    L.part(ellipse(32, 30, 11, 10), "#f4f1ea")
+    L.part(rect(26, 36, 38, 42), "#f4f1ea")
+    L.paint(ellipse(27, 30, 3, 3) | ellipse(37, 30, 3, 3), "#2a1a2e")
+    L.paint(poly([(31, 34), (33, 34), (32, 36)]), "#2a1a2e")
+    for x in (28, 31, 34, 37):
+        L.paint(rect(x, 38, x, 41), "#2a1a2e")
+    L.part(ellipse(32, 20, 15, 2.5), "#1a1a1a")
+    L.part(rect(24, 6, 40, 19), "#1a1a1a")
+    L.paint(rect(24, 15, 40, 17), "#7bc043")
+
+
+def r_phi(L, t):        # a big heart
+    L.part(ellipse(24, 21, 9, 9) | ellipse(40, 21, 9, 9) | poly([(15, 23), (49, 23), (32, 42)]), "#d0342c")
+    L.paint(ellipse(22, 18, 3, 2.5), "#ff9a9a")
+
+
+def r_bkn(L, t):        # the old Mice mascot: a mouse peeking out of its hole
+    L.part(rect(12, 12, 52, 42), "#c9a26a", shade=False)
+    L.paint(rect(12, 41, 52, 42), "#8a6a3a")
+    for y in (18, 25, 32):
+        L.paint(rect(12, y, 52, y), "#a8844e")
+    L.part({p for p in ellipse(32, 42, 13, 17) if p[1] <= 41}, "#2a1a14", shade=False)
+    for cx in (25, 39):
+        L.part(ellipse(cx, 27, 5, 5), "#e0e0e8")
+        L.paint(ellipse(cx, 27, 2.5, 2.5), "#f4a6b8")
+    L.part(ellipse(32, 34, 7, 6), "#e0e0e8")
+    L.part(ellipse(32, 38, 1.5, 1.2), "#f4a6b8")
+    L.dots([(29, 33), (35, 33)], "#ffffff")
+
+
+def r_hou(L, t):        # the old Pockets look: a pocket with a handkerchief
+    L.part(poly([(30, 6), (40, 11), (44, 20), (22, 20), (24, 11)]), "#e8a33a")
+    L.paint(line((32, 8), (34, 19), 1) | line((26, 13), (40, 13), 1), "#f4f1ea")
+    pocket = poly([(16, 18), (48, 18), (48, 36), (32, 43), (16, 36)])
+    L.part(pocket, "#3b5b8c")
+    L.paint({p for p in pocket if p[1] in (21, 22)}, "#2c4870")
+    L.paint({(x, y) for (x, y) in pocket if (x in (18, 46) or y == 20) and (x + y) % 2 == 0}, "#e8a33a")
+
+
+def r_det(L, t):        # the old Junkers mascot: a rattly jalopy, head on
+    L.part(rect(17, 37, 22, 43) | rect(42, 37, 47, 43), "#2a2a2e")                # tyres
+    L.part(poly([(22, 12), (42, 12), (46, 22), (18, 22)]), "#9c4a1e")             # cab
+    L.paint(poly([(24, 14), (40, 14), (43, 21), (21, 21)]), "#9fd8ff")
+    L.paint(line((27, 15), (34, 20), 1), "#ffffff")                               # cracked windshield
+    L.part(rect(14, 22, 50, 37), "#9c4a1e")
+    L.part(rect(25, 25, 39, 34), "#b8bcc4")                                       # grille
+    for x in (28, 31, 34, 37):
+        L.paint(rect(x, 26, x, 33), "#6a6a72")
+    L.part(ellipse(19, 29, 3.5, 3.5), "#fff3a0")
+    L.part(ellipse(45, 29, 3.5, 3.5), "#4a4a52")                                  # the dead headlight
+    L.part(rect(13, 37, 51, 39), "#b8bcc4")
+
+
+def r_ind(L, t):        # a popcorn box
+    for x, y in ((22, 15), (28, 12), (34, 12), (40, 14), (25, 19), (32, 17), (39, 19), (45, 18), (19, 19)):
+        L.part(ellipse(x, y, 3.5, 3), "#fff3c0")
+    box = poly([(18, 20), (46, 20), (42, 43), (22, 43)])
+    L.part(box, "#f4f4f0")
+    for x in (22, 30, 38):
+        L.paint({p for p in box if x <= p[0] - (p[1] - 20) * 0.0 <= x + 3}, "#d0342c")
+
+
+def r_sf(L, t):         # cherries
+    L.part(line((26, 32), (34, 13), 1.2) | line((40, 32), (34, 13), 1.2), "#4e7a2a", shade=False)
+    L.part(ellipse(39, 13, 6, 3), "#6db33f")
+    L.part(ellipse(25, 35, 7, 7) | ellipse(40, 35, 7, 7), "#c8203a")
+    L.paint(ellipse(23, 33, 1.5, 1.5) | ellipse(38, 33, 1.5, 1.5), "#ffb0b0")
+
+
+def r_lac(L, t):        # the old Cars mascot: a vintage roadster
+    L.part(poly([(10, 34), (14, 25), (26, 24), (31, 18), (37, 18), (40, 24), (52, 26), (54, 34)]), "#d22630")
+    L.part(line((31, 17), (35, 11), 1.5), "#9fd8ff", shade=False)                # windshield
+    L.paint(line((14, 29), (52, 30), 1), "#f4f1ea")                               # racing stripe
+    for cx in (20, 45):
+        L.part(ellipse(cx, 35, 6, 6), "#2a2a2e")
+        L.part(ellipse(cx, 35, 2.5, 2.5), "#c0c6cf")
+
+
+def r_lab(L, t):        # the old arch bridge
+    L.part(rect(10, 34, 54, 41), "#5aa0e0", shade=False)
+    L.paint(line((12, 38), (20, 38), 1) | line((28, 39), (38, 39), 1) | line((44, 37), (52, 37), 1), "#ffffff")
+    L.part(arc(32, 34, 19, 180, 360, 4), "#c9c3b5", shade=False)
+    for x in (20, 26, 32, 38, 44):
+        L.part(rect(x, 34 - int(math.sqrt(max(0, 17 ** 2 - (x - 32) ** 2))), x, 31), "#8a8478", shade=False,
+               outline=False)
+    L.part(rect(10, 29, 54, 32), "#8a8478")
+
+
+def r_dc(L, t):         # scales of justice
+    L.part(rect(22, 40, 42, 43), "#c9a227")
+    L.part(rect(31, 12, 33, 40), "#c9a227")
+    L.part(line((15, 15), (49, 15), 2), "#c9a227", shade=False)
+    L.part(ellipse(32, 11, 2.5, 2.5), "#c9a227")
+    for cx in (18, 46):
+        L.part(line((cx, 15), (cx - 6, 29), 1) | line((cx, 15), (cx + 6, 29), 1), "#8a7020", shade=False,
+               outline=False)
+        L.part({p for p in ellipse(cx, 29, 8, 5) if p[1] >= 29}, "#e8c84a")
+
+
+def r_den(L, t):        # a mine cart of gold
+    for x, y in ((24, 20), (31, 18), (38, 20), (28, 15), (35, 15)):
+        L.part(ellipse(x, y, 4, 3), "#f2c230")
+    L.part(poly([(15, 22), (49, 22), (45, 37), (19, 37)]), "#6a6a72")
+    L.paint(rect(17, 27, 47, 28), "#4a4a52")
+    L.part(ellipse(24, 39, 3.5, 3.5) | ellipse(40, 39, 3.5, 3.5), "#2b2b2b")
+
+
+def r_dal(L, t):        # the participation trophy
+    L.part(rect(22, 39, 42, 43), "#6a5a3a")
+    L.part(rect(29, 31, 35, 39), "#c0a040")
+    L.part(arc(19, 18, 5, 90, 270, 1.5) | arc(45, 18, 5, -90, 90, 1.5), "#c0a040", shade=False)
+    L.part(poly([(20, 10), (44, 10), (41, 26), (35, 31), (29, 31), (23, 26)]), "#e0c050")
+    L.paint(rect(27, 15, 37, 18), "#c0c6cf")
+
+
+def r_sac(L, t):        # a paw print
+    L.part(ellipse(32, 33, 10, 8), "#6b4226")
+    for x, y in ((20, 22), (27, 15), (37, 15), (44, 22)):
+        L.part(ellipse(x, y, 4, 4.5), "#6b4226")
+
+
+def r_mil(L, t):        # a pinecone
+    L.part(poly([(30, 6), (34, 6), (36, 12), (28, 12)]), "#3f7d2b")
+    cone = ellipse(32, 27, 10, 15)
+    L.part(cone, "#8a5a2a")
+    L.paint({(x, y) for (x, y) in cone if (x + y) % 6 == 0 or (x - y) % 6 == 0}, "#2a1808")
+
+
+def r_por(L, t):        # the old Tents mascot: a striped pup tent
+    L.part(line((32, 11), (32, 4), 1), "#3a2e1e", shade=False)
+    L.part(poly([(32, 4), (39, 6), (32, 8)]), "#b8322b", shade=False)
+    tent = poly([(32, 10), (52, 41), (12, 41)])
+    L.part(tent, "#e8742a")
+    L.paint({(x, y) for (x, y) in tent if (y // 5) % 2 == 0}, "#f4f1ea")
+    L.part(poly([(32, 22), (39, 41), (25, 41)]), "#3a2414", shade=False)
+    L.part(line((8, 43), (56, 43), 1.5), "#6b8e3a", shade=False)
+
+
+def r_okc(L, t):        # a ten-gallon hat
+    L.part(ellipse(32, 33, 19, 5), "#c9a26a")
+    L.part(poly([(21, 32), (23, 14), (32, 18), (41, 14), (43, 32)]), "#c9a26a")
+    L.part(rect(22, 26, 42, 29), "#d32f2f")
+
+
+def r_sa(L, t):         # a bowl of soup and its spoon
+    L.part(line((38, 26), (50, 8), 2), "#c0c6cf", shade=False)
+    L.part(ellipse(50, 8, 2.5, 3), "#c0c6cf")
+    L.part({p for p in ellipse(32, 28, 17, 13) if p[1] >= 28}, "#1b9aaa")
+    L.part(ellipse(32, 28, 17, 4), "#e8a050")
+    L.dots([(26, 28), (33, 27), (38, 29)], "#7bc043")
+
+
+def r_min(L, t):        # the old Water mascot: a curling wave
+    L.part(rect(10, 35, 54, 42), "#2a6fdb", shade=False)
+    crest = {p for p in ellipse(30, 34, 19, 22) if p[1] <= 35} - ellipse(37, 30, 8, 9)
+    crest = {p for p in crest if not (p[0] > 37 and p[1] > 24)}
+    L.part(crest, "#2a6fdb")
+    L.paint({p for p in crest if p not in ellipse(30, 34, 17, 20)}, "#bde3f5")      # foam along the lip
+    L.part(ellipse(42, 21, 2.2, 2.2) | ellipse(46, 24, 1.6, 1.6), "#bde3f5")      # spray off the curl
+    L.paint(line((14, 39), (24, 39), 1) | line((34, 40), (48, 40), 1), "#bde3f5")
+
+
+def r_cle(L, t):        # a frying pan of pierogies
+    L.part(line((40, 26), (54, 16), 3.5), "#3a2a20")
+    L.part(ellipse(28, 30, 15, 9), "#3a3a40")
+    for x, y in ((22, 29), (31, 27), (28, 33)):
+        L.part(top_half(x, y + 2, 5.5, 4), "#f2ddb0")
+
+
+def r_mem(L, t):        # the old Ribs mascot: a big cartoon rib
+    for cx in (12, 52):
+        L.part(ellipse(cx, 22, 4, 4) | ellipse(cx, 31, 4, 4), "#f4f1ea")
+    L.part(rect(11, 24, 53, 29), "#f4f1ea")
+    L.part(ellipse(32, 26, 15, 10), "#8b2e16")
+    for x in (24, 30, 36, 42):
+        L.paint(line((x, 19), (x - 4, 33), 1), "#4a1408")                        # grill marks
+    L.paint(ellipse(27, 21, 3, 1.5), "#c0603a")
+
+
+def r_tor(L, t):        # just a polite little word
+    L.part(ellipse(32, 23, 18, 11) | poly([(22, 30), (30, 32), (18, 40)]), "#f5f5f5")
+    txt = text_pixels("SORRY", 32 - (text_width("SORRY") + 1) // 2, 21)
+    L.paint(txt, "#d52b1e")
+
+
+# a print ink that has to be a set color, whatever the team colors are
+RETRO_INK = {"SF": "#d0203a"}   # cherries are red
+
+RETRO_ICONS = {
+    "PHX": r_phx, "SLC": r_slc, "CHI": r_chi, "CHA": r_cha, "NY": r_ny, "GA": r_ga, "BOS": r_bos, "ORL": r_orl,
+    "MIA": r_mia, "NO": r_no, "PHI": r_phi, "BKN": r_bkn, "HOU": r_hou, "DET": r_det, "IND": r_ind, "SF": r_sf,
+    "LAC": r_lac, "LAB": r_lab, "DC": r_dc, "DEN": r_den, "DAL": r_dal, "SAC": r_sac, "MIL": r_mil, "POR": r_por,
+    "OKC": r_okc, "SA": r_sa, "MIN": r_min, "CLE": r_cle, "MEM": r_mem, "TOR": r_tor,
+}
+
+
+# ------------------------------------------------------------------ alternate logos
+# Three more marks per team, built around the same icon, for menus, a
+# locker / store screen, or as unlockable cosmetics:
+#   retro    a vintage screen-print roundel around the team's old-era image
+#            (RETRO_ICONS), in three faded inks, with arched lettering
+#   simple   a monogram: the team's initial as a chunky letter on a plain disc
+#   current  a modern shield holding the full icon, with a name bar under it
+LOGO_STYLES = ("retro", "simple", "current")
+
+
+def fade(c, k=0.35):
+    """Vintage color: toward a warm brown-cream, so it reads as old felt."""
+    return mix(mix(c, "#c8a878", k), "#3a2a20", 0.08)
+
+
+SHORT_CITY = {"Philadelphia": "Philly", "New Orleans": "Nola", "San Francisco": "San Fran",
+              "Los Angeles": "L.A.", "San Antonio": "S.A."}
+
+
+def fits(text, width):
+    return text_width(text) <= width
+
+
+def lum(c):
+    r, g, b = rgb(c)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+
+def darken_until(c, max_lum, toward="#2a1a14"):
+    """The same hue, darkened just enough to sit below max_lum (for contrast with cream)."""
+    t = 0.0
+    out = c
+    while lum(out) > max_lum and t < 0.9:
+        t += 0.05
+        out = mix(c, toward, t)
+    return out
+
+
+def icon_layer(team, flat=False):
+    L = Logo(flat_all=flat)
+    team[5](L, team)
+    return L.px
+
+
+def arc_text(text, cx, cy, r, center_deg, top=True):
+    """Upright pixel letters laid along a circle: across the top (left to right)
+    or along the bottom (also left to right). Returns the set of pixels."""
+    out = set()
+    widths = [len(glyph(ch)[0]) for ch in text]
+    gap = 2                                                # upright letters on a curve need air between them
+    total = sum(widths) + gap * (len(text) - 1)
+    step = 1.0 / r                                        # radians per pixel of text
+    pos = -total / 2
+    for ch, w in zip(text, widths):
+        mid = pos + w / 2
+        ang = math.radians(center_deg) + (mid * step if top else -mid * step)
+        gx = cx + r * math.cos(ang) - w / 2
+        gy = cy + r * math.sin(ang) - 2.5
+        for (x, y) in text_pixels(ch, 0, 0):
+            out.add((int(round(gx + x)), int(round(gy + y))))
+        pos += w + gap
+    return out
+
+
+def retro_roundel(team):
+    """Vintage screen print: three faded inks, city arched over the top, the
+    name arched under the bottom, stars at the sides, the icon reprinted in
+    the same three inks."""
+    tid, city, name, jersey, trim, icon = team
+    team = team[:5] + (RETRO_ICONS.get(tid, icon),)     # the old-era image, not today's icon
+    paper = "#efe2c0"
+    dark = fade(mix(jersey, "#2a1a14", 0.5), 0.2)
+    band = darken_until(fade(jersey, 0.3), 0.5)
+    if abs(lum(band) - lum(dark)) < 0.1:
+        band = darken_until(fade(trim, 0.3), 0.5)
+    # print the icon in whichever team color is closest to the icon's own main color,
+    # so a peach stays peach-colored and a leaf stays red
+    px = icon_layer(team, flat=True)
+    counts = {}
+    for c in px.values():
+        if c != OUTLINE:
+            counts[c] = counts.get(c, 0) + 1
+    main = max(counts, key=counts.get) if counts else jersey
+    dist = lambda a, b: sum((x - y) ** 2 for x, y in zip(rgb(a), rgb(b)))            # noqa: E731
+    mid = darken_until(fade(RETRO_INK.get(tid) or min((jersey, trim), key=lambda c: dist(c, main)), 0.3), 0.55)
+    if lum(mid) - lum(dark) < 0.18:                        # keep the print ink clear of the dark ink
+        dark = darken_until(dark, max(0.05, lum(mid) - 0.2), toward="#120a08")
+    L = Logo(flat_all=True)
+    cx, cy = 32, 32
+    L.part(ellipse(cx, cy, 31, 31), dark, outline=False)
+    L.paint(ellipse(cx, cy, 30, 30), band)
+    L.paint(ellipse(cx, cy, 21.5, 21.5), dark)
+    inner = ellipse(cx, cy, 20.5, 20.5)
+    L.paint(inner, paper)
+    # the icon, reprinted in three inks, centred in the disc and kept inside it
+    xs = [x for x, _ in px]
+    ys = [y for _, y in px]
+    dx = cx - (min(xs) + max(xs) + 1) // 2
+    dy = cy - (min(ys) + max(ys) + 1) // 2 + 1
+    # split the icon's own colors at their median brightness, so every icon keeps
+    # its shape in two inks however light or dark the original is
+    fills = sorted(lum(c) for c in px.values() if c != OUTLINE)
+    median = fills[len(fills) // 2] if fills else 0.5
+    ink = mid
+    white = lum(main) > 0.8                                # a white cow / cloud stays paper; its details take the ink
+    for (x, y), c in px.items():
+        q = (x + dx, y + dy)
+        if q not in inner:
+            continue
+        v = lum(c)
+        L.px[q] = dark if (c == OUTLINE or v < 0.16 or v < median * 0.6) else ink if (v < median or (v == median and not white)) else paper
+    # lettering in the band
+    top_text = city.upper()
+    if len(top_text) > 10:
+        top_text = SHORT_CITY.get(city, tid).upper()
+    bottom = name.upper()
+    if len(bottom) > 11:
+        bottom = bottom.split()[-1]
+    L.paint(arc_text(top_text, cx, cy, 25.5, -90, top=True), paper)
+    L.paint(arc_text(bottom, cx, cy, 26.5, 90, top=False), paper)
+    for sx in (cx - 26, cx + 25):                          # stars at 9 and 3 o'clock
+        L.paint({(sx, cy - 1), (sx, cy), (sx, cy + 1), (sx - 1, cy), (sx + 1, cy)}, paper)
+    return L
+
+
+# chunky 5 x 7 capitals for the monogram
+BIG = {
+    "B": ["11110", "11011", "11011", "11110", "11011", "11011", "11110"],
+    "C": ["01111", "11000", "11000", "11000", "11000", "11000", "01111"],
+    "D": ["11110", "11011", "11011", "11011", "11011", "11011", "11110"],
+    "F": ["11111", "11000", "11000", "11110", "11000", "11000", "11000"],
+    "J": ["00011", "00011", "00011", "00011", "11011", "11011", "01110"],
+    "L": ["11000", "11000", "11000", "11000", "11000", "11000", "11111"],
+    "M": ["1100011", "1110111", "1111111", "1101011", "1100011", "1100011", "1100011"],
+    "N": ["110011", "111011", "111011", "110111", "110111", "110011", "110011"],
+    "P": ["11110", "11011", "11011", "11110", "11000", "11000", "11000"],
+    "R": ["11110", "11011", "11011", "11110", "11011", "11011", "11011"],
+    "S": ["01111", "11000", "11000", "01110", "00011", "00011", "11110"],
+    "T": ["11111", "11111", "00100", "00100", "00100", "00100", "00100"],
+    "V": ["11011", "11011", "11011", "11011", "11011", "01110", "00100"],
+    "W": ["1100011", "1100011", "1100011", "1101011", "1111111", "1110111", "1100011"],
+}
+
+
+def monogram(team):
+    """Simple secondary mark: the team's initial as a chunky letter on a plain disc."""
+    tid, city, name, jersey, trim, icon = team
+    L = Logo(flat_all=True)
+    cx, cy = 32, 32
+    light = lum(jersey) > 0.7
+    disc = mix(trim, "#101018", 0.15) if light else jersey
+    letter = jersey if light else trim
+    if lum(letter) < 0.2 and lum(disc) > 0.3:
+        letter = CREAM                                     # a near-black letter goes muddy on a mid disc
+    if abs(lum(letter) - lum(disc)) < 0.25:
+        letter = CREAM if lum(disc) < 0.55 else OUTLINE
+    L.part(ellipse(cx, cy, 30, 30), letter, outline=True)
+    L.paint(ellipse(cx, cy, 28, 28), disc)
+    L.paint(ellipse(cx, cy, 28, 28) - ellipse(cx, cy, 26.5, 26.5), mix(disc, "#101018", 0.35))
+    rows = BIG[name[0].upper()]
+    k = 5 if len(rows[0]) <= 5 else 4                      # 5 x 7 cells of 5 px; wide letters use 4 px
+    w, h = len(rows[0]) * k, len(rows) * k
+    x0, y0 = cx - w // 2, cy - h // 2
+    pts = {(x0 + c * k + i, y0 + r * k + j) for r, row in enumerate(rows) for c, b in enumerate(row) if b == "1"
+           for i in range(k) for j in range(k)}
+    shadow = mix(disc, "#101018", 0.55)
+    L.paint({(x + 2, y + 2) for x, y in pts}, shadow)              # drop shadow
+    ring = {(x + dx, y + dy) for x, y in pts for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))} - pts
+    L.paint(ring, OUTLINE)
+    L.paint(pts, letter)
+    L.paint({(x, y) for x, y in pts if (x - 1, y) not in pts or (x, y - 1) not in pts}, mix(letter, "#ffffff", 0.35))
+    return L
+
+
+def current_shield(team):
+    """Modern shield: two-tone with a diagonal split, the full icon inside it,
+    and a bold name bar hung under the point."""
+    tid, city, name, jersey, trim, icon = team
+    L = Logo(flat_all=True)
+    dark = mix(jersey, "#101018", 0.45)
+    outer = poly([(5, 1), (59, 1), (61, 6), (61, 36), (32, 56), (3, 36), (3, 6)])
+    inner = poly([(8, 4), (56, 4), (58, 8), (58, 35), (32, 52), (6, 35), (6, 8)])
+    L.part(outer, trim)
+    L.paint(inner, jersey)
+    L.paint({(x, y) for (x, y) in inner if x - y * 0.7 > 22}, dark)          # diagonal split
+    px = icon_layer(team, flat=True)
+    xs = [x for x, _ in px]
+    ys = [y for _, y in px]
+    dx = 32 - (min(xs) + max(xs) + 1) // 2
+    dy = 25 - (min(ys) + max(ys) + 1) // 2
+    for (x, y), c in px.items():
+        q = (x + dx, y + dy)
+        if q in inner:
+            L.px[q] = c
+        elif q in outer:
+            L.px[q] = OUTLINE
+    text = name.upper()
+    w = text_width(text)
+    bar = rect(32 - w // 2 - 4, 53, 32 + (w + 1) // 2 + 3, 62)
+    L.part(bar, trim)
+    L.paint(rect(32 - w // 2 - 3, 54, 32 + (w + 1) // 2 + 2, 54), mix(trim, "#ffffff", 0.35))
+    ink = OUTLINE if lum(trim) > 0.6 else CREAM
+    L.paint(text_pixels(text, 32 - (w + 1) // 2, 56), ink)
+    return L
+
+
+STYLE_FNS = {"retro": retro_roundel, "simple": monogram, "current": current_shield}
+
+
 # ------------------------------------------------------------------ output
 def to_image(px, size=N, crop=None):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -630,11 +1141,12 @@ def to_svg(px, tid):
 
 
 def main():
-    shutil.rmtree(OUT, ignore_errors=True)
-    for sub in ("png", "svg"):
+    for sub in ("png", "svg"):                          # only the generated art: keeps logos.test.ts
+        shutil.rmtree(os.path.join(OUT, sub), ignore_errors=True)
         os.makedirs(os.path.join(OUT, sub))
     meta = []
     tiles = []
+    style_tiles = []
     for team in TEAMS:
         tid, city, name, jersey, trim, _ = team
         b = badge(team)
@@ -644,6 +1156,16 @@ def main():
         icon.resize((48 * SCALE, 48 * SCALE), Image.NEAREST).save(os.path.join(OUT, "png", tid + "_icon.png"), optimize=True)
         with open(os.path.join(OUT, "svg", tid + ".svg"), "w") as f:
             f.write(to_svg(b.px, tid))
+        styles = []
+        for st in LOGO_STYLES:
+            lg_ = STYLE_FNS[st](team)
+            im = to_image(lg_.px)
+            im.resize((N * SCALE, N * SCALE), Image.NEAREST).save(
+                os.path.join(OUT, "png", "%s_%s.png" % (tid, st)), optimize=True)
+            with open(os.path.join(OUT, "svg", "%s_%s.svg" % (tid, st)), "w") as f:
+                f.write(to_svg(lg_.px, "%s-%s" % (tid, st)))
+            styles.append(im)
+        style_tiles.append((tid, [img] + styles))
         meta.append({"id": tid, "city": city, "name": name, "fullName": "%s %s" % (city, name),
                      "jersey": jersey, "trim": trim})
         tiles.append((tid, city, name, img))
@@ -668,7 +1190,27 @@ def main():
     lines += ["};", "", "/** Icon only, transparent (384 x 384). */",
               "export const TEAM_ICONS: Record<string, ImageSourcePropType> = {"]
     lines += ["  %s: require('./png/%s_icon.png')," % (json.dumps(t[0]), t[0]) for t in TEAMS]
-    lines += ["};", ""]
+    lines += ["};", "",
+              "/** Logo looks: the classic round badge plus three alternates. */",
+              "export type LogoStyle = 'classic' | %s;" % " | ".join("'%s'" % st for st in LOGO_STYLES),
+              "export const LOGO_STYLES: LogoStyle[] = ['classic', %s];" % ", ".join("'%s'" % st for st in LOGO_STYLES),
+              "export const LOGO_STYLE_LABELS: Record<LogoStyle, string> = {",
+              "  classic: 'Classic badge',",
+              "  retro: 'Retro roundel',",
+              "  simple: 'Monogram',",
+              "  current: 'Current shield',",
+              "};", "",
+              "/** Alternate logos (512 x 512), by team and style. */",
+              "export const TEAM_LOGO_STYLES: Record<string, Record<Exclude<LogoStyle, 'classic'>, ImageSourcePropType>> = {"]
+    for t in TEAMS:
+        lines.append("  %s: {" % json.dumps(t[0]))
+        lines += ["    %s: require('./png/%s_%s.png')," % (st, t[0], st) for st in LOGO_STYLES]
+        lines.append("  },")
+    lines += ["};", "",
+              "/** A team's logo in a style (classic = the round badge). */",
+              "export function teamLogo(teamId: string, style: LogoStyle = 'classic'): ImageSourcePropType | undefined {",
+              "  return style === 'classic' ? TEAM_LOGOS[teamId] : TEAM_LOGO_STYLES[teamId]?.[style];",
+              "}", ""]
     with open(os.path.join(OUT, "index.ts"), "w") as f:
         f.write("\n".join(lines))
 
@@ -683,6 +1225,18 @@ def main():
         d.text((x + (cell - d.textlength(label)) / 2, y + cell + 6), label, fill=(255, 255, 255, 255))
     os.makedirs(os.path.dirname(PREVIEW), exist_ok=True)
     sheet.save(PREVIEW)
+    # alternate styles: one row per team: classic, retro, simple, current (two teams per row)
+    cell = 64 * 2
+    per = 1 + len(LOGO_STYLES)
+    rows = (len(style_tiles) + 1) // 2
+    sheet = Image.new("RGBA", (2 * (per * cell + 60), rows * (cell + 8)), (236, 236, 242, 255))
+    d = ImageDraw.Draw(sheet)
+    for i, (tid, imgs) in enumerate(style_tiles):
+        x0, y0 = (i % 2) * (per * cell + 60), (i // 2) * (cell + 8)
+        d.text((x0 + 8, y0 + cell // 2 - 6), tid, fill=(40, 40, 50, 255))
+        for k, im in enumerate(imgs):
+            sheet.alpha_composite(im.resize((cell, cell), Image.NEAREST), (x0 + 50 + k * cell, y0 + 4))
+    sheet.save(os.path.join(ROOT, "previews", "logo_styles.png"))
     print("wrote %d logos" % len(TEAMS))
 
 
