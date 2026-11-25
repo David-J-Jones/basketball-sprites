@@ -216,16 +216,21 @@ def stop_script(t, L):
     if t < 2.3 + 5 / 14: return ('PLAY:run_stop', ramp(t, 2.3, 2.6, 8, 0), 0, -1)
     return ('idle', 0, 0, -1)
 
-lanes = [Lane('1  RUN', run_script, with_shorts(look1, s1), c1, ghosts=False),
-         Lane('2  SPRINT', sprint_script, with_shorts(look2, s2), c2),
-         Lane('3  DRIBBLE DRIVE + KILLER CROSS', drive_script, with_shorts(look3, s3), c3),
-         Lane('4  PLANT, TURN, STOP', stop_script, with_shorts(look4, s4), c4)]
-frames = []
-for k in range(int(SECONDS / DT)):
-    sheet = Image.new('RGB', (W, LANE * len(lanes)), (0, 0, 0))
-    for i, L in enumerate(lanes):
-        sheet.paste(L.render(*L.step()), (0, i * LANE))
-    frames.append(sheet)
-out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'previews', 'movement_showcase.gif')
-frames[0].save(out, save_all=True, append_images=frames[1:], duration=int(DT * 1000), loop=0, optimize=True)
-print(len(frames), os.path.getsize(out) // 1024, 'KB')
+def main():
+    lanes = [Lane('1  RUN', run_script, with_shorts(look1, s1), c1, ghosts=False),
+             Lane('2  SPRINT', sprint_script, with_shorts(look2, s2), c2),
+             Lane('3  DRIBBLE DRIVE + KILLER CROSS', drive_script, with_shorts(look3, s3), c3),
+             Lane('4  PLANT, TURN, STOP', stop_script, with_shorts(look4, s4), c4)]
+    frames = []
+    for k in range(int(SECONDS / DT)):
+        sheet = Image.new('RGB', (W, LANE * len(lanes)), (0, 0, 0))
+        for i, L in enumerate(lanes):
+            sheet.paste(L.render(*L.step()), (0, i * LANE))
+        frames.append(sheet)
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'previews', 'movement_showcase.gif')
+    frames[0].save(out, save_all=True, append_images=frames[1:], duration=int(DT * 1000), loop=0, optimize=True)
+    print(len(frames), os.path.getsize(out) // 1024, 'KB')
+
+
+if __name__ == '__main__':
+    main()

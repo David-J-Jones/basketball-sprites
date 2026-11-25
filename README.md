@@ -267,6 +267,8 @@ Every style keeps its classic version's frame count and event frames, so sim tim
 
 ### Crossover variety
 
+![crossover showcase](previews/crossover_showcase.gif)
+
 Every crossover goes near hand → far hand as `_up` and back as `_down`, like the classic one, so `handAfter()` and the animator's hand tracking work for all of them. They differ in look and timing, so a sim can pick by situation as well as by player:
 
 | Move | Frames / fps | Events | What it looks like |
@@ -328,6 +330,7 @@ const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
 - **Success effects:** `fx.success('steal' | 'block', x, y, flip, scale, at?)`. `at` is the ball's screen position (it defaults to where the hand would be). Turn either part off with `enabled: { text_block: false }` etc.
 - **By hand:** `fx.spawn('dust_skid', x, y, flip, scale)` for anything else (a charge, a dive for a loose ball). `fx.clear()` on a dead ball.
 - **Showcase:** `python3 tools/preview_movement.py` redraws `previews/movement_showcase.gif` from the built atlas: a run, a sprint, a dribble drive into a killer crossover, and a plant / turn / stop.
+- **Move showcases:** `python3 tools/preview_moves.py` redraws `previews/crossover_showcase.gif` (all eight hand-switch and fake moves against a defender who bites the wrong way) and `previews/drive_showcase.gif` (hesitation, killer cross, a tomahawk over a late help defender, the landing puff).
 - **Art:** `tools/generate_move_fx.py` draws them (one `fx_<name>` function per effect) and rewrites `moveFx/` and `previews/move_fx.png` / `previews/move_fx/*.gif`.
 
 ## Park mode: outfits, celebrations, ball trails
