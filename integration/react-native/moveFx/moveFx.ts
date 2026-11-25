@@ -13,7 +13,7 @@ import meta from './moveFx.json';
 import raw from '../playerSprites/spriteData.json';
 import type { AnimName, SpriteData } from '../playerSprites/types';
 
-export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines'
+export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines' | 'cross_swoosh'
   | 'impact_star' | 'swat_burst' | 'text_steal' | 'text_block';
 
 /** Plays that get a success effect: a flash where it happened and a pop-up above the player. */
@@ -87,7 +87,7 @@ export const DEFAULT_MOVE_FX_OPTIONS: MoveFxOptions = {
   speedLinesOn: 17,
   speedLinesOff: 14,
   enabled: {
-    dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true,
+    dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true, cross_swoosh: true,
     impact_star: true, swat_burst: true, text_steal: true, text_block: true,
   },
   maxEffects: 10,
@@ -98,6 +98,19 @@ export const STRIDE_PUSH_FRAMES = [4, 10];
 
 const STRIDE = /^(run(_(upright|power|bounce|glide|loose))?|dribble_run(_(low|high|rhythm|protect))?(_far)?)$/;
 const SKIDS = new Set<string>(['run_stop', 'turn_run', 'turn_dribble']);
+const DRIBBLE_MOVE = /^(crossover(_(quick|wide|double|hesi))?|behind_back|between_legs)_(up|down)$|^inside_out(_far)?$/;
+
+/** A dribble move whose ball path gets the swish (every hand switch, plus the inside-out fake). */
+export function isDribbleMove(anim: AnimName): boolean {
+  return DRIBBLE_MOVE.test(anim);
+}
+
+/** Frames where the ball whips across (cross, cross2, cross3; the inside-out's fake). */
+export function crossFrames(anim: AnimName): number[] {
+  if (!isDribbleMove(anim)) return [];
+  const ev = ANIMS[anim]?.events ?? {};
+  return [ev.cross, ev.cross2, ev.cross3, ev.fake].filter((f): f is number => f !== undefined);
+}
 
 /** Is this a 12-frame stride-clock cycle (run styles, dribble runs)? */
 export function isStride(anim: AnimName): boolean {
@@ -223,6 +236,10 @@ export class MoveFxEmitter {
       }
       if (burst !== null && f === burst) this.spawn('cut_burst', foot(-1), s.y, s.flip, s.scale);
       if (land !== null && f === land) this.spawn('land_puff', s.x, s.y, s.flip, s.scale);
+      if (crossFrames(s.anim).includes(f)) {
+        const [bx, by] = s.ball ?? [s.x + dir * 10 * s.scale, s.y - 6 * s.scale];
+        this.spawn('cross_swoosh', bx, by, s.flip, s.scale);
+      }
       if (s.anim === 'steal_success' && f === ANIMS.steal_success?.events.poke) {
         this.success('steal', s.x, s.y, s.flip, s.scale, s.ball);
       }
@@ -306,5 +323,122 @@ export class GhostTrail {
       this.list.length = Math.min(this.list.length, this.opts.count);
     }
     return this.list;
+  }
+}
+
+/** One piece of the ball's swish trail, oldest first; draw with <BallSwishTrail>. */
+export type SwishSegment = {
+  x1: number; y1: number; x2: number; y2: number; width: number; opacity: number;
+  /** this piece's color, from the palette: the first color at the ball, the last at the tail */
+  color: string;
+};
+
+/** Ready-made swish colors, ball end first. */
+export const SWISH_PALETTES = {
+  electric: ['#ffffff', '#3be8f0', '#7a5cff', '#ff4fb3'],
+  fire: ['#fff3c0', '#ffd23f', '#ff8c2a', '#e8321e'],
+  rainbow: ['#ffffff', '#ffd23f', '#5ce05c', '#3bb8f0', '#8e44e8', '#ff3e7a'],
+  ice: ['#ffffff', '#bde3f5', '#6ec6f0', '#2a6fdb'],
+  classic: ['#ffffff', '#ffffff'],
+} as const satisfies Record<string, readonly string[]>;
+
+/** A swish in a team's colors: white at the ball, then the trim, then the jersey. */
+export function teamSwish(jersey: string, trim: string): string[] {
+  return ['#ffffff', trim, jersey];
+}
+
+function hexToRgb(h: string): [number, number, number] {
+  const v = parseInt(h.replace('#', ''), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+/** The color a fraction u of the way along a palette (0 = first color). */
+export function paletteAt(palette: readonly string[], u: number): string {
+  if (palette.length === 1) return palette[0];
+  const x = Math.max(0, Math.min(1, u)) * (palette.length - 1);
+  const i = Math.min(palette.length - 2, Math.floor(x));
+  const t = x - i;
+  const a = hexToRgb(palette[i]);
+  const b = hexToRgb(palette[i + 1]);
+  const c = a.map((v, k) => Math.round(v + (b[k] - v) * t));
+  return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+export type BallSwishOptions = {
+  /** seconds a point of the trail lasts */
+  life: number;
+  /** trail width at the ball, in screen px per sprite px (scales with the sprite) */
+  width: number;
+  /** opacity at the ball */
+  opacity: number;
+  /** in-between points per sprite frame, so the trail curves instead of zig-zagging */
+  smooth: number;
+  /** colors along the trail, ball end first (see SWISH_PALETTES, teamSwish) */
+  palette: readonly string[];
+};
+
+export const DEFAULT_SWISH_OPTIONS: BallSwishOptions = {
+  life: 0.3, width: 5, opacity: 0.9, smooth: 4, palette: SWISH_PALETTES.electric,
+};
+
+/**
+ * A streak following the ball through a crossover (and every other dribble
+ * move), so the eye sees it whip from hand to hand. Feed it the ball's screen
+ * position every rendered frame; it records only while a dribble move plays.
+ */
+export class BallSwish {
+  private opts: BallSwishOptions;
+  private pts: { x: number; y: number; age: number }[] = [];
+  private last: [number, number] | null = null;
+  private prev: [number, number] | null = null;
+
+  constructor(opts: Partial<BallSwishOptions> = {}) {
+    this.opts = { ...DEFAULT_SWISH_OPTIONS, ...opts };
+  }
+
+  /** ball: the ball's screen centre (the frame's ball point, nudged by ballDepth as you draw it) or null. */
+  update(dt: number, s: { anim: AnimName; ball: [number, number] | null; scale: number }): SwishSegment[] {
+    for (const p of this.pts) p.age += dt;
+    this.pts = this.pts.filter((p) => p.age < this.opts.life);
+    if (isDribbleMove(s.anim) && s.ball) {
+      const [x, y] = s.ball;
+      if (!this.last || Math.hypot(x - this.last[0], y - this.last[1]) > 0.5) {
+        if (this.last) {
+          // a curve through the previous points (Catmull-Rom), so the streak arcs between sprite frames
+          const p0 = this.prev ?? this.last;
+          const p1 = this.last;
+          const p2: [number, number] = [x, y];
+          const n = this.opts.smooth;
+          for (let i = 1; i < n; i++) {
+            const t = i / n;
+            const t2 = t * t;
+            const cx = 0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p2[0]) * t2
+              + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p2[0]) * t2 * t);
+            const cy = 0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p2[1]) * t2
+              + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p2[1]) * t2 * t);
+            this.pts.push({ x: cx, y: cy, age: dt * (1 - t) });
+          }
+        }
+        this.pts.push({ x, y, age: 0 });
+        this.prev = this.last;
+        this.last = [x, y];
+      }
+    } else {
+      this.last = this.prev = null;
+    }
+    return this.segments(s.scale);
+  }
+
+  private segments(scale: number): SwishSegment[] {
+    const out: SwishSegment[] = [];
+    for (let i = 1; i < this.pts.length; i++) {
+      const a = this.pts[i - 1];
+      const b = this.pts[i];
+      const k = 1 - b.age / this.opts.life;                  // 1 at the ball, 0 at the tail
+      if (k <= 0) continue;
+      out.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, width: Math.max(1, this.opts.width * scale * k),
+        opacity: this.opts.opacity * Math.min(1, k * 1.4), color: paletteAt(this.opts.palette, 1 - k) });
+    }
+    return out;
   }
 }

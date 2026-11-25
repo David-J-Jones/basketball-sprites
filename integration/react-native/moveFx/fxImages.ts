@@ -9,6 +9,7 @@ export const FX_IMAGES: Record<MoveFxId, () => ImageSourcePropType> = {
   cut_burst: () => require('./cut_burst.png'),
   land_puff: () => require('./land_puff.png'),
   speed_lines: () => require('./speed_lines.png'),
+  cross_swoosh: () => require('./cross_swoosh.png'),
   impact_star: () => require('./impact_star.png'),
   swat_burst: () => require('./swat_burst.png'),
   text_steal: () => require('./text_steal.png'),

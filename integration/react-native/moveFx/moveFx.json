@@ -62,6 +62,18 @@
     15
    ]
   },
+  "cross_swoosh": {
+   "label": "Cross whoosh",
+   "width": 44,
+   "height": 18,
+   "frames": 6,
+   "fps": 20,
+   "loop": false,
+   "anchor": [
+    22,
+    16
+   ]
+  },
   "impact_star": {
    "label": "Steal flash",
    "width": 32,

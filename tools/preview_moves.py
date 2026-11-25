@@ -21,6 +21,30 @@ import preview_movement as pm  # noqa: E402
 
 A, S, PX, DT, FW, FH, FX = pm.ANIMS, pm.S, pm.PX_PER_FT, pm.DT, pm.FW, pm.FH, pm.FX
 STRIDE_PUSH = (4, 10)
+PALETTES = {                                         # same as SWISH_PALETTES in moveFx.ts
+    "electric": ["#ffffff", "#3be8f0", "#7a5cff", "#ff4fb3"],
+    "fire": ["#fff3c0", "#ffd23f", "#ff8c2a", "#e8321e"],
+    "rainbow": ["#ffffff", "#ffd23f", "#5ce05c", "#3bb8f0", "#8e44e8", "#ff3e7a"],
+    "ice": ["#ffffff", "#bde3f5", "#6ec6f0", "#2a6fdb"],
+}
+SWISH_LIFE, SWISH_W = 0.3, 5
+
+
+def palette_at(pal, u):
+    u = max(0.0, min(1.0, u)) * (len(pal) - 1)
+    i = min(len(pal) - 2, int(u))
+    t = u - i
+    a, b = [tuple(int(c.lstrip("#")[k:k + 2], 16) for k in (0, 2, 4)) for c in (pal[i], pal[i + 1])]
+    return tuple(round(x + (y - x) * t) for x, y in zip(a, b))
+
+
+def is_dribble_move(anim):
+    return anim.startswith(("crossover", "behind_back", "between_legs", "inside_out"))
+
+
+def cross_frames(anim):
+    ev = A[anim]["events"]
+    return [ev[k] for k in ("cross", "cross2", "cross3", "fake") if k in ev] if is_dribble_move(anim) else []
 MOVES_WITH_BURST = ("crossover", "hesitation", "inside_out", "behind_back", "between_legs")
 
 
@@ -39,6 +63,9 @@ class Actor:
     def __init__(self, look, colors, script, x=0.0, y=0.0, facing=1, lines=False, z_fn=None):
         self.look, self.colors, self.script = look, colors, script
         self.z_fn, self.z = z_fn, 0.0         # jump height the sim adds on top of the baked-in hop
+        self.palette = PALETTES["electric"]
+        self.swish = []                        # [world x, world y, age] (BallSwish in moveFx.ts)
+        self.ball_hist = []
         self.x, self.y, self.facing = x, y, facing
         self.stride = 0.0
         self.shot = None
@@ -84,11 +111,35 @@ class Actor:
                 fx.append(["cut_burst", self.x - facing * S, self.y, 0.0, flip])
             if ("takeoff" in ev or "rise" in ev) and f == n - 1:
                 fx.append(["land_puff", self.x, self.y, 0.0, flip])
+        img, ball, depth = pm.sprite(anim, fi, self.look, self.colors, flip)
+        bw = None
+        if ball:
+            bw = (self.x - FW / 2 + ball[0], -FH + ball[1] + depth * 4 * S - self.z)
+        for f in frames:
+            if f in cross_frames(anim) and bw:
+                fx.append(["cross_swoosh", bw[0], bw[1] + FX["cross_swoosh"]["anchor"][1] * S - 6, 0.0, flip])
+        for p in self.swish:
+            p[2] += DT
+        self.swish = [p for p in self.swish if p[2] < SWISH_LIFE]
+        if is_dribble_move(anim) and bw:
+            if not self.ball_hist or abs(bw[0] - self.ball_hist[-1][0]) + abs(bw[1] - self.ball_hist[-1][1]) > 0.5:
+                if self.ball_hist:                       # Catmull-Rom in-betweens, as in BallSwish
+                    p1 = self.ball_hist[-1]
+                    p0 = self.ball_hist[-2] if len(self.ball_hist) > 1 else p1
+                    p2 = bw
+                    for i in range(1, 4):
+                        u = i / 4
+                        c = [0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 3 * p2[k]) * u * u
+                                    + (-p0[k] + 3 * p1[k] - 2 * p2[k]) * u ** 3) for k in (0, 1)]
+                        self.swish.append([c[0], c[1], DT * (1 - u)])
+                self.swish.append([bw[0], bw[1], 0.0])
+                self.ball_hist = (self.ball_hist + [bw])[-2:]
+        else:
+            self.ball_hist = []
         self.last = (anim, fi)
         fast = self.lines_on and stride and (speed > 14 if self.lines > 0 else speed >= 17)
         self.lines = max(0.0, min(1.0, self.lines + (6 if fast else -4) * DT))
         self.lines_t += DT
-        img, ball, depth = pm.sprite(anim, fi, self.look, self.colors, flip)
         self.out = (anim, fi, img, ball, depth, flip, speed)
         return self.out
 
@@ -150,6 +201,22 @@ class Scene:
             img.alpha_composite(im, tl)
             if ball and depth >= 0:
                 pm.draw_ball(img, tl[0] + ball[0], tl[1] + ball[1] + depth * 4 * S)
+        for a in self.actors:                                   # swishes over everyone, so the cross reads
+            if len(a.swish) > 1:                                 # the swish, over the body, under the ball
+                layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                ld = ImageDraw.Draw(layer)
+                for p, q in zip(a.swish, a.swish[1:]):
+                    k = 1 - q[2] / SWISH_LIFE
+                    if k <= 0:
+                        continue
+                    col = palette_at(a.palette, 1 - k) + (int(255 * 0.9 * min(1, k * 1.4)),)
+                    w = max(2, int(SWISH_W * S * k))
+                    ld.line([(p[0] + ox, floor + p[1]), (q[0] + ox, floor + q[1])], fill=col, width=w)
+                    ld.ellipse([q[0] + ox - w / 2, floor + q[1] - w / 2, q[0] + ox + w / 2, floor + q[1] + w / 2], fill=col)
+                img.alpha_composite(layer)
+                anim, fi, im, ball, depth, flip, speed = a.out
+                if ball and depth >= 0:                          # the ball rides on the head of its streak
+                    pm.draw_ball(img, a.x + ox - FW / 2 + ball[0], floor + a.y - FH - a.z + ball[1] + depth * 4 * S)
         if self.hoop:                                           # rim and net in front of the dunker's hand
             rx, ry = self.hoop[0] + ox, floor - self.hoop[1]
             if self.loose:
@@ -167,14 +234,14 @@ class Scene:
 T0 = 0.55          # when the move starts
 CELL_W, CELL_H = 400, 300
 MOVES = [
-    ("CLASSIC CROSSOVER", "crossover_up", True),
-    ("SNAP", "crossover_quick_up", True),
-    ("KILLER", "crossover_wide_up", True),
-    ("DOUBLE CROSS", "crossover_double_up", True),
-    ("HESI CROSS", "crossover_hesi_up", True),
-    ("INSIDE-OUT", "inside_out", False),
-    ("BEHIND THE BACK", "behind_back_up", True),
-    ("BETWEEN THE LEGS", "between_legs_up", True),
+    ("CLASSIC CROSSOVER", "crossover_up", True, "electric"),
+    ("SNAP", "crossover_quick_up", True, "fire"),
+    ("KILLER", "crossover_wide_up", True, "rainbow"),
+    ("DOUBLE CROSS", "crossover_double_up", True, "electric"),
+    ("HESI CROSS", "crossover_hesi_up", True, "ice"),
+    ("INSIDE-OUT", "inside_out", False, "fire"),
+    ("BEHIND THE BACK", "behind_back_up", True, "rainbow"),
+    ("BETWEEN THE LEGS", "between_legs_up", True, "electric"),
 ]
 LOOKS = [pm.look1, pm.look2, pm.look3, pm.look4]
 KITS = [("PHX", "city"), ("MIA", "city"), ("CHI", "retro90"), ("BOS", "away"), ("ORL", "retro80"),
@@ -208,16 +275,17 @@ def defender_script(move, switches):
 
 
 def crossover_showcase(out):
-    length = max(T0 + dur(m) for _, m, _ in MOVES) + 1.0
+    length = max(T0 + dur(m) for _, m, _, _ in MOVES) + 1.0
     scenes = []
-    for i, (label, move, sw) in enumerate(MOVES):
+    for i, (label, move, sw, pal) in enumerate(MOVES):
         cols, shorts = pm.uni(*KITS[i])
         off = Actor(pm.with_shorts(LOOKS[i % 4], shorts), cols, offense_script(move, sw), x=0, y=10, lines=True)
+        off.palette = PALETTES[pal]
         dcols, dshorts = pm.uni("DET", "home")
-        dx = 11 * T0 * PX + 4.0 * PX
+        dx = 11 * T0 * PX + 6.5 * PX
         dfn = Actor(pm.with_shorts(LOOKS[(i + 2) % 4], dshorts), dcols, defender_script(move, sw), x=dx, y=16,
                     facing=-1)
-        scenes.append(Scene(CELL_W, CELL_H, [off, dfn], label))
+        scenes.append(Scene(CELL_W, CELL_H, [off, dfn], "%s   (%s swish)" % (label, pal)))
     frames = []
     for k in range(int(length / DT)):
         t = k * DT

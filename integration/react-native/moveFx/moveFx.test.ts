@@ -1,7 +1,8 @@
 import { PlayerAnimator } from '../playerSprites/animController';
 import type { AnimName } from '../playerSprites/types';
 import {
-  burstFrame, fxDuration, fxFrame, GhostTrail, isStride, landFrame, MOVE_FX, MOVE_FX_IDS, MoveFxEmitter,
+  BallSwish, burstFrame, paletteAt, SWISH_PALETTES, teamSwish, crossFrames, fxDuration, fxFrame, GhostTrail, isDribbleMove, isStride, landFrame, MOVE_FX,
+  MOVE_FX_IDS, MoveFxEmitter,
   type FxInstance, type MoveFxId,
 } from './moveFx';
 
@@ -21,7 +22,7 @@ function drive(seconds: number, vx: number, hasBall = false, fx = new MoveFxEmit
 describe('move fx data', () => {
   it('has every effect with a size, frames, fps and an anchor inside the frame', () => {
     expect(MOVE_FX_IDS).toEqual([
-      'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'impact_star', 'swat_burst', 'text_steal',
+      'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'cross_swoosh', 'impact_star', 'swat_burst', 'text_steal',
       'text_block',
     ]);
     for (const id of MOVE_FX_IDS) {
@@ -100,6 +101,56 @@ describe('MoveFxEmitter', () => {
     expect(fx.effects.length).toBe(3);
     fx.clear();
     expect(fx.effects.length).toBe(0);
+  });
+});
+
+describe('crossover swish', () => {
+  it('knows where every dribble move whips the ball across', () => {
+    expect(crossFrames('crossover_up')).toEqual([2]);
+    expect(crossFrames('crossover_double_down')).toEqual([2, 5, 7]);
+    expect(crossFrames('inside_out')).toEqual([2]);
+    expect(crossFrames('behind_back_up').length).toBe(1);
+    expect(crossFrames('dribble_run')).toEqual([]);
+    expect(isDribbleMove('hesitation')).toBe(false);
+  });
+
+  it('blends palettes and makes team swishes', () => {
+    expect(paletteAt(['#000000', '#ffffff'], 0.5)).toBe('#808080');
+    expect(paletteAt(SWISH_PALETTES.fire, 0)).toBe('#fff3c0');
+    expect(paletteAt(SWISH_PALETTES.fire, 1)).toBe('#e8321e');
+    expect(teamSwish('#E56020', '#5A2D12')).toEqual(['#ffffff', '#5A2D12', '#E56020']);
+  });
+
+  it('pops a whoosh on each cross: three on the double', () => {
+    const fx = new MoveFxEmitter();
+    const a = new PlayerAnimator('right');
+    a.update(DT, { vx: 0, hasBall: true });
+    a.play('crossover_double_up');
+    let whooshes = 0;
+    let lastKey = 0;
+    for (let t = 0; t < 1; t += DT) {
+      const o = a.update(DT, { vx: 0, hasBall: true });
+      for (const e of fx.update(DT, { x: 0, y: 0, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 2 })) {
+        if (e.fx === 'cross_swoosh' && e.key > lastKey) {
+          whooshes++;
+          lastKey = e.key;
+        }
+      }
+    }
+    expect(whooshes).toBe(3);
+  });
+
+  it('streaks the ball path during a move, thick at the ball, and clears afterwards', () => {
+    const sw = new BallSwish();
+    let segs = sw.update(DT, { anim: 'crossover_up', ball: [0, 0], scale: 2 });
+    for (let i = 1; i <= 4; i++) segs = sw.update(DT, { anim: 'crossover_up', ball: [i * 6, i * 2], scale: 2 });
+    expect(segs.length).toBeGreaterThan(4);                                  // smoothed in-between points too
+    expect(segs[segs.length - 1].width).toBeGreaterThan(segs[0].width);
+    expect(segs[segs.length - 1].opacity).toBeGreaterThan(segs[0].opacity);
+    expect(segs[segs.length - 1].color).toBe('#ffffff');                     // electric: white-hot at the ball
+    expect(segs[0].color).not.toBe('#ffffff');                               // colored toward the tail
+    for (let i = 0; i < 20; i++) segs = sw.update(DT, { anim: 'dribble_run', ball: [30, 10], scale: 2 });
+    expect(segs).toEqual([]);                                                // a plain dribble leaves no streak
   });
 });
 

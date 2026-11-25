@@ -253,6 +253,26 @@ def fx_text_block(c, f, n):
     pop_text(c, f, n, "BLOCKED!", (255, 120, 80), (220, 40, 40))
 
 
+def fx_cross_swoosh(c, f, n):
+    """Crossover: curved air lines whipping around where the ball crosses."""
+    t = f / (n - 1)
+    cx, cy = c.w / 2, c.h - 2
+    arcs = ((6, 200, (255, 79, 179)), (9.5, 192, (59, 232, 240)), (13, 186, (255, 214, 64)))   # magenta, cyan, gold
+    for k, (r, a0, col) in enumerate(arcs):
+        span = 120 * ease_out(min(1, t * 1.8 + k * 0.08))
+        tail = 120 * max(0, (t - 0.3) * 1.4)                 # the back end catches up: the line flies off
+        steps = 40
+        for i in range(steps + 1):
+            a = math.radians(a0 + tail + (span - tail) * i / steps)
+            if span - tail <= 0:
+                break
+            x, y = cx + math.cos(a) * r * 1.5, cy + math.sin(a) * r
+            fade = i / steps                                  # brightest at the leading end
+            c.put(x, y, STREAK if fade > 0.82 else col, 255 * (0.4 + 0.6 * fade) * (1 - t ** 2))
+            if fade > 0.3:                                    # a second row: thicker, punchier lines
+                c.put(x, y + 1, col, 200 * fade * (1 - t ** 2))
+
+
 EFFECTS = {
     # id: (label, w, h, frames, fps, loop, anchor, fn)
     "dust_step": ("Step dust", 20, 11, 5, 18, False, (15, 10), fx_dust_step),
@@ -260,6 +280,7 @@ EFFECTS = {
     "cut_burst": ("Cut burst", 30, 15, 6, 18, False, (24, 14), fx_cut_burst),
     "land_puff": ("Landing puff", 28, 11, 6, 16, False, (14, 10), fx_land_puff),
     "speed_lines": ("Speed lines", 26, 30, 6, 14, True, (25, 15), fx_speed_lines),
+    "cross_swoosh": ("Cross whoosh", 44, 18, 6, 20, False, (22, 16), fx_cross_swoosh),
     "impact_star": ("Steal flash", 32, 32, 7, 20, False, (16, 16), fx_impact_star),
     "swat_burst": ("Block burst", 36, 36, 8, 20, False, (18, 18), fx_swat_burst),
     "text_steal": ("STEAL! pop-up", 76, 28, 12, 12, False, (38, 27), fx_text_steal),
