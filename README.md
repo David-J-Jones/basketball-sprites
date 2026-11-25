@@ -28,14 +28,15 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **30 league team jerseys + a white one** (see Team logos below), 5 skin tones, 20 hair styles (bald, buzz, fade, crew, cornrows, afro, locs, mohawk, high_top, twists, curly, flow, waves, spiky, man_bun, braids, mullet, pompadour, frohawk, side_part), 6 hair colors, 7 facial-hair options (none, stubble, mustache, goatee, beard, chinstrap, long_beard).
 - **Faces on court** read at every skin tone: a white of the eye behind the pupil, a dark brow, the ear, a nose that sticks out past the profile, and the lips. Full facial hair has light strands, so a black beard still shows on the deepest skin tone.
 - **New hair styles keep existing faces:** the eight newer styles come from one extra roll after the rest of the face, so about 1 in 4 players picks one up and everyone else looks exactly as before.
-- **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 6 layups and 8 dunks, meant to be picked per player.
+- **Signature styles** (see [Signature animations](#signature-animations)): 6 runs, 5 dribbles, 5 jump shots, 7 crossover moves, 6 layups and 8 dunks, meant to be picked per player.
+- **Movement effects** (see [Movement effects](#movement-effects)): step dust, skid clouds, cut bursts, landing puffs and speed lines fired from the animation, plus optional afterimages, in `moveFx/`.
 - **League look:** tank top in team colors tucked into long basketball shorts (straight legs, square hem), white socks, grey shoes. Legs taper from the hip to the knee, with a calf and a slim ankle.
 - **Park-mode cosmetics** (see [Park mode](#park-mode-outfits-celebrations-ball-trails)): shirts (tank, tee, long sleeve, compression, and 12 printed tees: Hawaiian, tie-dye, wave, US flag, camo, flames, checkerboard, galaxy, plaid flannel, 70s stripes, polka dots, lightning bolt), a brown wedding-style suit with a white tie (`OUTFIT_PRESETS`), shorts (any color, standard, long or full-length trousers), socks (any color, tall tube socks), shoes (upper and sole colors), 3 headbands, wristbands and a shooting sleeve.
 - **Store add-ons:** hats (top hat, ball cap forward and backwards, halo, cat ears, fedora, goat head, fishbowl with a goldfish, spinning propeller hat), parachute pants, cowboy boots.
 - **Developer-only:** a color-shifting tee (`developer_tee`).
 - **Celebrations:** air guitar, 3 dances and 5 victory poses.
 - **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
-- **102 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **113 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `crossover_quick_up/down`, `crossover_wide_up/down`, `crossover_double_up/down`, `crossover_hesi_up/down`, `inside_out`, `inside_out_far`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -54,7 +55,8 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 | `png/<ID>.png` | Full round badge, 512×512 |
 | `png/<ID>_icon.png` | Icon only, transparent, 384×384 (scoreboards, small UI) |
 | `svg/<ID>.svg` | Badge as crisp vector squares |
-| `teams.json` / `index.ts` | Ids, city, name, jersey and trim colors, plus `TEAM_LOGOS` / `TEAM_ICONS` require maps |
+| `png/<ID>_retro.png`, `_simple.png`, `_current.png` | Alternate logos, 512×512 (see below); `svg/<ID>_<style>.svg` too |
+| `teams.json` / `index.ts` | Ids, city, name, jersey and trim colors, plus `TEAM_LOGOS` / `TEAM_ICONS` / `TEAM_LOGO_STYLES` require maps |
 
 ```tsx
 import { LEAGUE_TEAMS, TEAM_LOGOS } from './teamLogos';
@@ -63,18 +65,40 @@ import { LEAGUE_TEAMS, TEAM_LOGOS } from './teamLogos';
 
 **Team colors live in `tools/generate_logos.py`.** Running `python3 tools/generate_logos.py` redraws the logos and also writes the same 30 teams into `playerSprites/palettes.json`, so jerseys always match the logos.
 
+### Alternate logos
+
+![logo styles](previews/logo_styles.png)
+
+Every team also has three more logos built around the same icon, for menus, a team-select screen, or as unlockable cosmetics:
+
+| Style | Look |
+|---|---|
+| `classic` | The round badge above, with the ribbon banner |
+| `retro` | A vintage felt patch: faded colors, a stitched border, the city across the top and the name across the bottom (long cities shorten: Philly, Nola, San Fran) |
+| `simple` | A flat one-color silhouette of the icon on a plain disc, with dark details in a second muted tone. Reads at tiny sizes (scoreboards, notifications) |
+| `current` | A modern angular shield, two-tone with a diagonal split, a flat-shaded icon and a bold name bar in the trim color |
+
+```tsx
+import { teamLogo, LOGO_STYLES, LOGO_STYLE_LABELS } from './teamLogos';
+<Image source={teamLogo('PHX', 'retro')} style={{ width: 64, height: 64 }} />   // 'classic' | 'retro' | 'simple' | 'current'
+```
+
+Each style is one function in `tools/generate_logos.py` (`retro_patch`, `simple_mark`, `current_shield`), so redrawing a team's icon updates all four.
+
 Three teams are placeholders because your list didn't cover them: **Cleveland Pierogies, Memphis Ribs and Toronto Sorries**. Orlando is the **Tourists**, because Mickey is still a Disney trademark. To rename or redraw a team, edit its row in `TEAMS` and its `icon_*` function, then rerun.
 
 ## Team uniforms (career mode)
 
 ![jersey cards](previews/uniforms.png)
 
-Every league team has three uniforms, in **`integration/react-native/teamUniforms/`**:
+Every league team has three uniforms plus three unlockable throwbacks, in **`integration/react-native/teamUniforms/`**:
 - **Home:** light, in the team's colors.
 - **Away:** the team color.
 - **City edition:** themed on the city, with its own name, for example Phoenix "Desert Sunset", Chicago "Windy City", Miami "Vice Nights", Brooklyn "Swiss Cheese", Toronto "Lumberjack".
 
-No two city editions are alike, and each team's three uniforms all differ.
+- **Throwbacks** (`retro70`, `retro80`, `retro90`): see below.
+
+No two city editions are alike, and each team's six uniforms all differ.
 
 **On court** a uniform is a jersey and trim color, shorts color, and one of 16 **uniform patterns** drawn in two accent colors over the jersey and shorts: classic side panels, retro hem stripes, chest band, pinstripes, chevron, contrast yoke, dithered fade, two-tone, spots, city skyline, flames, waves, plaid, lightning bolt, stars and honeycomb. Each pattern is a pair of tint masks per frame, in its own page group per body, so it only loads when a team wearing it is on court. Patterns are skipped under printed park-mode shirts.
 
@@ -90,6 +114,31 @@ const { colors, outfit } = uniformSprite(u);
 <PlayerSprite look={look} colors={colors} outfit={outfit} anim="run" frame={f} x={x} y={y} scale={s} />
 <Image source={UNIFORM_CARDS.MIA.city} style={{ width: 256, height: 160 }} />
 ```
+
+### Throwback jerseys ('70s, '80s, '90s)
+
+![throwback jersey cards](previews/retro_uniforms.png)
+
+Three era editions per team (90 in all), made from the team's own jersey and trim colors so every team gets them:
+
+| Kind | Name | Look | Patterns | Card lettering |
+|---|---|---|---|---|
+| `retro70` | '70s Throwback | Faded, warm team colors with cream; the city across the chest | retro hem stripes, chest band, yoke | Double outline |
+| `retro80` | '80s Throwback | Clean, high contrast, saturated; white or the team color | pinstripes, two-tone, classic, chevron | Block drop shadow |
+| `retro90` | '90s Throwback | Loud: a dark base, the team color bright, and a clashing neon (teal, purple, lime or hot pink) | lightning, flames, fade, chevron, waves, stars | Slanted |
+
+Each team gets an era pattern it doesn't already wear at home, away or in its city edition. They use the existing on-court patterns, so they need no new sprite art.
+
+They're **unlockable cosmetics**: `UNIFORM_UNLOCKS` marks home, away and city as unlocked by default and gives each throwback a label and a suggested way to earn it ('70s: win 10 games with the team, '80s: make the playoffs, '90s: win a title). The game decides what actually unlocks them:
+
+```tsx
+import { availableUniforms, getUniform, UNIFORM_UNLOCKS, RETRO_KINDS } from './teamUniforms';
+
+const kinds = availableUniforms(save.unlockedThrowbacks[teamId]);   // ['home', 'away', 'city', 'retro90']
+const u = getUniform(teamId, 'retro90')!;                            // name: "'90s Throwback"
+```
+
+To hand-design one team's throwback instead, add a row to `RETRO_OVERRIDES` in `tools/generate_uniforms.py` (same tuple as `T`).
 
 To change a uniform, edit its row in `T` in `tools/generate_uniforms.py` and run it; it rewrites the cards, `uniforms.json`, `index.ts` and the previews. New patterns go in `UNIFORM_PATTERNS` in `generate_sprites.py` (a shirt function of height and position round the body, and a shorts function), which needs a sprite rebuild.
 
@@ -130,14 +179,15 @@ Everything the app needs is in **`integration/react-native/playerSprites/`**, pl
 | `Headshot.tsx` | `<Headshot playerId size jersey />`, a thin `SvgXml` wrapper. |
 | `appearance.ts` | `playerLook(id, heightIn, weightLbs)` / `lookFromFace()` for sprites, `bodyFor()`, teams, `jerseysForGame()`. |
 | `PlayerSprite.tsx` | `<PlayerSprite>` plus `frameAt`, `scaleForHeight`, `frameToScreen`. |
-| `moves.ts` | `crossoverFor(dy)`, `handAfter()`, `dribbleAnim(hand, moving)`. |
+| `moves.ts` | `crossoverFor(dy, style)`, `handSwitch()`, `handAfter()`, `insideOutFor()`, `dribbleAnim(hand, moving)`. |
 | `animController.ts` | `PlayerAnimator`: picks animation, frame and facing from velocity, with smooth turns and transitions (see below). |
-| `animStyles.ts` | Signature run / dribble / shot styles and layup / dunk bags (`STYLE_OPTIONS`, `defaultAnimStyles`). |
+| `animStyles.ts` | Signature run / dribble / shot styles and crossover / layup / dunk bags (`STYLE_OPTIONS`, `defaultAnimStyles`). |
 | `outfit.ts` | Park-mode outfits: `outfitTints()`, `COSMETICS` (lists for a locker screen). |
 | `frames.ts` | `frameData`, `framesOf`, `headOverlay`, `loadBody`: read the compact frame data. |
 | `*.test.ts` | Jest tests (see below). |
 | `spriteData.*`, `bodyData.ts`, `bodies/*.json`, `atlas/*.png` | Generated. Don't edit by hand. |
 | `ballTrails/` | `<BallTrail>`, `trailFrame`, `TRAILS`; one PNG strip per trail (generated). |
+| `moveFx/` | `MoveFxEmitter`, `<MoveFx>`, `GhostTrail`, `<PlayerGhosts>`; one PNG strip per effect (generated). |
 
 ## How a face is generated
 
@@ -184,20 +234,21 @@ animator.release();                    // roll or pop out: movement resumes
 
   Each turn passes through two square-on frames that mirror each other, and the flip happens between them (`events.flipAt`), so it doesn't read as a jump.
 - **Start and stop:** `run_start` and `run_stop` play between standing and running. Both have hysteresis and a short minimum hold, so a player hovering around the run threshold doesn't flicker between idle and run.
-- **Stride:** the run cycles are now 12 frames at 18 fps (in-betweens generated from the key poses). `run`, `dribble_run` and `dribble_run_far` share one stride clock, so picking up or giving up the ball never restarts the legs. The stride speeds up and slows down with actual speed, so feet don't slide.
+- **Stride:** the classic `run` and `dribble_run` have a flight phase: the body sinks after each landing and is 2 px off the floor on every push-off, the torso tips into each push, and the arms pump harder. The run cycles are 12 frames at 18 fps (in-betweens generated from the key poses). `run`, `dribble_run` and `dribble_run_far` share one stride clock, so picking up or giving up the ball never restarts the legs. The stride speeds up and slows down with actual speed, so feet don't slide.
 - **Tuning:** all thresholds are options: `runOn`, `runOff`, `turnSpeed`, `turnDelay`, `minHold`, `refSpeed`. The defaults assume feet per second.
 
 If you drive animations yourself instead, keep the same rules: never flip `facing` directly from the sign of `vx`, and don't reset the frame counter when switching between run and dribble_run.
 
 ## Signature animations
 
-Players can have their own run, dribble and jumper, and their own bag of layups and dunks. `animStyles.ts` holds the whole catalog with names for a selection screen:
+Players can have their own run, dribble and jumper, and their own bag of crossovers, layups and dunks. `animStyles.ts` holds the whole catalog with names for a selection screen:
 
 | Kind | Options (`STYLE_OPTIONS`) | Animations |
 |---|---|---|
 | Run | `run` Classic, `run_upright` Upright, `run_power` Power, `run_bounce` Bouncy, `run_glide` Glide, `run_loose` Loose | the id itself |
 | Dribble | `classic`, `low`, `high`, `rhythm`, `protect` | `dribble_<style>`, `dribble_<style>_far`, `dribble_run_<style>`, `dribble_run_<style>_far` (classic = `dribble`, `dribble_run`…) |
 | Jump shot | `classic`, `quick`, `high` (high release), `kick` (leg kick), `push` | `shoot_<style>`, `shoot_<style>_pullup`, `shoot_<style>_fade` (classic = `shoot`…) |
+| Crossovers | `crossover` Classic, `crossover_quick` Snap, `crossover_wide` Killer, `crossover_double` Double, `crossover_hesi` Hesi cross, `behind_back`, `between_legs` | `<id>_up`, `<id>_down` (see below) |
 | Layups | `layup`, `layup_finger_roll`, `layup_euro`, `layup_reverse`, `layup_scoop`, `layup_floater` | the id itself |
 | Dunks | `dunk_basic`, `dunk_athletic`, `dunk_hang`, `dunk_windmill`, `dunk_tomahawk`, `dunk_reverse`, `dunk_two_hand`, `dunk_cradle` | the id itself |
 
@@ -207,11 +258,71 @@ const styles: AnimStyles = saved ?? defaultAnimStyles(player.id, look.body);
 
 const animator = new PlayerAnimator(facing, animatorOptions(styles)); // run + dribble styles automatic
 animator.play(jumperFor(styles, speedTowardBasket), basketSide);      // set / pull-up / fade in his shot style
+animator.play(pickCrossover(styles, dy));                             // random from his crossover bag, the hand updates itself
 animator.play(pickLayup(styles), basketSide);                         // random from his layup bag
 animator.play(pickDunk(styles), basketSide);
 ```
 
 Every style keeps its classic version's frame count and event frames, so sim timing doesn't depend on the style. Examples: every jumper releases on frame 4, every running dribble bounces on frames 3 and 9, and every run is 12 frames on the shared stride clock. Layups and dunks list their own events in the table below. The one exception is `layup_floater`, which releases early, on frame 3. Walking with the ball uses `walk_dribble` for every style. Hand-switch moves (crossovers etc.) are drawn once and hand back to whatever dribble style the player uses.
+
+### Crossover variety
+
+Every crossover goes near hand → far hand as `_up` and back as `_down`, like the classic one, so `handAfter()` and the animator's hand tracking work for all of them. They differ in look and timing, so a sim can pick by situation as well as by player:
+
+| Move | Frames / fps | Events | What it looks like |
+|---|---|---|---|
+| `crossover` | 6 / 14 | `cross: 2`, `catch: 3`, `cutStart: 3` | Push it across in front, plant and cut |
+| `crossover_quick` (Snap) | 5 / 18 | `cross: 2`, `catch: 3`, `cutStart: 3` | Tight and low, one short bounce under the body, small push-off. The fastest switch (0.28 s) |
+| `crossover_wide` (Killer) | 7 / 14 | `jab: 1`, `cross: 3`, `catch: 4`, `cutStart: 4` | Jab step with the ball held out wide, sweep it low and far across the front, lunge out the other way |
+| `crossover_double` (Double) | 11 / 17 | `cross: 2`, `cross2: 5`, `cross3: 7`, `catch: 8`, `cutStart: 8` | Across, back, and across again, square to the defender, then the cut |
+| `crossover_hesi` (Hesi cross) | 8 / 14 | `hesi: 2`, `cross: 4`, `catch: 5`, `cutStart: 5` | Rise up tall to sell the stop, then drop and cross |
+| `inside_out` / `inside_out_far` | 6 / 14 | `fake: 2`, `burst: 4` | Fake crossover: rolls the ball in toward the middle, dips the shoulders, then wraps it back out and bursts. **Keeps the same hand**; `insideOutFor(hand)` picks |
+
+```ts
+crossoverFor(dy);               // classic: 'crossover_up' | 'crossover_down'
+crossoverFor(dy, 'wide');       // 'crossover_wide_up' | 'crossover_wide_down'
+handSwitch('crossover_double', dy);
+pickCrossover(styles, dy);      // one from the player's bag
+animator.play(insideOutFor(animator.hand));
+```
+
+`defaultAnimStyles()` gives every player the classic crossover plus one or two more: small guards lean toward the snap, killer and double crosses, bigs get one extra move. `STYLE_OPTIONS.crossover` lists all seven hand-switch moves for a selection screen.
+
+## Movement effects
+
+![movement effects](previews/move_fx.png)
+
+`moveFx/` adds life around a moving player. `MoveFxEmitter` watches the animation the player is in and fires effects on the right frames, so they always line up with the art:
+
+| Effect | When it fires |
+|---|---|
+| `dust_step` | Each push-off of a run or dribble run (frames 4 and 10 of the stride), above `stepDustSpeed` (9 ft/s). Walking is quiet |
+| `dust_skid` | Planting: `run_stop`, `turn_run`, `turn_dribble` |
+| `cut_burst` | Exploding out of a move: the `cutStart` / `burst` frame of every crossover, behind-the-back, between-the-legs, inside-out and hesitation |
+| `land_puff` | The last frame of a jump (shots, layups, dunks, blocks, rebounds) |
+| `speed_lines` | Rides behind a sprinter above `speedLinesOn` (17 ft/s), fading out below `speedLinesOff` (14) |
+
+Dust stays where it was kicked up; speed lines follow the player. Everything is mirrored for a player facing left.
+
+```tsx
+import { MoveFx, MoveFxEmitter, GhostTrail, PlayerGhosts } from './moveFx';
+
+const fx = new MoveFxEmitter();       // once per player; options: thresholds, enabled per effect, maxEffects
+const ghosts = new GhostTrail();      // optional afterimages
+
+// every frame, after animator.update():
+const effects = fx.update(dt, { x, y, anim, frame, flip, speed, scale });
+const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
+
+<MoveFx effects={effects} />                                              {/* under the player */}
+<PlayerGhosts trail={ghosts} ghosts={trail} look={look} colors={colors} scale={scale} />
+<PlayerSprite look={look} colors={colors} anim={anim} frame={frame} x={x} y={y} scale={scale} flip={flip} />
+```
+
+- **Afterimages:** `GhostTrail` keeps up to `count` (3) past poses while the player is above `minSpeed` (16 ft/s), `spacing` (0.05 s) apart, fading from `opacity` (0.35). Each ghost is a full sprite, so save it for the ball handler on a break or a park-mode cosmetic.
+- **Cost:** the five strips together are under 10 KB and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
+- **By hand:** `fx.spawn('dust_skid', x, y, flip, scale)` for anything else (a charge, a dive for a loose ball). `fx.clear()` on a dead ball.
+- **Art:** `tools/generate_move_fx.py` draws them (one `fx_<name>` function per effect) and rewrites `moveFx/` and `previews/move_fx.png` / `previews/move_fx/*.gif`.
 
 ## Park mode: outfits, celebrations, ball trails
 
@@ -461,6 +572,7 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `layup_finger_roll` / `layup_euro` | 8 | 12 | no | `release: 4` / `release: 5` (euro swings the ball across the body) |
 | `dunk_windmill` / `dunk_tomahawk` | 8 / 7 | 12 / 11 | no | `dunk: 6` / `dunk: 5` |
 | `behind_back_up/down`, `between_legs_up/down` | 6 | 14 | no | Hand switches like the crossovers; `handSwitch(move, dy)` picks |
+| `crossover_<quick/wide/double/hesi>_up/down`, `inside_out` / `_far` | 5–11 | 14–18 | no | Crossover variants; see [Crossover variety](#crossover-variety) |
 | `hesitation` / `hesitation_far` | 6 | 12 | no | Rise to sell the stop, then `burst: 3`; same hand |
 | `dunk_basic` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `dunk: 4`. One hand, like the layup |
 | `dunk_athletic` | 8 | 11 | no | `gather: 0`, `takeoff: 2`, `dunk: 5`. Heels kicked up, both hands |
@@ -480,7 +592,7 @@ Each player is drawn from tinted layers: skin, any worn wear masks, jersey, trim
   | `dribble_<style>` | ~2.7 each | a player with that dribble style has the ball |
   | `shot_<style>` | ~1.2 each | a player with that shot style shoots |
   | `layups` / `dunks` (all styles) | ~1.7 / ~3.3 | any layup / dunk plays |
-  | `moves`: crossovers, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
+  | `moves`: crossovers (all variants), inside-out, behind back, between legs, hesitation, screens, pass, steal | ~4.3 | one of them plays |
   | `finish`: classic jumpers, block, rebound | ~3.1 | one of them plays |
   | `extras`: celebrate, point_up, frustrated | ~0.6 | one of them plays |
   | `post`: post_up, hook, fadeaways, spin | ~3.4 | one of them plays |
@@ -495,7 +607,7 @@ Each player is drawn from tinted layers: skin, any worn wear masks, jersey, trim
 ## Tests
 
 ```bash
-npx jest playerSprites
+npx jest playerSprites ballTrails moveFx
 ```
 
 The tests cover:
@@ -507,9 +619,11 @@ The tests cover:
 - the sprite look matches the headshot;
 - body classes are picked correctly;
 - the sprite data covers every body × animation × hair × facial hair;
-- crossovers move the ball across the body, and the direction helpers pick the right animation;
+- every crossover variant, behind-the-back and between-the-legs moves the ball across the body, the double cross goes across three times, the inside-out fakes it and keeps the hand, and the direction helpers pick the right animation;
+- movement effects: step dust only at a run, speed lines fade in and out with speed, skids on stops, bursts out of crossovers, mirrored dust for a player facing left, the per-player cap, and fading afterimages;
 - `PlayerAnimator`: walk ↔ run keeps the stride, backpedal and defensive slides, idle variety, hand switches after every hand-switch move; jittery velocity never flips the sprite, real direction changes turn at `flipAt`, start/stop transitions play, the stride survives run ↔ dribble_run, and the run never skips a frame at 60 fps;
 - jersey clashes switch the away team to white;
+- every team has six distinct uniforms, the throwbacks are named by era, use their era's patterns and start locked, and every team has all four logo styles;
 - signature styles resolve to real animations with the classic version's timing;
 - outfits cover the right skin areas, a shooting sleeve stays on its arm through a flip, and every frame has the outfit layers and headbands;
 - there are 3 dances and 5 victory poses, each ending on its hold frame;
@@ -521,6 +635,7 @@ The tests cover:
 pip install pillow
 python3 tools/generate_sprites.py      # ~6 min
 python3 tools/generate_trails.py       # the ball and its trails, a few seconds
+python3 tools/generate_move_fx.py      # movement effects (dust, skids, speed lines), a second
 python3 tools/generate_app_icon.py     # app icon, a second
 python3 tools/generate_feature_graphic.py  # Play feature graphic, a second
 python3 tools/generate_uniforms.py     # team uniforms: jersey cards and uniforms.json (after the sprites)
