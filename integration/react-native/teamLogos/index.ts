@@ -78,8 +78,8 @@ export type LogoStyle = 'classic' | 'retro' | 'simple' | 'current';
 export const LOGO_STYLES: LogoStyle[] = ['classic', 'retro', 'simple', 'current'];
 export const LOGO_STYLE_LABELS: Record<LogoStyle, string> = {
   classic: 'Classic badge',
-  retro: 'Retro patch',
-  simple: 'Simple mark',
+  retro: 'Retro roundel',
+  simple: 'Monogram',
   current: 'Current shield',
 };
 

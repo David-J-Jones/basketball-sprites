@@ -74,16 +74,16 @@ Every team also has three more logos built around the same icon, for menus, a te
 | Style | Look |
 |---|---|
 | `classic` | The round badge above, with the ribbon banner |
-| `retro` | A vintage felt patch: faded colors, a stitched border, the city across the top and the name across the bottom (long cities shorten: Philly, Nola, San Fran) |
-| `simple` | A flat one-color silhouette of the icon on a plain disc, with dark details in a second muted tone. Reads at tiny sizes (scoreboards, notifications) |
-| `current` | A modern angular shield, two-tone with a diagonal split, a flat-shaded icon and a bold name bar in the trim color |
+| `retro` | A vintage screen-print roundel: the icon reprinted in three faded inks in the team's colors, the city arched over the top, the name along the bottom, stars at the sides (long cities shorten: Philly, Nola, San Fran, L.A., S.A.) |
+| `simple` | A monogram: the team's initial as a chunky block letter with a drop shadow on a plain team-color disc. Reads at tiny sizes (scoreboards, notifications) |
+| `current` | A modern shield, two-tone with a diagonal split, holding the full icon flat-shaded, with a bold name bar hung under the point |
 
 ```tsx
 import { teamLogo, LOGO_STYLES, LOGO_STYLE_LABELS } from './teamLogos';
 <Image source={teamLogo('PHX', 'retro')} style={{ width: 64, height: 64 }} />   // 'classic' | 'retro' | 'simple' | 'current'
 ```
 
-Each style is one function in `tools/generate_logos.py` (`retro_patch`, `simple_mark`, `current_shield`), so redrawing a team's icon updates all four.
+Each style is one function in `tools/generate_logos.py` (`retro_roundel`, `monogram`, `current_shield`); redrawing a team's icon updates the retro and current logos too. Monogram letters live in `BIG`.
 
 Three teams are placeholders because your list didn't cover them: **Cleveland Pierogies, Memphis Ribs and Toronto Sorries**. Orlando is the **Tourists**, because Mickey is still a Disney trademark. To rename or redraw a team, edit its row in `TEAMS` and its `icon_*` function, then rerun.
 

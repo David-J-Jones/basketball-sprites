@@ -169,6 +169,7 @@ FONT = {
     "Q": "010101101110011", "R": "110101110101101", "S": "011100010001110", "T": "111010010010010",
     "U": "101101101101111", "V": "101101101101010", "W": "101101111111101", "X": "101101010101101",
     "Y": "101101010010010", "Z": "111001010100111", " ": "000000000000000", "'": "010010000000000",
+    ".": "000000000000010",
 }
 
 
@@ -601,9 +602,9 @@ def icon_only(team):
 # ------------------------------------------------------------------ alternate logos
 # Three more marks per team, built around the same icon, for menus, a
 # locker / store screen, or as unlockable cosmetics:
-#   retro    a vintage felt patch: faded colors, stitched border, city on top
-#   simple   a flat one-color silhouette of the icon on a plain disc
-#   current  a modern angular shield, flat-shaded icon, bold name bar
+#   retro    a vintage screen-print roundel: three faded inks, arched lettering
+#   simple   a monogram: the team's initial as a chunky letter on a plain disc
+#   current  a modern shield holding the full icon, with a name bar under it
 LOGO_STYLES = ("retro", "simple", "current")
 
 
@@ -612,99 +613,196 @@ def fade(c, k=0.35):
     return mix(mix(c, "#c8a878", k), "#3a2a20", 0.08)
 
 
-SHORT_CITY = {"Philadelphia": "Philly", "New Orleans": "Nola", "San Francisco": "San Fran"}
+SHORT_CITY = {"Philadelphia": "Philly", "New Orleans": "Nola", "San Francisco": "San Fran",
+              "Los Angeles": "L.A.", "San Antonio": "S.A."}
 
 
 def fits(text, width):
     return text_width(text) <= width
 
 
-def retro_patch(team):
+def lum(c):
+    r, g, b = rgb(c)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+
+def darken_until(c, max_lum, toward="#2a1a14"):
+    """The same hue, darkened just enough to sit below max_lum (for contrast with cream)."""
+    t = 0.0
+    out = c
+    while lum(out) > max_lum and t < 0.9:
+        t += 0.05
+        out = mix(c, toward, t)
+    return out
+
+
+def icon_layer(team, flat=False):
+    L = Logo(flat_all=flat)
+    team[5](L, team)
+    return L.px
+
+
+def arc_text(text, cx, cy, r, center_deg, top=True):
+    """Upright pixel letters laid along a circle: across the top (left to right)
+    or along the bottom (also left to right). Returns the set of pixels."""
+    out = set()
+    widths = [len(glyph(ch)[0]) for ch in text]
+    gap = 2                                                # upright letters on a curve need air between them
+    total = sum(widths) + gap * (len(text) - 1)
+    step = 1.0 / r                                        # radians per pixel of text
+    pos = -total / 2
+    for ch, w in zip(text, widths):
+        mid = pos + w / 2
+        ang = math.radians(center_deg) + (mid * step if top else -mid * step)
+        gx = cx + r * math.cos(ang) - w / 2
+        gy = cy + r * math.sin(ang) - 2.5
+        for (x, y) in text_pixels(ch, 0, 0):
+            out.add((int(round(gx + x)), int(round(gy + y))))
+        pos += w + gap
+    return out
+
+
+def retro_roundel(team):
+    """Vintage screen print: three faded inks, city arched over the top, the
+    name arched under the bottom, stars at the sides, the icon reprinted in
+    the same three inks."""
     tid, city, name, jersey, trim, icon = team
-    L = Logo()
-    felt, ink = fade(jersey, 0.3), fade(trim, 0.25)
-    cream = "#efe2c0"
-    corner = lambda x, y: min(x - 3, 60 - x, y - 3, 60 - y)                       # noqa: E731
-    patch = {(x, y) for x in range(3, 61) for y in range(3, 61)
-             if not (corner(x, y) < 5 and math.hypot(min(x - 8, 55 - x, 0), min(y - 8, 55 - y, 0)) > 5)}
-    L.part(patch, felt, shade=False)
-    inner = {(x, y) for (x, y) in patch if corner(x, y) >= 4}
-    L.paint(inner, mix(felt, "#ffffff", 0.08))
-    # stitching: a dashed line just inside the edge
-    stitch = {(x, y) for (x, y) in patch if corner(x, y) == 2 and (x + y) % 3 != 0}
-    L.paint(stitch, cream)
-    # the icon on a cream disc, colors faded to match the felt
-    L.part(ellipse(32, 30, 17, 17), cream, shade=False)
-    L.paint(ellipse(32, 30, 17, 17) - ellipse(32, 30, 15.5, 15.5), ink)
-    icon_px = Logo()
-    icon(icon_px, team)
-    for (x, y), c in icon_px.px.items():
-        if (x, y) in patch and math.hypot(x + 0.5 - 32, (y + 0.5 - 30) * 1.0) < 19 or y < 46:
-            if (x, y) in patch and corner(x, y) >= 4:
-                L.px[(x, y)] = c if c == OUTLINE else fade(c, 0.3)
-    # city across the top, name across the bottom, each on a felt band
-    for text, y0 in ((city.upper() if fits(city.upper(), 46) else SHORT_CITY.get(city, tid).upper(), 6),
-                     (name.upper(), 50)):
-        if not fits(text, 46):
-            text = text.split()[-1] if fits(text.split()[-1], 46) else tid
-        band = rect(8, y0 - 1, 55, y0 + 5)
-        L.paint(band, mix(felt, "#2a1020", 0.25))
-        txt = text_pixels(text, 32 - (text_width(text) + 1) // 2, y0)
-        L.paint({(x + 1, y + 1) for x, y in txt}, mix(felt, "#2a1020", 0.55))
-        L.paint(txt, cream)
+    paper = "#efe2c0"
+    dark = fade(mix(jersey, "#2a1a14", 0.5), 0.2)
+    band = darken_until(fade(jersey, 0.3), 0.5)
+    if abs(lum(band) - lum(dark)) < 0.1:
+        band = darken_until(fade(trim, 0.3), 0.5)
+    # print the icon in whichever team color is closest to the icon's own main color,
+    # so a peach stays peach-colored and a leaf stays red
+    px = icon_layer(team, flat=True)
+    counts = {}
+    for c in px.values():
+        if c != OUTLINE:
+            counts[c] = counts.get(c, 0) + 1
+    main = max(counts, key=counts.get) if counts else jersey
+    dist = lambda a, b: sum((x - y) ** 2 for x, y in zip(rgb(a), rgb(b)))            # noqa: E731
+    mid = darken_until(fade(min((jersey, trim), key=lambda c: dist(c, main)), 0.3), 0.55)
+    if lum(mid) - lum(dark) < 0.18:                        # keep the print ink clear of the dark ink
+        dark = darken_until(dark, max(0.05, lum(mid) - 0.2), toward="#120a08")
+    L = Logo(flat_all=True)
+    cx, cy = 32, 32
+    L.part(ellipse(cx, cy, 31, 31), dark, outline=False)
+    L.paint(ellipse(cx, cy, 30, 30), band)
+    L.paint(ellipse(cx, cy, 21.5, 21.5), dark)
+    inner = ellipse(cx, cy, 20.5, 20.5)
+    L.paint(inner, paper)
+    # the icon, reprinted in three inks, centred in the disc and kept inside it
+    xs = [x for x, _ in px]
+    ys = [y for _, y in px]
+    dx = cx - (min(xs) + max(xs) + 1) // 2
+    dy = cy - (min(ys) + max(ys) + 1) // 2 + 1
+    # split the icon's own colors at their median brightness, so every icon keeps
+    # its shape in two inks however light or dark the original is
+    fills = sorted(lum(c) for c in px.values() if c != OUTLINE)
+    median = fills[len(fills) // 2] if fills else 0.5
+    ink = mid
+    for (x, y), c in px.items():
+        q = (x + dx, y + dy)
+        if q not in inner:
+            continue
+        v = lum(c)
+        L.px[q] = dark if (c == OUTLINE or v < 0.16 or v < median * 0.6) else ink if v <= median else paper
+    # lettering in the band
+    top_text = city.upper()
+    if len(top_text) > 10:
+        top_text = SHORT_CITY.get(city, tid).upper()
+    bottom = name.upper()
+    if len(bottom) > 11:
+        bottom = bottom.split()[-1]
+    L.paint(arc_text(top_text, cx, cy, 25.5, -90, top=True), paper)
+    L.paint(arc_text(bottom, cx, cy, 26.5, 90, top=False), paper)
+    for sx in (cx - 26, cx + 25):                          # stars at 9 and 3 o'clock
+        L.paint({(sx, cy - 1), (sx, cy), (sx, cy + 1), (sx - 1, cy), (sx + 1, cy)}, paper)
     return L
 
 
-def simple_mark(team):
+# chunky 5 x 7 capitals for the monogram
+BIG = {
+    "B": ["11110", "11011", "11011", "11110", "11011", "11011", "11110"],
+    "C": ["01111", "11000", "11000", "11000", "11000", "11000", "01111"],
+    "D": ["11110", "11011", "11011", "11011", "11011", "11011", "11110"],
+    "F": ["11111", "11000", "11000", "11110", "11000", "11000", "11000"],
+    "J": ["00011", "00011", "00011", "00011", "11011", "11011", "01110"],
+    "L": ["11000", "11000", "11000", "11000", "11000", "11000", "11111"],
+    "M": ["1100011", "1110111", "1111111", "1101011", "1100011", "1100011", "1100011"],
+    "N": ["110011", "111011", "111011", "110111", "110111", "110011", "110011"],
+    "P": ["11110", "11011", "11011", "11110", "11000", "11000", "11000"],
+    "R": ["11110", "11011", "11011", "11110", "11011", "11011", "11011"],
+    "S": ["01111", "11000", "11000", "01110", "00011", "00011", "11110"],
+    "T": ["11111", "11111", "00100", "00100", "00100", "00100", "00100"],
+    "V": ["11011", "11011", "11011", "11011", "11011", "01110", "00100"],
+    "W": ["1100011", "1100011", "1100011", "1101011", "1111111", "1110111", "1100011"],
+}
+
+
+def monogram(team):
+    """Simple secondary mark: the team's initial as a chunky letter on a plain disc."""
     tid, city, name, jersey, trim, icon = team
     L = Logo(flat_all=True)
-    light = sum(rgb(jersey)) > 480
-    disc, ring = (jersey, trim) if not light else (trim, jersey)
-    mark = CREAM if sum(rgb(disc)) < 480 else OUTLINE
-    L.part(ellipse(32, 32, 29, 29), ring, outline=False)
-    L.part(ellipse(32, 32, 26, 26), disc, outline=False)
-    icon_px = Logo(flat_all=True)
-    icon(icon_px, team)
-    shape = set(icon_px.px)
-    ys = [y for _, y in shape]
-    xs = [x for x, _ in shape]
-    dx = 32 - (min(xs) + max(xs) + 1) // 2
-    dy = 32 - (min(ys) + max(ys) + 1) // 2
-    sil = {(x + dx, y + dy) for x, y in shape}
-    # one solid silhouette: outline pixels between parts become cut lines in the
-    # disc color, and dark details (eyes, stripes, patches) a second, muted tone
-    L.paint(sil, mark)
-    detail = mix(mark, disc, 0.62)
-    for (x, y), c in icon_px.px.items():
-        q = (x + dx, y + dy)
-        if c == OUTLINE:
-            inside = all(n in sil for n in ((q[0] + 1, q[1]), (q[0] - 1, q[1]), (q[0], q[1] + 1), (q[0], q[1] - 1)))
-            if inside:
-                L.px[q] = disc
-        elif sum(rgb(c)) < 260 or (mark == CREAM and sum(rgb(c)) < 330):
-            L.px[q] = detail
+    cx, cy = 32, 32
+    light = lum(jersey) > 0.7
+    disc = mix(trim, "#101018", 0.15) if light else jersey
+    letter = jersey if light else trim
+    if lum(letter) < 0.2 and lum(disc) > 0.3:
+        letter = CREAM                                     # a near-black letter goes muddy on a mid disc
+    if abs(lum(letter) - lum(disc)) < 0.25:
+        letter = CREAM if lum(disc) < 0.55 else OUTLINE
+    L.part(ellipse(cx, cy, 30, 30), letter, outline=True)
+    L.paint(ellipse(cx, cy, 28, 28), disc)
+    L.paint(ellipse(cx, cy, 28, 28) - ellipse(cx, cy, 26.5, 26.5), mix(disc, "#101018", 0.35))
+    rows = BIG[name[0].upper()]
+    k = 5 if len(rows[0]) <= 5 else 4                      # 5 x 7 cells of 5 px; wide letters use 4 px
+    w, h = len(rows[0]) * k, len(rows) * k
+    x0, y0 = cx - w // 2, cy - h // 2
+    pts = {(x0 + c * k + i, y0 + r * k + j) for r, row in enumerate(rows) for c, b in enumerate(row) if b == "1"
+           for i in range(k) for j in range(k)}
+    shadow = mix(disc, "#101018", 0.55)
+    L.paint({(x + 2, y + 2) for x, y in pts}, shadow)              # drop shadow
+    ring = {(x + dx, y + dy) for x, y in pts for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))} - pts
+    L.paint(ring, OUTLINE)
+    L.paint(pts, letter)
+    L.paint({(x, y) for x, y in pts if (x - 1, y) not in pts or (x, y - 1) not in pts}, mix(letter, "#ffffff", 0.35))
     return L
 
 
 def current_shield(team):
+    """Modern shield: two-tone with a diagonal split, the full icon inside it,
+    and a bold name bar hung under the point."""
     tid, city, name, jersey, trim, icon = team
     L = Logo(flat_all=True)
-    dark = mix(jersey, "#101018", 0.55)
-    shield = poly([(8, 4), (56, 4), (58, 10), (58, 34), (32, 54), (6, 34), (6, 10)])
-    L.part(shield, jersey)
-    L.paint({(x, y) for (x, y) in shield if x + y * 0.6 > 44}, dark)            # diagonal two-tone split
-    L.paint({p for p in shield if p not in poly([(10, 7), (54, 7), (55, 11), (55, 33), (32, 51), (9, 33), (9, 11)])},
-            trim)                                                               # trim border
-    icon(L, team)
-    text = name.upper() if fits(name.upper(), 52) else tid
+    dark = mix(jersey, "#101018", 0.45)
+    outer = poly([(5, 1), (59, 1), (61, 6), (61, 36), (32, 56), (3, 36), (3, 6)])
+    inner = poly([(8, 4), (56, 4), (58, 8), (58, 35), (32, 52), (6, 35), (6, 8)])
+    L.part(outer, trim)
+    L.paint(inner, jersey)
+    L.paint({(x, y) for (x, y) in inner if x - y * 0.7 > 22}, dark)          # diagonal split
+    px = icon_layer(team, flat=True)
+    xs = [x for x, _ in px]
+    ys = [y for _, y in px]
+    dx = 32 - (min(xs) + max(xs) + 1) // 2
+    dy = 25 - (min(ys) + max(ys) + 1) // 2
+    for (x, y), c in px.items():
+        q = (x + dx, y + dy)
+        if q in inner:
+            L.px[q] = c
+        elif q in outer:
+            L.px[q] = OUTLINE
+    text = name.upper()
     w = text_width(text)
-    L.part(rect(32 - w // 2 - 4, 49, 32 + (w + 1) // 2 + 3, 59), trim)
-    ink = OUTLINE if sum(rgb(trim)) > 420 else CREAM
-    L.paint(text_pixels(text, 32 - (w + 1) // 2, 52), ink)
+    bar = rect(32 - w // 2 - 4, 53, 32 + (w + 1) // 2 + 3, 62)
+    L.part(bar, trim)
+    L.paint(rect(32 - w // 2 - 3, 54, 32 + (w + 1) // 2 + 2, 54), mix(trim, "#ffffff", 0.35))
+    ink = OUTLINE if lum(trim) > 0.6 else CREAM
+    L.paint(text_pixels(text, 32 - (w + 1) // 2, 56), ink)
     return L
 
 
-STYLE_FNS = {"retro": retro_patch, "simple": simple_mark, "current": current_shield}
+STYLE_FNS = {"retro": retro_roundel, "simple": monogram, "current": current_shield}
 
 
 # ------------------------------------------------------------------ output
@@ -742,8 +840,8 @@ def to_svg(px, tid):
 
 
 def main():
-    shutil.rmtree(OUT, ignore_errors=True)
-    for sub in ("png", "svg"):
+    for sub in ("png", "svg"):                          # only the generated art: keeps logos.test.ts
+        shutil.rmtree(os.path.join(OUT, sub), ignore_errors=True)
         os.makedirs(os.path.join(OUT, sub))
     meta = []
     tiles = []
@@ -797,8 +895,8 @@ def main():
               "export const LOGO_STYLES: LogoStyle[] = ['classic', %s];" % ", ".join("'%s'" % st for st in LOGO_STYLES),
               "export const LOGO_STYLE_LABELS: Record<LogoStyle, string> = {",
               "  classic: 'Classic badge',",
-              "  retro: 'Retro patch',",
-              "  simple: 'Simple mark',",
+              "  retro: 'Retro roundel',",
+              "  simple: 'Monogram',",
               "  current: 'Current shield',",
               "};", "",
               "/** Alternate logos (512 x 512), by team and style. */",
