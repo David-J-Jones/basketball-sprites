@@ -1,19 +1,21 @@
 /**
  * Signature animations a player can pick (or be given): run, dribble and
- * jump-shot styles, plus the layups and dunks in his bag. Every style keeps
+ * jump-shot styles, plus the crossovers, layups and dunks in his bag. Every style keeps
  * the frame count and event frames of its classic version, so game logic is
  * the same whichever one a player uses.
  */
 import { runStyleFor } from './appearance';
 import type { AnimatorOptions } from './animController';
 import type { BodyKey } from './features';
-import { dribbleAnim, shotFor, type BallHand } from './moves';
+import { dribbleAnim, handSwitch, shotFor, type BallHand, type HandSwitchMove } from './moves';
 import type { AnimName, DribbleStyle, DunkAnim, LayupAnim, RunStyle, ShotAnim, ShotStyle } from './types';
 
 export type AnimStyles = {
   run: RunStyle;
   dribble: DribbleStyle;
   shot: ShotStyle;
+  /** hand-switch moves he uses to change direction; the game picks among them */
+  crossovers: HandSwitchMove[];
   /** layups he can use; the game picks among them */
   layups: LayupAnim[];
   /** dunks he can use; the game picks among them */
@@ -27,6 +29,7 @@ export const STYLE_OPTIONS: {
   run: StyleOption<RunStyle>[];
   dribble: StyleOption<DribbleStyle>[];
   shot: StyleOption<ShotStyle>[];
+  crossover: StyleOption<HandSwitchMove>[];
   layup: StyleOption<LayupAnim>[];
   dunk: StyleOption<DunkAnim>[];
 } = {
@@ -52,6 +55,15 @@ export const STYLE_OPTIONS: {
     { id: 'kick', label: 'Leg kick', description: 'Legs kick out on the release' },
     { id: 'push', label: 'Push', description: 'Old-school push from the chin, low arc' },
   ],
+  crossover: [
+    { id: 'crossover', label: 'Classic', description: 'Push it across in front, plant and cut' },
+    { id: 'crossover_quick', label: 'Snap', description: 'Tight, low and quick, one short bounce' },
+    { id: 'crossover_wide', label: 'Killer', description: 'Jab wide, sweep it low across, lunge the other way' },
+    { id: 'crossover_double', label: 'Double', description: 'Across, back, and across again before the cut' },
+    { id: 'crossover_hesi', label: 'Hesi cross', description: 'Rise up to sell the stop, then drop and cross' },
+    { id: 'behind_back', label: 'Behind the back', description: 'Wrap it around the back to the other hand' },
+    { id: 'between_legs', label: 'Between the legs', description: 'Wide stance, bounce it through the legs' },
+  ],
   layup: [
     { id: 'layup', label: 'Standard', description: 'One hand off the glass' },
     { id: 'layup_finger_roll', label: 'Finger roll', description: 'Palm up, rolled off the fingers' },
@@ -76,6 +88,7 @@ export const DEFAULT_ANIM_STYLES: AnimStyles = {
   run: 'run',
   dribble: 'classic',
   shot: 'classic',
+  crossovers: ['crossover', 'crossover_quick', 'behind_back'],
   layups: ['layup', 'layup_finger_roll', 'layup_euro'],
   dunks: ['dunk_basic', 'dunk_athletic'],
 };
@@ -117,6 +130,17 @@ export function defaultAnimStyles(playerId: number, body: BodyKey): AnimStyles {
   const layupExtra = weighted<LayupAnim>(seeded(playerId, 3), [
     ['layup_reverse', 1], ['layup_scoop', small ? 2 : 0.6], ['layup_floater', small ? 2.5 : 0.8],
   ]);
+  // everyone has the classic cross; guards get a signature move or two on top
+  const signature = weighted<HandSwitchMove>(seeded(playerId, 5), [
+    ['crossover_quick', small ? 3 : 1.2], ['crossover_wide', small ? 2 : 1.2], ['crossover_double', small ? 2 : 0.5],
+    ['crossover_hesi', 1.5], ['behind_back', big ? 0.6 : 1.2], ['between_legs', big ? 0.4 : 1.2],
+  ]);
+  const second = weighted<HandSwitchMove>(seeded(playerId, 6), [
+    ['crossover_quick', 1], ['crossover_hesi', 1], ['behind_back', 1], ['between_legs', 1],
+  ]);
+  const crossovers: HandSwitchMove[] = big
+    ? ['crossover', signature]
+    : [...new Set<HandSwitchMove>(['crossover', signature, second])];
   const dunks: DunkAnim[] = big
     ? ['dunk_two_hand', 'dunk_hang', 'dunk_basic']
     : ['dunk_basic', weighted<DunkAnim>(seeded(playerId, 4), [
@@ -126,6 +150,7 @@ export function defaultAnimStyles(playerId: number, body: BodyKey): AnimStyles {
     run: runStyleFor(playerId, body),
     dribble,
     shot,
+    crossovers,
     layups: ['layup', big ? 'layup_finger_roll' : 'layup_euro', layupExtra],
     dunks,
   };
@@ -144,6 +169,15 @@ export function jumperFor(styles: AnimStyles, speedTowardBasket: number, thresho
 /** Dribble animation in the player's dribble style (see dribbleAnim). */
 export function dribbleFor(styles: AnimStyles, hand: BallHand, moving: boolean, walking = false): AnimName {
   return dribbleAnim(hand, moving, walking, styles.dribble);
+}
+
+/**
+ * A hand-switch move from his bag for a direction change (dy < 0: up the
+ * screen; see handSwitch). `rand` is 0..1 (defaults to Math.random).
+ */
+export function pickCrossover(styles: AnimStyles, dy: number, rand = Math.random()): AnimName {
+  const move = styles.crossovers[Math.floor(rand * styles.crossovers.length)] ?? 'crossover';
+  return handSwitch(move, dy);
 }
 
 /** One layup from his bag. `rand` is 0..1 (defaults to Math.random). */

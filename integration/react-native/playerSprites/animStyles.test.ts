@@ -1,11 +1,12 @@
 import { PlayerAnimator } from './animController';
 import {
-  STYLE_OPTIONS, DEFAULT_ANIM_STYLES, animatorOptions, defaultAnimStyles, dribbleFor, jumperFor, pickDunk, pickLayup,
+  STYLE_OPTIONS, DEFAULT_ANIM_STYLES, animatorOptions, defaultAnimStyles, dribbleFor, jumperFor, pickCrossover, pickDunk,
+  pickLayup,
   type AnimStyles,
 } from './animStyles';
 import { BODY_KEYS } from './features';
 import { framesOf, SPRITE_DATA as SPRITES } from './frames';
-import { dribbleAnim, shotFor } from './moves';
+import { dribbleAnim, handAfter, handSwitch, shotFor } from './moves';
 import type { AnimName } from './types';
 
 const has = (a: string) => a in SPRITES.anims;
@@ -27,6 +28,7 @@ describe('animation styles', () => {
     for (const s of STYLE_OPTIONS.shot) names.push(shotFor(0, 3, s.id), shotFor(9, 3, s.id), shotFor(-9, 3, s.id));
     for (const l of STYLE_OPTIONS.layup) names.push(l.id);
     for (const d of STYLE_OPTIONS.dunk) names.push(d.id);
+    for (const c of STYLE_OPTIONS.crossover) names.push(handSwitch(c.id, -1), handSwitch(c.id, 1));
     for (const n of names) {
       expect(has(n)).toBe(true);
       for (const body of BODY_KEYS) expect(framesOf(body, n as AnimName).length).toBe(SPRITES.anims[n as AnimName].frameCount);
@@ -58,6 +60,24 @@ describe('animation styles', () => {
     expect(defaultAnimStyles(3, 'h7-heavy').dunks).toContain('dunk_two_hand');
     const styles = new Set(Array.from({ length: 200 }, (_, i) => defaultAnimStyles(i, 'h4-average').shot));
     expect(styles.size).toBe(5);
+  });
+
+  it('gives everyone the classic crossover plus a varied bag of moves', () => {
+    const all = Array.from({ length: 300 }, (_, i) => defaultAnimStyles(i + 1, i % 2 ? 'h2-lean' : 'h6-solid'));
+    for (const s of all) {
+      expect(s.crossovers[0]).toBe('crossover');
+      expect(new Set(s.crossovers).size).toBe(s.crossovers.length);
+    }
+    const used = new Set(all.flatMap((s) => s.crossovers));
+    for (const c of STYLE_OPTIONS.crossover) expect(used.has(c.id)).toBe(true);
+    expect(defaultAnimStyles(9, 'h2-lean')).toEqual(defaultAnimStyles(9, 'h2-lean'));
+  });
+
+  it('picks a crossover from the bag for the direction of the cut', () => {
+    const s: AnimStyles = { ...DEFAULT_ANIM_STYLES, crossovers: ['crossover_wide', 'crossover_double'] };
+    expect(pickCrossover(s, -1, 0)).toBe('crossover_wide_up');
+    expect(pickCrossover(s, 1, 0.99)).toBe('crossover_double_down');
+    expect(handAfter(pickCrossover(s, -1, 0.5))).toBe('far');
   });
 
   it('plays the chosen styles', () => {

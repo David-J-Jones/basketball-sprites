@@ -10,6 +10,8 @@ export type AnimName =
   | 'dribble' | 'dribble_run' | 'dribble_far' | 'dribble_run_far'
   | 'crossover_up' | 'crossover_down' | 'behind_back_up' | 'behind_back_down'
   | 'between_legs_up' | 'between_legs_down' | 'hesitation' | 'hesitation_far'
+  | `crossover_${StyledCrossover}_up` | `crossover_${StyledCrossover}_down`
+  | 'inside_out' | 'inside_out_far'
   | 'shoot' | 'shoot_pullup' | 'shoot_fade'
   | 'layup' | 'layup_finger_roll' | 'layup_euro'
   | 'dunk_basic' | 'dunk_athletic' | 'dunk_hang' | 'dunk_windmill' | 'dunk_tomahawk'
@@ -33,6 +35,13 @@ export type RunStyle = 'run' | 'run_upright' | 'run_power' | 'run_bounce' | 'run
 /** Dribble styles. 'classic' is dribble / dribble_run; the rest are dribble_<style>, dribble_run_<style>. */
 export type DribbleStyle = 'classic' | 'low' | 'high' | 'rhythm' | 'protect';
 type StyledDribble = Exclude<DribbleStyle, 'classic'>;
+
+/**
+ * Crossover styles. 'classic' is crossover_up / crossover_down; the rest are
+ * crossover_<style>_up / _down. All of them switch hands the same way.
+ */
+export type CrossoverStyle = 'classic' | 'quick' | 'wide' | 'double' | 'hesi';
+type StyledCrossover = Exclude<CrossoverStyle, 'classic'>;
 
 /** Jump-shot styles. 'classic' is shoot / shoot_pullup / shoot_fade; the rest are shoot_<style>[_pullup|_fade]. */
 export type ShotStyle = 'classic' | 'quick' | 'high' | 'kick' | 'push';

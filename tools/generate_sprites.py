@@ -2260,6 +2260,19 @@ RUN_ARM = [  # (upper, forearm) for the near arm
     (40, 135), (30, 120), (5, 85), (-25, 55),
 ]
 RUN_BOB = [0, 1, 0, -1, -1, 0, 0, -1]
+# The classic run and dribble_run: a step lands on keys 0 and 4 and pushes off
+# on 3 and 7, so the body sinks after each landing and is airborne (2 px up)
+# on every push-off. That flight phase is most of what makes a run read as
+# fast instead of a walk on the spot.
+RUN_BOB_LIVE = [0, 1, 0, -2, 0, 1, 0, -2]
+RUN_LEAN_LIVE = [14, 13, 15, 17, 14, 13, 15, 17]   # tips into each push-off
+
+
+def run_arm_live(k):
+    """RUN_ARM with a harder pump: the arm drives further each way and the
+    elbow closes as it comes forward."""
+    up, fo = RUN_ARM[k]
+    return (up * 1.3, fo + up * 0.35)
 
 
 def idle_frames():
@@ -2271,8 +2284,8 @@ RUN_FRAMES = 12   # locomotion cycles are 12 frames: 8 key poses + in-betweens
 
 
 def run_keys():
-    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], RUN_ARM[i],
-              lean=14, bob=RUN_BOB[i]) for i in range(8)]
+    return [P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], run_arm_live((i + 4) % 8), run_arm_live(i),
+              lean=RUN_LEAN_LIVE[i], bob=RUN_BOB_LIVE[i]) for i in range(8)]
 
 
 def run_frames():
@@ -2293,8 +2306,8 @@ def dribble_run_frames():
     # two bounces per stride; the near hand keeps dribbling out in front
     arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
     ball = [("near", 1.5, 4.5, 1), ("hip", 13, 8, 1), ("ground", 13, 0, 1), ("hip", 13, 8, 1)] * 2
-    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], RUN_ARM[i],
-                       lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
+    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], arm[i], run_arm_live(i),
+                       lean=RUN_LEAN_LIVE[i] + 2, bob=RUN_BOB_LIVE[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
 
 
 def dribble_far_frames():
@@ -2307,8 +2320,8 @@ def dribble_run_far_frames():
     # mid-run; only the dribbling hand changes
     arm = [(32, 72), (30, 45), (30, 38), (32, 60)] * 2
     ball = [("far", 1.5, 4.5, -1), ("hip", 13, 8, -1), ("ground", 13, 0, -1), ("hip", 13, 8, -1)] * 2
-    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], RUN_ARM[(i + 4) % 8], arm[i],
-                       lean=16, bob=RUN_BOB[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
+    return resample([P(RUN_LEG[i], RUN_LEG[(i + 4) % 8], run_arm_live((i + 4) % 8), arm[i],
+                       lean=RUN_LEAN_LIVE[i] + 2, bob=RUN_BOB_LIVE[i], ball=ball[i]) for i in range(8)], RUN_FRAMES)
 
 
 IDLE_POSE = P((8, -4, 0), (-6, -2, 0), (22, 50), (-14, 20), lean=4)
@@ -2781,6 +2794,126 @@ def between_legs_up_frames():
 
 def between_legs_down_frames():
     return [swap_sides(p) for p in between_legs_up_frames()]
+
+
+# ---------------------------------------------------------------- crossover variety
+# Every crossover is drawn as the `_up` version (near hand -> far hand, cut up
+# the screen); `_down` is its mirror image, the same way as crossover_down.
+FAR_DRIBBLE_POSE = swap_sides(DRIBBLE_POSE)
+
+
+def crossover_quick_up_frames():
+    """Snap cross: tight and low, the ball barely leaves the feet, no big
+    step. Fast and compact, for small guards in traffic."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1 snap it down hard, already moving across
+        P((28, -18, 0), (-18, -40, 14), (36, 28), (38, 70), lean=20, bob=1, ball=("hip", 7, 10, 0.3)),
+        # 2 one short bounce right under the body
+        P((28, -18, 0), (-18, -40, 14), (20, 34), (36, 44), lean=21, bob=1, ball=("ground", 6, 0, -0.2)),
+        # 3 far hand has it, small push off the near foot
+        P((14, -24, 10), (24, -12, -2), (24, 62), (36, 58), lean=19, bob=1, ball=("far", 1.5, 4.5, -0.8)),
+        dict(FAR_DRIBBLE_POSE),
+    ]
+
+
+def crossover_quick_down_frames():
+    return [swap_sides(p) for p in crossover_quick_up_frames()]
+
+
+def crossover_wide_up_frames():
+    """Killer cross: jab hard to the near side with the ball held out wide,
+    then sweep it low and far across the front and lunge the other way."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1 jab step: near foot out, ball pulled wide on the near side
+        P((40, -8, -6), (-20, -40, 15), (52, 82), (40, 90), lean=22, bob=1, ball=("near", 1.5, 4.5, 1)),
+        # 2 sweep it down, still wide
+        P((40, -14, -4), (-22, -44, 16), (46, 36), (44, 70), lean=26, bob=2, ball=("hip", 14, 10, 0.7)),
+        # 3 bounce way out in front, wide base
+        P((34, -20, 0), (-24, -46, 16), (26, 30), (50, 46), lean=28, bob=2, ball=("ground", 14, 0, 0)),
+        # 4 far hand scoops it, near foot plants to push off
+        P((-10, -26, 18), (36, -6, -4), (6, 50), (46, 50), lean=26, bob=1, ball=("far", 1.5, 4.5, -0.8)),
+        # 5 explode out of it, long first step
+        P((12, -34, 12), (34, -12, -4), (40, 90), (40, 82), lean=22, ball=("far", 1.5, 5.0, -1)),
+        dict(FAR_DRIBBLE_POSE),
+    ]
+
+
+def crossover_wide_down_frames():
+    return [swap_sides(p) for p in crossover_wide_up_frames()]
+
+
+def crossover_double_up_frames():
+    """Double cross: near -> far -> near, then back to the far hand for real
+    and cut. The first two switches stay square to sell them."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1-2 first cross: push down, bounce in front
+        P((28, -18, 0), (-18, -40, 14), (40, 38), (36, 74), lean=20, bob=1, ball=("hip", 10, 9, 0.5)),
+        P((28, -18, 0), (-18, -40, 14), (22, 40), (36, 56), lean=21, bob=1, ball=("ground", 9, 0, 0)),
+        # 3 far hand catches, stays square
+        P((26, -16, 0), (-16, -38, 13), (16, 50), (36, 62), lean=20, bob=1, ball=("far", 1.5, 4.5, -0.7)),
+        # 4-5 second cross: far hand pushes it straight back
+        P((26, -18, 0), (-18, -40, 14), (24, 54), (40, 38), lean=22, bob=1, ball=("hip", 10, 9, -0.4)),
+        P((28, -18, 0), (-18, -40, 14), (34, 48), (22, 40), lean=22, bob=1, ball=("ground", 9, 0, 0)),
+        # 6 near hand has it again, for one touch
+        P((28, -18, 0), (-18, -40, 14), (36, 50), (30, 56), lean=22, bob=1, ball=("near", 1.5, 4.5, 0.7)),
+        # 7 third cross: snap it right back across
+        P((30, -20, 0), (-22, -44, 15), (22, 36), (36, 50), lean=24, bob=1, ball=("ground", 9, 0, -0.1)),
+        # 8 far hand catches, plant and push off (like crossover_up frame 3)
+        P((-5, -24, 18), (34, -4, -4), (0, 60), (35, 50), lean=22, bob=1, ball=("far", 1.5, 4.5, -0.6)),
+        P((10, -30, 10), (30, -10, -4), (40, 90), (30, 55), lean=18, ball=("far", 1.5, 5.0, -1)),
+        dict(FAR_DRIBBLE_POSE),
+    ]
+
+
+def crossover_double_down_frames():
+    return [swap_sides(p) for p in crossover_double_up_frames()]
+
+
+def crossover_hesi_up_frames():
+    """Hesi cross: rise up to sell the stop, then drop and cross."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1-2 rise up tall and sell it (as in hesitation)
+        P((10, -4, 0), (-8, -12, 6), (30, 60), (35, 70), lean=4, ball=("near", 1.5, 3.5, 1)),
+        P((8, -4, 0), (-8, -10, 6), (32, 55), (35, 70), lean=2, head_dy=-1, ball=("hip", 12, 7, 1)),
+        # 3 drop low, push it across
+        P((32, -20, 0), (-22, -46, 16), (42, 38), (35, 75), lean=24, bob=1, ball=("hip", 11, 9, 0.5)),
+        # 4 bounce in front
+        P((32, -20, 0), (-22, -46, 16), (22, 40), (38, 55), lean=25, bob=1, ball=("ground", 10, 0, 0)),
+        # 5 far hand catches, plant and go
+        P((-5, -24, 18), (34, -4, -4), (0, 60), (35, 50), lean=23, bob=1, ball=("far", 1.5, 4.5, -0.6)),
+        P((10, -30, 10), (30, -10, -4), (40, 90), (30, 55), lean=19, ball=("far", 1.5, 5.0, -1)),
+        dict(FAR_DRIBBLE_POSE),
+    ]
+
+
+def crossover_hesi_down_frames():
+    return [swap_sides(p) for p in crossover_hesi_up_frames()]
+
+
+def inside_out_frames():
+    """Inside-out: fake the crossover (the hand rolls the ball in toward the
+    middle, shoulders dip the other way), then pull it back out and burst
+    with the same hand."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1 shoulders dip, far foot jabs as if crossing
+        P((22, -16, 0), (8, -30, 8), (26, 46), (36, 72), lean=22, bob=1, ball=("near", 0.5, 4.0, 0.4)),
+        # 2 ball rolled in toward the middle: the fake
+        P((24, -18, 0), (10, -32, 8), (36, 40), (38, 64), lean=24, bob=1, ball=("hip", 9, 8, 0.1)),
+        # 3 hand wraps back over it and pushes it out
+        P((28, -16, 0), (-10, -36, 14), (44, 58), (34, 70), lean=22, bob=1, ball=("hip", 13, 7, 0.9)),
+        # 4 burst (as in hesitation)
+        P((34, -10, 0), (-26, -52, 30), (30, 40), (-20, 60), lean=26, bob=1, ball=("ground", 13, 0, 1)),
+        P(RUN_LEG[0], RUN_LEG[4], (32, 72), RUN_ARM[0], lean=16, ball=("near", 1.5, 4.5, 1)),     # into dribble_run
+    ]
+
+
+def inside_out_far_frames():
+    return [swap_sides(p, legs=False) for p in inside_out_frames()]
 
 
 def hesitation_frames():
@@ -3444,7 +3577,9 @@ ANIM_GROUP = {
     "post_up": "post", "post_hook": "post", "post_fadeaway": "post", "post_fade_one_leg": "post",
     "spin_move": "post",
 }
-for _n in ("crossover_up", "crossover_down", "behind_back_up", "behind_back_down", "between_legs_up",
+for _n in ("crossover_up", "crossover_down", "crossover_quick_up", "crossover_quick_down", "crossover_wide_up",
+           "crossover_wide_down", "crossover_double_up", "crossover_double_down", "crossover_hesi_up",
+           "crossover_hesi_down", "inside_out", "inside_out_far", "behind_back_up", "behind_back_down", "between_legs_up",
            "between_legs_down", "hesitation", "hesitation_far", "screen_set", "screen_hold",
            "screen_contact", "pass", "steal"):
     ANIM_GROUP[_n] = "moves"
@@ -3529,6 +3664,18 @@ ANIMS = [
     ("between_legs_down", between_legs_down_frames, 14, False, {"cross": 2, "catch": 3, "cutStart": 3}),
     ("hesitation", hesitation_frames, 12, False, {"burst": 3}),
     ("hesitation_far", hesitation_far_frames, 12, False, {"burst": 3}),
+    ("crossover_quick_up", crossover_quick_up_frames, 18, False, {"cross": 2, "catch": 3, "cutStart": 3}),
+    ("crossover_quick_down", crossover_quick_down_frames, 18, False, {"cross": 2, "catch": 3, "cutStart": 3}),
+    ("crossover_wide_up", crossover_wide_up_frames, 14, False, {"jab": 1, "cross": 3, "catch": 4, "cutStart": 4}),
+    ("crossover_wide_down", crossover_wide_down_frames, 14, False, {"jab": 1, "cross": 3, "catch": 4, "cutStart": 4}),
+    ("crossover_double_up", crossover_double_up_frames, 17, False,
+     {"cross": 2, "cross2": 5, "cross3": 7, "catch": 8, "cutStart": 8}),
+    ("crossover_double_down", crossover_double_down_frames, 17, False,
+     {"cross": 2, "cross2": 5, "cross3": 7, "catch": 8, "cutStart": 8}),
+    ("crossover_hesi_up", crossover_hesi_up_frames, 14, False, {"hesi": 2, "cross": 4, "catch": 5, "cutStart": 5}),
+    ("crossover_hesi_down", crossover_hesi_down_frames, 14, False, {"hesi": 2, "cross": 4, "catch": 5, "cutStart": 5}),
+    ("inside_out", inside_out_frames, 14, False, {"fake": 2, "burst": 4}),
+    ("inside_out_far", inside_out_far_frames, 14, False, {"fake": 2, "burst": 4}),
     ("dunk_hang", dunk_hang_frames, 10, False,
      {"gather": 0, "takeoff": 2, "dunk": 4, "hangStart": 5, "hangEnd": 6}),
 ] + SIGNATURE_ANIMS

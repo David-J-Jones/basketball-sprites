@@ -7,7 +7,9 @@ export { Headshot } from './Headshot';
 export type { HeadshotProps } from './Headshot';
 export { PlayerSprite, frameAt, animDuration, scaleForHeight, frameToScreen } from './PlayerSprite';
 export type { PlayerSpriteProps } from './PlayerSprite';
-export { crossoverFor, handSwitch, handAfter, hesitationFor, dribbleAnim, shotFor } from './moves';
+export {
+  crossoverFor, handSwitch, handAfter, hesitationFor, insideOutFor, dribbleAnim, shotFor, HAND_SWITCH_MOVES, CROSSOVER_STYLES,
+} from './moves';
 export type { BallHand, HandSwitchMove } from './moves';
 export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from './animController';
 export type { Facing, AnimatorInput, AnimatorOutput, AnimatorOptions } from './animController';
@@ -19,6 +21,7 @@ export {
 } from './outfit';
 export type { OutfitTints, CosmeticOption, OutfitPreset } from './outfit';
 export {
-  STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickLayup, pickDunk,
+  STYLE_OPTIONS, DEFAULT_ANIM_STYLES, defaultAnimStyles, animatorOptions, jumperFor, dribbleFor, pickCrossover, pickLayup,
+  pickDunk,
 } from './animStyles';
 export type { AnimStyles, StyleOption } from './animStyles';
