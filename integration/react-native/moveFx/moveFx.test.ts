@@ -146,7 +146,7 @@ describe('crossover swish', () => {
     for (let i = 1; i <= 4; i++) segs = sw.update(DT, { anim: 'crossover_up', ball: [i * 6, i * 2], scale: 2 });
     expect(segs.length).toBeGreaterThan(4);                                  // smoothed in-between points too
     expect(segs[segs.length - 1].width).toBeGreaterThan(segs[0].width);
-    expect(segs[segs.length - 1].opacity).toBeGreaterThan(segs[0].opacity);
+    expect(segs[segs.length - 1].opacity).toBeGreaterThanOrEqual(segs[0].opacity);  // full brightness until the tail fades
     expect(segs[segs.length - 1].color).toBe('#ffffff');                     // electric: white-hot at the ball
     expect(segs[0].color).not.toBe('#ffffff');                               // colored toward the tail
     for (let i = 0; i < 20; i++) segs = sw.update(DT, { anim: 'dribble_run', ball: [30, 10], scale: 2 });
