@@ -292,6 +292,8 @@ animator.play(insideOutFor(animator.hand));
 
 ![movement effects](previews/move_fx.png)
 
+![movement showcase](previews/movement_showcase.gif)
+
 `moveFx/` adds life around a moving player. `MoveFxEmitter` watches the animation the player is in and fires effects on the right frames, so they always line up with the art:
 
 | Effect | When it fires |
@@ -325,6 +327,7 @@ const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
 - **Cost:** the nine strips together are about 40 KB on disk and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
 - **Success effects:** `fx.success('steal' | 'block', x, y, flip, scale, at?)`. `at` is the ball's screen position (it defaults to where the hand would be). Turn either part off with `enabled: { text_block: false }` etc.
 - **By hand:** `fx.spawn('dust_skid', x, y, flip, scale)` for anything else (a charge, a dive for a loose ball). `fx.clear()` on a dead ball.
+- **Showcase:** `python3 tools/preview_movement.py` redraws `previews/movement_showcase.gif` from the built atlas: a run, a sprint, a dribble drive into a killer crossover, and a plant / turn / stop.
 - **Art:** `tools/generate_move_fx.py` draws them (one `fx_<name>` function per effect) and rewrites `moveFx/` and `previews/move_fx.png` / `previews/move_fx/*.gif`.
 
 ## Park mode: outfits, celebrations, ball trails
