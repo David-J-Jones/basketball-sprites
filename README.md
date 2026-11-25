@@ -44,49 +44,6 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - Drawn as 50×60 pixel art in the same style as the sprites. Every pixel is a crisp square, grouped into one `<path>` per color with `shape-rendering="crispEdges"`, so it stays sharp at any size.
 - **Features:** 4 head shapes, 5 eye shapes, 5 noses, 4 mouths, 5 eye colors, brow weight, plus the same skin, hair and facial-hair options as the sprite. Shading follows the original face generator: brow and eye sockets, nose bridge, cheekbones, jawline and neck shadow, with strand highlights in the hair. The jersey uses the team color (navy if none) and can show a number.
 
-## Arenas
-
-![arena themes](previews/arenas.png)
-
-Six arena themes players can choose from, in **`integration/react-native/arenas/`**. Each one is a set of layers the game draws around its own court, at the same pixel size as the court:
-
-| Arena | Around the court | Floor | Lighting |
-|---|---|---|---|
-| `pro_arena` Pro Arena | Rafters, light rigs, a DEFENSE jumbotron, team banners, an upper and lower deck, an LED ribbon | Glossy maple | Spotlights |
-| `retro_gym` Old School Gym | Brick wall, high windows, pennants, a bulb scoreboard, wooden bleachers, padded wall | Honey boards with scuffs | Sunbeams |
-| `street` Street Court | Sunset sky and sun, city skyline, trees, fans behind a chain-link fence, a curb | Cracked concrete | Sunset glow |
-| `neon` Neon Nights | Synth grid, pink / cyan / gold neon tubes, a neon ball, a glow-stick crowd in silhouette, LED strip | Glossy dark with reflections | Neon haze and lasers |
-| `beach` Beach Court | Sky, clouds, ocean, palm trees, lifeguard tower, umbrellas, fans on the sand | Sun-bleached boards | Sun glare |
-| `rooftop` Rooftop Night | Stars, moon, a lit skyline, water towers, string lights, brick parapet | Painted green rooftop | Night vignette and bokeh |
-
-**Layers** (all stored at 4x, nearest-neighbour):
-
-| Layer | Size (art px) | What it is |
-|---|---|---|
-| `backdrop` | 480 x 64 | Everything behind the far sideline. It's the band above the court (the top ~40% of a 16:9 screen) and wider than the screen, so it pans |
-| `team` | 480 x 64 | White mask over the team-colored parts (banners, ribbon, pennants, wall pads, umbrellas, rail); tinted with the home color |
-| `crowd`, `crowd_home`, `crowd_away` | 480 x 64, 3 frames | The fans (sitting, bobbing, cheering) and masks over their shirts: about half wear the home color, some the away color |
-| `floor` | 64 x 64 | Tileable floor texture for the court renderer |
-| `overlay` | 270 x 152 | Full-screen lighting, transparent |
-
-```tsx
-import { ArenaBackdrop, ArenaOverlay, arenaFloor, arenaScale, ARENAS } from './arenas';
-
-const scale = arenaScale(screenHeight);              // screen px per art px (4 at 608 px tall)
-<ArenaBackdrop arena={settings.arena} width={screenWidth} scale={scale}
-  pan={cameraX / courtLength} time={gameTime} excitement={crowdHype}
-  homeColor={home.jersey} awayColor={away.jersey} />
-{/* ...the game's court (tile arenaFloor(arena).source, line / apron / paint colors), players, banner... */}
-<ArenaOverlay arena={settings.arena} width={screenWidth} height={screenHeight} />
-{/* ...HUD */}
-```
-
-- **Picking one:** `ARENAS` has an id, label and description for each, for a settings or locker screen. `DEFAULT_ARENA` is `pro_arena`.
-- **The crowd:** `crowdFrame(time, excitement)` cycles sit / bob / cheer at 4 fps. Raise `excitement` (0..1) on a run or a big dunk and they speed up; past 0.7 they're on their feet.
-- **Pan:** `pan` 0..1 slides the wider backdrop as the camera moves, a little slower than the court (parallax).
-- **Your banner and ribbon** (team name, scrolling ads) still draw on top, as now.
-- **Mockups:** `previews/arenas/<id>.png` shows each one in the game's layout. Redraw everything with `python3 tools/generate_arenas.py`. Each theme is one function (`pro_arena()`, `retro_gym()`...), and floors and lighting are `floor(kind)` / `overlay(kind)`.
-
 ## Team logos
 
 ![team logos](previews/logos.png)
@@ -715,7 +672,6 @@ pip install pillow
 python3 tools/generate_sprites.py      # ~6 min
 python3 tools/generate_trails.py       # the ball and its trails, a few seconds
 python3 tools/generate_move_fx.py      # movement effects (dust, skids, speed lines), a second
-python3 tools/generate_arenas.py       # arena themes and their mockups, a few seconds
 python3 tools/generate_app_icon.py     # app icon, a second
 python3 tools/generate_feature_graphic.py  # Play feature graphic, a second
 python3 tools/generate_uniforms.py     # team uniforms: jersey cards and uniforms.json (after the sprites)
