@@ -74,7 +74,7 @@ Every team also has three more logos built around the same icon, for menus, a te
 | Style | Look |
 |---|---|
 | `classic` | The round badge above, with the ribbon banner |
-| `retro` | A vintage screen-print roundel around the franchise's **old-era image** (DC's scales of justice, Detroit's tire, Indiana's popcorn, Toronto's "SORRY" bubble...), printed in three faded inks in the team's colors, the city arched over the top, the name along the bottom, stars at the sides (long cities shorten: Philly, Nola, San Fran, L.A., S.A.) |
+| `retro` | A vintage screen-print roundel around the franchise's **old-era image**: still the team's own mascot, drawn the old way (Chicago's whole cow, Brooklyn's mouse in its hole, Detroit's jalopy, DC's scales of justice, Charlotte's beehive...), printed in three faded inks in the team's colors, the city arched over the top, the name along the bottom, stars at the sides (long cities shorten: Philly, Nola, San Fran, L.A., S.A.) |
 | `simple` | A monogram: the team's initial as a chunky block letter with a drop shadow on a plain team-color disc. Reads at tiny sizes (scoreboards, notifications) |
 | `current` | A modern shield, two-tone with a diagonal split, holding the full icon flat-shaded, with a bold name bar hung under the point |
 
