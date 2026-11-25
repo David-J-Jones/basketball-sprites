@@ -3,11 +3,38 @@ import type { ImageSourcePropType } from 'react-native';
 import type { JerseyColors, Outfit, UniformPattern } from '../playerSprites/types';
 import uniforms from './uniforms.json';
 
-export type UniformKind = 'home' | 'away' | 'city';
-export const UNIFORM_KINDS: UniformKind[] = ['home', 'away', 'city'];
+export type UniformKind = 'home' | 'away' | 'city' | 'retro70' | 'retro80' | 'retro90';
+export const UNIFORM_KINDS: UniformKind[] = ['home', 'away', 'city', 'retro70', 'retro80', 'retro90'];
+/** The throwbacks: unlockable cosmetics, not part of a team's regular set. */
+export type RetroKind = 'retro70' | 'retro80' | 'retro90';
+export const RETRO_KINDS: RetroKind[] = ['retro70', 'retro80', 'retro90'];
+
+export type UniformUnlock = {
+  /** shown on a locker / store screen */
+  label: string;
+  /** a suggested way to earn it; the game decides what actually unlocks it */
+  hint: string;
+  /** true for home / away / city */
+  unlockedByDefault: boolean;
+};
+
+export const UNIFORM_UNLOCKS: Record<UniformKind, UniformUnlock> = {
+  home: { label: 'Home', hint: 'Team issue', unlockedByDefault: true },
+  away: { label: 'Away', hint: 'Team issue', unlockedByDefault: true },
+  city: { label: 'City Edition', hint: 'Team issue', unlockedByDefault: true },
+  retro70: { label: "'70s Throwback", hint: 'Win 10 games with the team', unlockedByDefault: false },
+  retro80: { label: "'80s Throwback", hint: 'Make the playoffs with the team', unlockedByDefault: false },
+  retro90: { label: "'90s Throwback", hint: 'Win a title with the team', unlockedByDefault: false },
+};
+
+/** The uniforms a team can wear right now, given the throwbacks the player has unlocked for it. */
+export function availableUniforms(unlocked: Iterable<RetroKind> = []): UniformKind[] {
+  const have = new Set<UniformKind>(unlocked);
+  return UNIFORM_KINDS.filter((k) => UNIFORM_UNLOCKS[k].unlockedByDefault || have.has(k));
+}
 
 export type TeamUniform = {
-  /** 'Home', 'Away', or the city edition's name */
+  /** 'Home', 'Away', the city edition's name, or "'70s Throwback" etc. */
   name: string;
   pattern: UniformPattern;
   jersey: string;
@@ -42,150 +69,240 @@ export const UNIFORM_CARDS: Record<string, Record<UniformKind, ImageSourcePropTy
     home: require('./png/PHX_home.png'),
     away: require('./png/PHX_away.png'),
     city: require('./png/PHX_city.png'),
+    retro70: require('./png/PHX_retro70.png'),
+    retro80: require('./png/PHX_retro80.png'),
+    retro90: require('./png/PHX_retro90.png'),
   },
   "SLC": {
     home: require('./png/SLC_home.png'),
     away: require('./png/SLC_away.png'),
     city: require('./png/SLC_city.png'),
+    retro70: require('./png/SLC_retro70.png'),
+    retro80: require('./png/SLC_retro80.png'),
+    retro90: require('./png/SLC_retro90.png'),
   },
   "CHI": {
     home: require('./png/CHI_home.png'),
     away: require('./png/CHI_away.png'),
     city: require('./png/CHI_city.png'),
+    retro70: require('./png/CHI_retro70.png'),
+    retro80: require('./png/CHI_retro80.png'),
+    retro90: require('./png/CHI_retro90.png'),
   },
   "CHA": {
     home: require('./png/CHA_home.png'),
     away: require('./png/CHA_away.png'),
     city: require('./png/CHA_city.png'),
+    retro70: require('./png/CHA_retro70.png'),
+    retro80: require('./png/CHA_retro80.png'),
+    retro90: require('./png/CHA_retro90.png'),
   },
   "NY": {
     home: require('./png/NY_home.png'),
     away: require('./png/NY_away.png'),
     city: require('./png/NY_city.png'),
+    retro70: require('./png/NY_retro70.png'),
+    retro80: require('./png/NY_retro80.png'),
+    retro90: require('./png/NY_retro90.png'),
   },
   "GA": {
     home: require('./png/GA_home.png'),
     away: require('./png/GA_away.png'),
     city: require('./png/GA_city.png'),
+    retro70: require('./png/GA_retro70.png'),
+    retro80: require('./png/GA_retro80.png'),
+    retro90: require('./png/GA_retro90.png'),
   },
   "BOS": {
     home: require('./png/BOS_home.png'),
     away: require('./png/BOS_away.png'),
     city: require('./png/BOS_city.png'),
+    retro70: require('./png/BOS_retro70.png'),
+    retro80: require('./png/BOS_retro80.png'),
+    retro90: require('./png/BOS_retro90.png'),
   },
   "ORL": {
     home: require('./png/ORL_home.png'),
     away: require('./png/ORL_away.png'),
     city: require('./png/ORL_city.png'),
+    retro70: require('./png/ORL_retro70.png'),
+    retro80: require('./png/ORL_retro80.png'),
+    retro90: require('./png/ORL_retro90.png'),
   },
   "MIA": {
     home: require('./png/MIA_home.png'),
     away: require('./png/MIA_away.png'),
     city: require('./png/MIA_city.png'),
+    retro70: require('./png/MIA_retro70.png'),
+    retro80: require('./png/MIA_retro80.png'),
+    retro90: require('./png/MIA_retro90.png'),
   },
   "NO": {
     home: require('./png/NO_home.png'),
     away: require('./png/NO_away.png'),
     city: require('./png/NO_city.png'),
+    retro70: require('./png/NO_retro70.png'),
+    retro80: require('./png/NO_retro80.png'),
+    retro90: require('./png/NO_retro90.png'),
   },
   "PHI": {
     home: require('./png/PHI_home.png'),
     away: require('./png/PHI_away.png'),
     city: require('./png/PHI_city.png'),
+    retro70: require('./png/PHI_retro70.png'),
+    retro80: require('./png/PHI_retro80.png'),
+    retro90: require('./png/PHI_retro90.png'),
   },
   "BKN": {
     home: require('./png/BKN_home.png'),
     away: require('./png/BKN_away.png'),
     city: require('./png/BKN_city.png'),
+    retro70: require('./png/BKN_retro70.png'),
+    retro80: require('./png/BKN_retro80.png'),
+    retro90: require('./png/BKN_retro90.png'),
   },
   "HOU": {
     home: require('./png/HOU_home.png'),
     away: require('./png/HOU_away.png'),
     city: require('./png/HOU_city.png'),
+    retro70: require('./png/HOU_retro70.png'),
+    retro80: require('./png/HOU_retro80.png'),
+    retro90: require('./png/HOU_retro90.png'),
   },
   "DET": {
     home: require('./png/DET_home.png'),
     away: require('./png/DET_away.png'),
     city: require('./png/DET_city.png'),
+    retro70: require('./png/DET_retro70.png'),
+    retro80: require('./png/DET_retro80.png'),
+    retro90: require('./png/DET_retro90.png'),
   },
   "IND": {
     home: require('./png/IND_home.png'),
     away: require('./png/IND_away.png'),
     city: require('./png/IND_city.png'),
+    retro70: require('./png/IND_retro70.png'),
+    retro80: require('./png/IND_retro80.png'),
+    retro90: require('./png/IND_retro90.png'),
   },
   "SF": {
     home: require('./png/SF_home.png'),
     away: require('./png/SF_away.png'),
     city: require('./png/SF_city.png'),
+    retro70: require('./png/SF_retro70.png'),
+    retro80: require('./png/SF_retro80.png'),
+    retro90: require('./png/SF_retro90.png'),
   },
   "LAC": {
     home: require('./png/LAC_home.png'),
     away: require('./png/LAC_away.png'),
     city: require('./png/LAC_city.png'),
+    retro70: require('./png/LAC_retro70.png'),
+    retro80: require('./png/LAC_retro80.png'),
+    retro90: require('./png/LAC_retro90.png'),
   },
   "LAB": {
     home: require('./png/LAB_home.png'),
     away: require('./png/LAB_away.png'),
     city: require('./png/LAB_city.png'),
+    retro70: require('./png/LAB_retro70.png'),
+    retro80: require('./png/LAB_retro80.png'),
+    retro90: require('./png/LAB_retro90.png'),
   },
   "DC": {
     home: require('./png/DC_home.png'),
     away: require('./png/DC_away.png'),
     city: require('./png/DC_city.png'),
+    retro70: require('./png/DC_retro70.png'),
+    retro80: require('./png/DC_retro80.png'),
+    retro90: require('./png/DC_retro90.png'),
   },
   "DEN": {
     home: require('./png/DEN_home.png'),
     away: require('./png/DEN_away.png'),
     city: require('./png/DEN_city.png'),
+    retro70: require('./png/DEN_retro70.png'),
+    retro80: require('./png/DEN_retro80.png'),
+    retro90: require('./png/DEN_retro90.png'),
   },
   "DAL": {
     home: require('./png/DAL_home.png'),
     away: require('./png/DAL_away.png'),
     city: require('./png/DAL_city.png'),
+    retro70: require('./png/DAL_retro70.png'),
+    retro80: require('./png/DAL_retro80.png'),
+    retro90: require('./png/DAL_retro90.png'),
   },
   "SAC": {
     home: require('./png/SAC_home.png'),
     away: require('./png/SAC_away.png'),
     city: require('./png/SAC_city.png'),
+    retro70: require('./png/SAC_retro70.png'),
+    retro80: require('./png/SAC_retro80.png'),
+    retro90: require('./png/SAC_retro90.png'),
   },
   "MIL": {
     home: require('./png/MIL_home.png'),
     away: require('./png/MIL_away.png'),
     city: require('./png/MIL_city.png'),
+    retro70: require('./png/MIL_retro70.png'),
+    retro80: require('./png/MIL_retro80.png'),
+    retro90: require('./png/MIL_retro90.png'),
   },
   "POR": {
     home: require('./png/POR_home.png'),
     away: require('./png/POR_away.png'),
     city: require('./png/POR_city.png'),
+    retro70: require('./png/POR_retro70.png'),
+    retro80: require('./png/POR_retro80.png'),
+    retro90: require('./png/POR_retro90.png'),
   },
   "OKC": {
     home: require('./png/OKC_home.png'),
     away: require('./png/OKC_away.png'),
     city: require('./png/OKC_city.png'),
+    retro70: require('./png/OKC_retro70.png'),
+    retro80: require('./png/OKC_retro80.png'),
+    retro90: require('./png/OKC_retro90.png'),
   },
   "SA": {
     home: require('./png/SA_home.png'),
     away: require('./png/SA_away.png'),
     city: require('./png/SA_city.png'),
+    retro70: require('./png/SA_retro70.png'),
+    retro80: require('./png/SA_retro80.png'),
+    retro90: require('./png/SA_retro90.png'),
   },
   "MIN": {
     home: require('./png/MIN_home.png'),
     away: require('./png/MIN_away.png'),
     city: require('./png/MIN_city.png'),
+    retro70: require('./png/MIN_retro70.png'),
+    retro80: require('./png/MIN_retro80.png'),
+    retro90: require('./png/MIN_retro90.png'),
   },
   "CLE": {
     home: require('./png/CLE_home.png'),
     away: require('./png/CLE_away.png'),
     city: require('./png/CLE_city.png'),
+    retro70: require('./png/CLE_retro70.png'),
+    retro80: require('./png/CLE_retro80.png'),
+    retro90: require('./png/CLE_retro90.png'),
   },
   "MEM": {
     home: require('./png/MEM_home.png'),
     away: require('./png/MEM_away.png'),
     city: require('./png/MEM_city.png'),
+    retro70: require('./png/MEM_retro70.png'),
+    retro80: require('./png/MEM_retro80.png'),
+    retro90: require('./png/MEM_retro90.png'),
   },
   "TOR": {
     home: require('./png/TOR_home.png'),
     away: require('./png/TOR_away.png'),
     city: require('./png/TOR_city.png'),
+    retro70: require('./png/TOR_retro70.png'),
+    retro80: require('./png/TOR_retro80.png'),
+    retro90: require('./png/TOR_retro90.png'),
   },
 };
