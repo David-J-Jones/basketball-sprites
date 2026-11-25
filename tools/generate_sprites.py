@@ -2462,6 +2462,52 @@ def layup_frames():
     ]
 
 
+def steal_success_frames():
+    """A steal that works: swipe, poke the ball loose, chase it down, scoop
+    it up, chin it to the chest and push out on the dribble. The lunge
+    drifts up to 4 art pixels forward and comes back by the last frame."""
+    windup = (228, 205)
+    return [
+        # 0-2 the same wind-up and swipe as `steal`
+        P((46, -8, 0), (-14, -40, 12), (45, 75), (35, 70), lean=26),
+        P((50, -6, 0), (-18, -44, 14), windup, (20, 55), lean=22, arms_behind_head=True),
+        P((60, 10, -4), (-30, -56, 22), (100, 96), (5, 40), lean=32, dx=2, smear=[windup, (150, 150)]),
+        # 3 poke: the swipe gets a piece of it
+        P((62, 14, -4), (-34, -60, 24), (70, 64), (-5, 30), lean=36, dx=3, smear=[(100, 96)],
+          ball=("near", 4.0, 2.0, 1)),
+        # 4 the ball squirts loose, out in front
+        P((60, 12, -4), (-32, -58, 22), (48, 44), (10, 40), lean=34, dx=3, ball=("hip", 17, 11, 0.7)),
+        # 5 he dives after it as it bounces
+        P((70, 24, -8), (-36, -64, 30), (80, 70), (20, 60), lean=42, dx=4, bob=2, ball=("ground", 19, 0, 0.6)),
+        # 6 scoops it up off the bounce
+        P((68, 20, -6), (-30, -60, 26), (62, 40), (40, 50), lean=40, dx=4, bob=2, ball=("near", 1.5, 3.5, 1)),
+        # 7-8 pulls it in with both hands and chins it: secured
+        P((44, -10, 0), (-20, -40, 14), (20, 130), (30, 120), lean=12, dx=3, bob=1, ball=("between", 1.0, 1.5, 0.3)),
+        P((40, -12, 0), (-16, -38, 12), (24, 140), (34, 128), lean=6, dx=2, ball=("between", 1.0, 0.5, 0.3)),
+        # 9 pushes it out ahead...
+        P((34, -10, 0), (-26, -52, 30), (40, 60), (-20, 60), lean=22, dx=1, bob=1, ball=("hip", 13, 8, 1)),
+        # 10 ...and is off on the dribble (dribble_run frame 0)
+        P(RUN_LEG[0], RUN_LEG[4], (32, 72), RUN_ARM[0], lean=16, ball=("near", 1.5, 4.5, 1)),
+    ]
+
+
+def stripped_frames():
+    """The ball handler getting his pocket picked: the ball is knocked out of
+    his hand, he reaches after it, then throws his arms out (hey!)."""
+    return [
+        dict(DRIBBLE_POSE),
+        # 1 the poke: ball knocked away, his hand flung up, body jolted
+        P((20, -12, 0), (-12, -32, 10), (75, 110), (40, 85), lean=4, bob=1, head_dx=-1, ball=("hip", 23, 1, 0.8)),
+        # 2-3 reaches after it, one step, but it's gone
+        P((40, 4, -6), (-22, -50, 26), (95, 98), (30, 70), lean=22),
+        P((44, 10, -8), (-20, -48, 24), (88, 92), (40, 80), lean=24, bob=1),
+        # 4-5 straightens up, arms out: what was that?
+        P((14, -6, 0), (-8, -8, 4), (50, 150), (44, 140), lean=-2, shrug=1),
+        P((12, -6, 0), (-8, -6, 4), (56, 158), (48, 148), lean=-4, shrug=1, head_dy=-1),
+        dict(IDLE_POSE),
+    ]
+
+
 def pass_frames():
     # two-hand chest pass
     return [
@@ -3581,7 +3627,7 @@ for _n in ("crossover_up", "crossover_down", "crossover_quick_up", "crossover_qu
            "crossover_wide_down", "crossover_double_up", "crossover_double_down", "crossover_hesi_up",
            "crossover_hesi_down", "inside_out", "inside_out_far", "behind_back_up", "behind_back_down", "between_legs_up",
            "between_legs_down", "hesitation", "hesitation_far", "screen_set", "screen_hold",
-           "screen_contact", "pass", "steal"):
+           "screen_contact", "pass", "steal", "steal_success", "stripped"):
     ANIM_GROUP[_n] = "moves"
 for _n in ("shoot", "shoot_pullup", "shoot_fade", "block", "rebound"):
     ANIM_GROUP[_n] = "finish"
@@ -3623,6 +3669,9 @@ ANIMS = [
     ("layup", layup_frames, 12, False, {"gather": 0, "takeoff": 2, "release": 4}),
     ("pass", pass_frames, 14, False, {"release": 3}),
     ("steal", steal_frames, 14, False, {"activeStart": 2, "activeEnd": 4}),
+    ("steal_success", steal_success_frames, 14, False,
+     {"activeStart": 2, "poke": 3, "loose": 4, "catch": 6, "secure": 8, "burst": 9}),
+    ("stripped", stripped_frames, 12, False, {"lose": 1}),
     ("block", block_frames, 10, False, {"takeoff": 1, "activeStart": 2, "activeEnd": 4}),
     ("rebound", rebound_frames, 10, False, {"takeoff": 1, "catch": 3}),
     ("dunk_basic", dunk_basic_frames, 12, False, {"gather": 0, "takeoff": 2, "dunk": 4}),

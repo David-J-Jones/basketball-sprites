@@ -15,7 +15,7 @@ export type AnimName =
   | 'shoot' | 'shoot_pullup' | 'shoot_fade'
   | 'layup' | 'layup_finger_roll' | 'layup_euro'
   | 'dunk_basic' | 'dunk_athletic' | 'dunk_hang' | 'dunk_windmill' | 'dunk_tomahawk'
-  | 'pass' | 'steal' | 'block' | 'rebound'
+  | 'pass' | 'steal' | 'steal_success' | 'stripped' | 'block' | 'rebound'
   | 'screen_set' | 'screen_hold' | 'screen_contact'
   | 'defense_stance' | 'defense_slide' | 'defense_hands_up' | 'guard_on_ball'
   | 'celebrate' | 'point_up' | 'frustrated'

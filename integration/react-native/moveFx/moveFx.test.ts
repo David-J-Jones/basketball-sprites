@@ -41,6 +41,7 @@ describe('move fx data', () => {
     expect(burstFrame('crossover_wide_up')).toBe(4);
     expect(burstFrame('hesitation')).toBe(3);
     expect(burstFrame('dribble')).toBeNull();
+    expect(burstFrame('steal_success')).toBe(9);           // dust as he pushes off with the ball
     expect(landFrame('dunk_basic')).not.toBeNull();
     expect(landFrame('run')).toBeNull();
     for (const a of ['run', 'run_power', 'dribble_run', 'dribble_run_low_far'] as AnimName[]) expect(isStride(a)).toBe(true);

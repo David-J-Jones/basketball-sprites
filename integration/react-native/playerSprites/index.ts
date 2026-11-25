@@ -8,7 +8,8 @@ export type { HeadshotProps } from './Headshot';
 export { PlayerSprite, frameAt, animDuration, scaleForHeight, frameToScreen } from './PlayerSprite';
 export type { PlayerSpriteProps } from './PlayerSprite';
 export {
-  crossoverFor, handSwitch, handAfter, hesitationFor, insideOutFor, dribbleAnim, shotFor, HAND_SWITCH_MOVES, CROSSOVER_STYLES,
+  crossoverFor, handSwitch, handAfter, hesitationFor, insideOutFor, dribbleAnim, shotFor, stealAnims, HAND_SWITCH_MOVES,
+  CROSSOVER_STYLES,
 } from './moves';
 export type { BallHand, HandSwitchMove } from './moves';
 export { PlayerAnimator, DEFAULT_ANIMATOR_OPTIONS, POST_MOVES, opposite } from './animController';

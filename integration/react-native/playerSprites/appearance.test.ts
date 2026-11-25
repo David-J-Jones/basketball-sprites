@@ -10,7 +10,7 @@ import {
 } from './appearance';
 import { faceFromSeed } from './faceArt';
 import {
-  CROSSOVER_STYLES, crossoverFor, dribbleAnim, HAND_SWITCH_MOVES, handAfter, handSwitch, hesitationFor, insideOutFor, shotFor,
+  CROSSOVER_STYLES, crossoverFor, dribbleAnim, HAND_SWITCH_MOVES, handAfter, handSwitch, hesitationFor, insideOutFor, shotFor, stealAnims,
 } from './moves';
 import { BODY_KEYS, FACIAL_HAIR, HAIR_COLORS, HAIR_STYLES, SKIN_TONES } from './features';
 import { BODY_LOADERS } from './bodyData';
@@ -142,6 +142,23 @@ describe('sprite data', () => {
     }
   });
 
+  it('wins the ball on a successful steal, and the ball handler loses it', () => {
+    const ev = SPRITES.anims.steal_success.events;
+    expect(ev.poke).toBeLessThan(ev.loose);
+    expect(ev.loose).toBeLessThan(ev.catch);
+    expect(ev.catch).toBeLessThan(ev.secure);
+    expect(ev.secure).toBeLessThan(ev.burst);
+    for (const body of BODY_KEYS) {
+      const won = framesOf(body, 'steal_success');
+      expect(won[0].ball).toBeNull();                         // he doesn't have it to start
+      expect(won[ev.poke].ball).not.toBeNull();
+      expect(won[won.length - 1].ballDepth).toBe(1);         // and leaves dribbling with the near hand
+      const lost = framesOf(body, 'stripped');
+      expect(lost[0].ball).not.toBeNull();
+      expect(lost.slice(SPRITES.anims.stripped.events.lose + 1).every((f) => f.ball === null)).toBe(true);
+    }
+  });
+
   it('marks the dunk moments', () => {
     expect(SPRITES.anims.dunk_basic.events.dunk).toBeDefined();
     expect(SPRITES.anims.dunk_athletic.events.dunk).toBeDefined();
@@ -184,6 +201,9 @@ describe('direction helpers', () => {
     expect(handAfter('inside_out')).toBeNull();
     expect(insideOutFor('far')).toBe('inside_out_far');
     expect(hesitationFor('near')).toBe('hesitation');
+    expect(stealAnims(true)).toEqual({ defender: 'steal_success', handler: 'stripped' });
+    expect(stealAnims(false)).toEqual({ defender: 'steal', handler: null });
+    expect(handAfter('steal_success')).toBe('near');
   });
 
   it('picks the dribble for the ball hand', () => {

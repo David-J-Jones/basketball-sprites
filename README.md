@@ -36,7 +36,7 @@ Pixel-art court sprites and headshots for the sim league. Both come from the sam
 - **Developer-only:** a color-shifting tee (`developer_tee`).
 - **Celebrations:** air guitar, 3 dances and 5 victory poses.
 - **Ball trails:** 11 animated effects (fire, laser, bubbles, money, lightning, rainbow, ice, smoke, stars, confetti, afterimage) in `ballTrails/`.
-- **113 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `crossover_quick_up/down`, `crossover_wide_up/down`, `crossover_double_up/down`, `crossover_hesi_up/down`, `inside_out`, `inside_out_far`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
+- **115 animations:** the signature styles and celebrations above, plus `post_up`, `post_hook`, `post_fadeaway`, `post_fade_one_leg`, `spin_move`, `run_upright`, `run_power`, `run_bounce`, `guard_on_ball`, `celebrate`, `point_up`, `frustrated`, `walk`, `walk_dribble`, `walk_dribble_far`, `backpedal`, `idle_hips`, `idle_knees`, `defense_stance`, `defense_slide`, `defense_hands_up`, `shoot_pullup`, `shoot_fade`, `layup_finger_roll`, `layup_euro`, `dunk_windmill`, `dunk_tomahawk`, `behind_back_up`, `behind_back_down`, `crossover_quick_up/down`, `crossover_wide_up/down`, `crossover_double_up/down`, `crossover_hesi_up/down`, `inside_out`, `inside_out_far`, `between_legs_up`, `between_legs_down`, `hesitation`, `hesitation_far`, `screen_set`, `screen_hold`, `screen_contact`, `steal_success`, `stripped`, `idle`, `run`, `run_start`, `run_stop`, `turn`, `turn_run`, `turn_dribble`, `dribble`, `dribble_run`, `dribble_far`, `dribble_run_far`, `crossover_up`, `crossover_down`, `shoot`, `layup`, `pass`, `steal`, `block`, `rebound`, `dunk_basic`, `dunk_athletic`, `dunk_hang`.
 - **No ball, shadow or rim in the art.** Frames list where the ball and hands are.
 
 **Headshots** (front view)
@@ -525,6 +525,13 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
   - `post_fade_one_leg`: the one-legged fade, off the far foot with the near knee up. It doesn't turn, so play it facing the basket: `play('post_fade_one_leg', basketSide)`.
 
   Any of these ends the post-up. `release()` ends it without a move. The shots drift up to 5 art pixels (toward the basket for the hook and spin, away for the fades), so move the player there in the sim as they play.
+- **Steals:** `stealAnims(success)` gives both sides. On a miss the defender plays `steal` and the ball handler carries on. On a steal the defender plays `steal_success`, the ball handler plays `stripped` from the defender's `poke` event, and the ball is loose from `loose` to `catch` (draw it from the frames' ball point or let the sim own it). The lunge drifts up to 4 art pixels forward and comes back by the last frame; afterwards the defender is dribbling with the near hand, and `MoveFxEmitter` kicks up a burst as he pushes off.
+
+  ```ts
+  const { defender, handler } = stealAnims(sim.stealWorked);
+  defenderAnimator.play(defender, towardBall);
+  if (handler) handlerAnimator.play(handler);   // at defender's events.poke
+  ```
 - **Guarding:** pass `onBall: true` in the animator input for the defender on the ball handler. When he is defending and not moving he plays `guard_on_ball` (a low, active stance with hand jabs) instead of `defense_stance`.
 - **Faces changed:** new hair and beard options were added to the seeded face generator, so an existing player id may now get a different headshot (and matching sprite) than before this update.
 - **Dunks and the rim:** position the jump so `nearHand`/`farHand` at the `dunk` frame land on the rim. For `dunk_hang`, loop frames `hangStart`–`hangEnd` while he hangs, then play the rest.
@@ -556,7 +563,9 @@ const jerseys = jerseysForGame(teamById(homeId), teamById(awayId));
 | `shoot` | 8 | 12 | no | `gather: 0`, `rise: 2`, `release: 4` |
 | `layup` | 8 | 12 | no | `gather: 0`, `takeoff: 2`, `release: 4`. Near hand |
 | `pass` | 6 | 14 | no | `release: 3` |
-| `steal` | 6 | 14 | no | `activeStart: 2`, `activeEnd: 4` |
+| `steal` | 6 | 14 | no | `activeStart: 2`, `activeEnd: 4`. The swipe on its own (a miss) |
+| `steal_success` | 11 | 14 | no | `poke: 3`, `loose: 4`, `catch: 6`, `secure: 8`, `burst: 9`. Swipe, poke it loose, dive and scoop, chin it, push out on the dribble (near hand) |
+| `stripped` | 7 | 12 | no | `lose: 1`. The ball handler's side: ball knocked away, reaches after it, arms out |
 | `block` | 6 | 10 | no | `takeoff: 1`, `activeStart: 2`, `activeEnd: 4` |
 | `rebound` | 6 | 10 | no | `takeoff: 1`, `catch: 3` |
 | `screen_set` | 4 | 12 | no | `set: 3`: jog in, plant a wide base, arms folded across the chest |

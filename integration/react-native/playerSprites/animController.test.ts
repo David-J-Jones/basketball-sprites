@@ -182,6 +182,10 @@ describe('PlayerAnimator walking, defense and idles', () => {
       a.play(move);
       expect(run(a, 1.5, 0, true).pop()).toMatchObject({ hand });
     }
+    const d = new PlayerAnimator('right');
+    run(d, 0.3, 0);
+    d.play('steal_success');
+    expect(run(d, 1.5, 10, true).pop()).toMatchObject({ anim: 'dribble_run', hand: 'near' });
     a.play('inside_out');
     expect(run(a, 1, 0, true).pop()).toMatchObject({ anim: 'dribble', hand: 'near' });
   });

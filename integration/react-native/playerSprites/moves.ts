@@ -41,8 +41,9 @@ export function crossoverFor(dy: number, style: CrossoverStyle = 'classic'): Ani
 
 const HAND_SWITCH_RE = new RegExp(`^(${HAND_SWITCH_MOVES.join('|')})_(up|down)$`);
 
-/** The hand holding the ball after a hand-switch move (null for any other animation). */
+/** The hand holding the ball after a hand-switch move or a won steal (null for any other animation). */
 export function handAfter(anim: AnimName): BallHand | null {
+  if (anim === 'steal_success') return 'near';           // he comes out of it dribbling with the near hand
   if (!HAND_SWITCH_RE.test(anim)) return null;
   return anim.endsWith('_up') ? 'far' : 'near';
 }
@@ -79,4 +80,13 @@ export function shotFor(speedTowardBasket: number, threshold = 3, style: ShotSty
   if (speedTowardBasket > threshold) return `${base}_pullup` as ShotAnim;
   if (speedTowardBasket < -threshold) return `${base}_fade` as ShotAnim;
   return base as ShotAnim;
+}
+
+/**
+ * The two sides of a steal attempt. Play `defender` on the defender and, when
+ * it works, `handler` on the ball handler at the defender's `poke` event.
+ * A miss is the plain swipe and the ball handler carries on.
+ */
+export function stealAnims(success: boolean): { defender: 'steal' | 'steal_success'; handler: 'stripped' | null } {
+  return success ? { defender: 'steal_success', handler: 'stripped' } : { defender: 'steal', handler: null };
 }
