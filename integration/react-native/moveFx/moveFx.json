@@ -133,6 +133,42 @@
     52,
     27
    ]
+  },
+  "text_contested": {
+   "label": "CONTESTED! pop-up",
+   "width": 128,
+   "height": 28,
+   "frames": 12,
+   "fps": 12,
+   "loop": false,
+   "anchor": [
+    64,
+    27
+   ]
+  },
+  "text_open": {
+   "label": "WIDE OPEN! pop-up",
+   "width": 128,
+   "height": 28,
+   "frames": 12,
+   "fps": 12,
+   "loop": false,
+   "anchor": [
+    64,
+    27
+   ]
+  },
+  "text_smothered": {
+   "label": "SMOTHERED! pop-up",
+   "width": 128,
+   "height": 28,
+   "frames": 12,
+   "fps": 12,
+   "loop": false,
+   "anchor": [
+    64,
+    27
+   ]
   }
  }
 }

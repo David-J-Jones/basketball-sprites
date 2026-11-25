@@ -23,7 +23,7 @@ describe('move fx data', () => {
   it('has every effect with a size, frames, fps and an anchor inside the frame', () => {
     expect(MOVE_FX_IDS).toEqual([
       'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'cross_swoosh', 'dunk_splash', 'impact_star', 'swat_burst', 'text_steal',
-      'text_block',
+      'text_block', 'text_contested', 'text_open', 'text_smothered',
     ]);
     for (const id of MOVE_FX_IDS) {
       const m = MOVE_FX[id];
@@ -186,6 +186,21 @@ describe('dunk splash', () => {
       expect(fx.update(DT, { x: 0, y: 0, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 2 })
         .some((e) => e.fx === 'dunk_splash')).toBe(false);
     }
+  });
+});
+
+describe('shot callouts', () => {
+  it('pops the verdict over the shooter, never mirrored, and lets each be switched off', () => {
+    const fx = new MoveFxEmitter();
+    for (const kind of ['open', 'contested', 'smothered'] as const) {
+      const e = fx.callout(kind, 100, 200, 2)!;
+      expect(e.fx).toBe(`text_${kind}`);
+      expect(e.y).toBeLessThan(200);
+      expect(e.flip).toBe(false);
+    }
+    const quiet = new MoveFxEmitter({ enabled: { text_contested: false } as never });
+    expect(quiet.callout('contested', 0, 0, 1)).toBeNull();
+    expect(quiet.callout('open', 0, 0, 1)).not.toBeNull();
   });
 });
 

@@ -15,4 +15,7 @@ export const FX_IMAGES: Record<MoveFxId, () => ImageSourcePropType> = {
   swat_burst: () => require('./swat_burst.png'),
   text_steal: () => require('./text_steal.png'),
   text_block: () => require('./text_block.png'),
+  text_contested: () => require('./text_contested.png'),
+  text_open: () => require('./text_open.png'),
+  text_smothered: () => require('./text_smothered.png'),
 };

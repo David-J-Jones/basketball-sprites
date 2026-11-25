@@ -253,6 +253,19 @@ def fx_text_block(c, f, n):
     pop_text(c, f, n, "BLOCKED!", (255, 120, 80), (220, 40, 40))
 
 
+# shot-quality callouts over the shooter
+def fx_text_contested(c, f, n):
+    pop_text(c, f, n, "CONTESTED!", (255, 160, 60), (230, 90, 30))
+
+
+def fx_text_open(c, f, n):
+    pop_text(c, f, n, "WIDE OPEN!", (120, 240, 140), (40, 180, 90))
+
+
+def fx_text_smothered(c, f, n):
+    pop_text(c, f, n, "SMOTHERED!", (255, 90, 110), (190, 30, 60))
+
+
 def fx_cross_swoosh(c, f, n):
     """Crossover: curved air lines whipping around where the ball crosses."""
     t = f / (n - 1)
@@ -339,6 +352,9 @@ EFFECTS = {
     "swat_burst": ("Block burst", 36, 36, 8, 20, False, (18, 18), fx_swat_burst),
     "text_steal": ("STEAL! pop-up", 76, 28, 12, 12, False, (38, 27), fx_text_steal),
     "text_block": ("BLOCKED! pop-up", 104, 28, 12, 12, False, (52, 27), fx_text_block),
+    "text_contested": ("CONTESTED! pop-up", 128, 28, 12, 12, False, (64, 27), fx_text_contested),
+    "text_open": ("WIDE OPEN! pop-up", 128, 28, 12, 12, False, (64, 27), fx_text_open),
+    "text_smothered": ("SMOTHERED! pop-up", 128, 28, 12, 12, False, (64, 27), fx_text_smothered),
 }
 
 
