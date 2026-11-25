@@ -11,12 +11,13 @@ the team name.
 Outputs (integration/react-native/teamLogos/):
     png/<ID>.png        badge, 512 x 512 (8 px per art pixel)
     png/<ID>_icon.png   icon only, transparent, 384 x 384
-    svg/<ID>.svg        badge as crisp vector squares
+    png/<ID>_<style>.png  alternate logos (retro patch, simple mark, current shield), 512 x 512
+    svg/<ID>.svg        badge as crisp vector squares (svg/<ID>_<style>.svg for the alternates)
     teams.json          ids, names, colors
     index.ts            require() map for React Native
 It also writes the same 30 teams into playerSprites/palettes.json so the
 in-game jerseys match the logos. Team colors are defined here, in TEAMS.
-plus previews/logos.png.
+plus previews/logos.png and previews/logo_styles.png.
 
 Run:  python3 tools/generate_logos.py
 """
@@ -120,10 +121,12 @@ class Logo:
     """Parts are painted in order. Each part gets its own outline, so parts
     painted later are outlined against the ones below (retro cel look)."""
 
-    def __init__(self):
+    def __init__(self, flat_all=False):
         self.px = {}
+        self.flat_all = flat_all      # modern flat look: no 3-tone shading anywhere
 
     def part(self, pixels, color, shade=True, outline=True, flat=False):
+        flat = flat or self.flat_all
         pixels = set(pixels)
         if not pixels:
             return
@@ -595,6 +598,115 @@ def icon_only(team):
     return L
 
 
+# ------------------------------------------------------------------ alternate logos
+# Three more marks per team, built around the same icon, for menus, a
+# locker / store screen, or as unlockable cosmetics:
+#   retro    a vintage felt patch: faded colors, stitched border, city on top
+#   simple   a flat one-color silhouette of the icon on a plain disc
+#   current  a modern angular shield, flat-shaded icon, bold name bar
+LOGO_STYLES = ("retro", "simple", "current")
+
+
+def fade(c, k=0.35):
+    """Vintage color: toward a warm brown-cream, so it reads as old felt."""
+    return mix(mix(c, "#c8a878", k), "#3a2a20", 0.08)
+
+
+SHORT_CITY = {"Philadelphia": "Philly", "New Orleans": "Nola", "San Francisco": "San Fran"}
+
+
+def fits(text, width):
+    return text_width(text) <= width
+
+
+def retro_patch(team):
+    tid, city, name, jersey, trim, icon = team
+    L = Logo()
+    felt, ink = fade(jersey, 0.3), fade(trim, 0.25)
+    cream = "#efe2c0"
+    corner = lambda x, y: min(x - 3, 60 - x, y - 3, 60 - y)                       # noqa: E731
+    patch = {(x, y) for x in range(3, 61) for y in range(3, 61)
+             if not (corner(x, y) < 5 and math.hypot(min(x - 8, 55 - x, 0), min(y - 8, 55 - y, 0)) > 5)}
+    L.part(patch, felt, shade=False)
+    inner = {(x, y) for (x, y) in patch if corner(x, y) >= 4}
+    L.paint(inner, mix(felt, "#ffffff", 0.08))
+    # stitching: a dashed line just inside the edge
+    stitch = {(x, y) for (x, y) in patch if corner(x, y) == 2 and (x + y) % 3 != 0}
+    L.paint(stitch, cream)
+    # the icon on a cream disc, colors faded to match the felt
+    L.part(ellipse(32, 30, 17, 17), cream, shade=False)
+    L.paint(ellipse(32, 30, 17, 17) - ellipse(32, 30, 15.5, 15.5), ink)
+    icon_px = Logo()
+    icon(icon_px, team)
+    for (x, y), c in icon_px.px.items():
+        if (x, y) in patch and math.hypot(x + 0.5 - 32, (y + 0.5 - 30) * 1.0) < 19 or y < 46:
+            if (x, y) in patch and corner(x, y) >= 4:
+                L.px[(x, y)] = c if c == OUTLINE else fade(c, 0.3)
+    # city across the top, name across the bottom, each on a felt band
+    for text, y0 in ((city.upper() if fits(city.upper(), 46) else SHORT_CITY.get(city, tid).upper(), 6),
+                     (name.upper(), 50)):
+        if not fits(text, 46):
+            text = text.split()[-1] if fits(text.split()[-1], 46) else tid
+        band = rect(8, y0 - 1, 55, y0 + 5)
+        L.paint(band, mix(felt, "#2a1020", 0.25))
+        txt = text_pixels(text, 32 - (text_width(text) + 1) // 2, y0)
+        L.paint({(x + 1, y + 1) for x, y in txt}, mix(felt, "#2a1020", 0.55))
+        L.paint(txt, cream)
+    return L
+
+
+def simple_mark(team):
+    tid, city, name, jersey, trim, icon = team
+    L = Logo(flat_all=True)
+    light = sum(rgb(jersey)) > 480
+    disc, ring = (jersey, trim) if not light else (trim, jersey)
+    mark = CREAM if sum(rgb(disc)) < 480 else OUTLINE
+    L.part(ellipse(32, 32, 29, 29), ring, outline=False)
+    L.part(ellipse(32, 32, 26, 26), disc, outline=False)
+    icon_px = Logo(flat_all=True)
+    icon(icon_px, team)
+    shape = set(icon_px.px)
+    ys = [y for _, y in shape]
+    xs = [x for x, _ in shape]
+    dx = 32 - (min(xs) + max(xs) + 1) // 2
+    dy = 32 - (min(ys) + max(ys) + 1) // 2
+    sil = {(x + dx, y + dy) for x, y in shape}
+    # one solid silhouette: outline pixels between parts become cut lines in the
+    # disc color, and dark details (eyes, stripes, patches) a second, muted tone
+    L.paint(sil, mark)
+    detail = mix(mark, disc, 0.62)
+    for (x, y), c in icon_px.px.items():
+        q = (x + dx, y + dy)
+        if c == OUTLINE:
+            inside = all(n in sil for n in ((q[0] + 1, q[1]), (q[0] - 1, q[1]), (q[0], q[1] + 1), (q[0], q[1] - 1)))
+            if inside:
+                L.px[q] = disc
+        elif sum(rgb(c)) < 260 or (mark == CREAM and sum(rgb(c)) < 330):
+            L.px[q] = detail
+    return L
+
+
+def current_shield(team):
+    tid, city, name, jersey, trim, icon = team
+    L = Logo(flat_all=True)
+    dark = mix(jersey, "#101018", 0.55)
+    shield = poly([(8, 4), (56, 4), (58, 10), (58, 34), (32, 54), (6, 34), (6, 10)])
+    L.part(shield, jersey)
+    L.paint({(x, y) for (x, y) in shield if x + y * 0.6 > 44}, dark)            # diagonal two-tone split
+    L.paint({p for p in shield if p not in poly([(10, 7), (54, 7), (55, 11), (55, 33), (32, 51), (9, 33), (9, 11)])},
+            trim)                                                               # trim border
+    icon(L, team)
+    text = name.upper() if fits(name.upper(), 52) else tid
+    w = text_width(text)
+    L.part(rect(32 - w // 2 - 4, 49, 32 + (w + 1) // 2 + 3, 59), trim)
+    ink = OUTLINE if sum(rgb(trim)) > 420 else CREAM
+    L.paint(text_pixels(text, 32 - (w + 1) // 2, 52), ink)
+    return L
+
+
+STYLE_FNS = {"retro": retro_patch, "simple": simple_mark, "current": current_shield}
+
+
 # ------------------------------------------------------------------ output
 def to_image(px, size=N, crop=None):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -635,6 +747,7 @@ def main():
         os.makedirs(os.path.join(OUT, sub))
     meta = []
     tiles = []
+    style_tiles = []
     for team in TEAMS:
         tid, city, name, jersey, trim, _ = team
         b = badge(team)
@@ -644,6 +757,16 @@ def main():
         icon.resize((48 * SCALE, 48 * SCALE), Image.NEAREST).save(os.path.join(OUT, "png", tid + "_icon.png"), optimize=True)
         with open(os.path.join(OUT, "svg", tid + ".svg"), "w") as f:
             f.write(to_svg(b.px, tid))
+        styles = []
+        for st in LOGO_STYLES:
+            lg_ = STYLE_FNS[st](team)
+            im = to_image(lg_.px)
+            im.resize((N * SCALE, N * SCALE), Image.NEAREST).save(
+                os.path.join(OUT, "png", "%s_%s.png" % (tid, st)), optimize=True)
+            with open(os.path.join(OUT, "svg", "%s_%s.svg" % (tid, st)), "w") as f:
+                f.write(to_svg(lg_.px, "%s-%s" % (tid, st)))
+            styles.append(im)
+        style_tiles.append((tid, [img] + styles))
         meta.append({"id": tid, "city": city, "name": name, "fullName": "%s %s" % (city, name),
                      "jersey": jersey, "trim": trim})
         tiles.append((tid, city, name, img))
@@ -668,7 +791,27 @@ def main():
     lines += ["};", "", "/** Icon only, transparent (384 x 384). */",
               "export const TEAM_ICONS: Record<string, ImageSourcePropType> = {"]
     lines += ["  %s: require('./png/%s_icon.png')," % (json.dumps(t[0]), t[0]) for t in TEAMS]
-    lines += ["};", ""]
+    lines += ["};", "",
+              "/** Logo looks: the classic round badge plus three alternates. */",
+              "export type LogoStyle = 'classic' | %s;" % " | ".join("'%s'" % st for st in LOGO_STYLES),
+              "export const LOGO_STYLES: LogoStyle[] = ['classic', %s];" % ", ".join("'%s'" % st for st in LOGO_STYLES),
+              "export const LOGO_STYLE_LABELS: Record<LogoStyle, string> = {",
+              "  classic: 'Classic badge',",
+              "  retro: 'Retro patch',",
+              "  simple: 'Simple mark',",
+              "  current: 'Current shield',",
+              "};", "",
+              "/** Alternate logos (512 x 512), by team and style. */",
+              "export const TEAM_LOGO_STYLES: Record<string, Record<Exclude<LogoStyle, 'classic'>, ImageSourcePropType>> = {"]
+    for t in TEAMS:
+        lines.append("  %s: {" % json.dumps(t[0]))
+        lines += ["    %s: require('./png/%s_%s.png')," % (st, t[0], st) for st in LOGO_STYLES]
+        lines.append("  },")
+    lines += ["};", "",
+              "/** A team's logo in a style (classic = the round badge). */",
+              "export function teamLogo(teamId: string, style: LogoStyle = 'classic'): ImageSourcePropType | undefined {",
+              "  return style === 'classic' ? TEAM_LOGOS[teamId] : TEAM_LOGO_STYLES[teamId]?.[style];",
+              "}", ""]
     with open(os.path.join(OUT, "index.ts"), "w") as f:
         f.write("\n".join(lines))
 
@@ -683,6 +826,18 @@ def main():
         d.text((x + (cell - d.textlength(label)) / 2, y + cell + 6), label, fill=(255, 255, 255, 255))
     os.makedirs(os.path.dirname(PREVIEW), exist_ok=True)
     sheet.save(PREVIEW)
+    # alternate styles: one row per team: classic, retro, simple, current (two teams per row)
+    cell = 64 * 2
+    per = 1 + len(LOGO_STYLES)
+    rows = (len(style_tiles) + 1) // 2
+    sheet = Image.new("RGBA", (2 * (per * cell + 60), rows * (cell + 8)), (236, 236, 242, 255))
+    d = ImageDraw.Draw(sheet)
+    for i, (tid, imgs) in enumerate(style_tiles):
+        x0, y0 = (i % 2) * (per * cell + 60), (i // 2) * (cell + 8)
+        d.text((x0 + 8, y0 + cell // 2 - 6), tid, fill=(40, 40, 50, 255))
+        for k, im in enumerate(imgs):
+            sheet.alpha_composite(im.resize((cell, cell), Image.NEAREST), (x0 + 50 + k * cell, y0 + 4))
+    sheet.save(os.path.join(ROOT, "previews", "logo_styles.png"))
     print("wrote %d logos" % len(TEAMS))
 
 
