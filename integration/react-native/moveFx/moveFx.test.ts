@@ -20,7 +20,10 @@ function drive(seconds: number, vx: number, hasBall = false, fx = new MoveFxEmit
 
 describe('move fx data', () => {
   it('has every effect with a size, frames, fps and an anchor inside the frame', () => {
-    expect(MOVE_FX_IDS).toEqual(['dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines']);
+    expect(MOVE_FX_IDS).toEqual([
+      'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'impact_star', 'swat_burst', 'text_steal',
+      'text_block',
+    ]);
     for (const id of MOVE_FX_IDS) {
       const m = MOVE_FX[id];
       expect(m.label).toBeTruthy();
@@ -97,6 +100,45 @@ describe('MoveFxEmitter', () => {
     expect(fx.effects.length).toBe(3);
     fx.clear();
     expect(fx.effects.length).toBe(0);
+  });
+});
+
+describe('success effects', () => {
+  it('flashes and pops STEAL! on its own when a steal works', () => {
+    const fx = new MoveFxEmitter();
+    const a = new PlayerAnimator('right');
+    a.update(DT, { vx: 0 });
+    a.play('steal_success');
+    const seen = new Set<MoveFxId>();
+    for (let t = 0; t < 1; t += DT) {
+      const o = a.update(DT, { vx: 0 });
+      for (const e of fx.update(DT, { x: 100, y: 200, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 2 })) {
+        seen.add(e.fx);
+        if (e.fx === 'impact_star') expect(e.x).toBeGreaterThan(100);       // out at the hand, in front of him
+        if (e.fx === 'text_steal') expect(e.y).toBeLessThan(200);           // above his head
+      }
+    }
+    expect(seen.has('impact_star')).toBe(true);
+    expect(seen.has('text_steal')).toBe(true);
+    // a plain swipe is a miss: no celebration
+    const miss = new MoveFxEmitter();
+    const b = new PlayerAnimator('right');
+    b.play('steal');
+    for (let t = 0; t < 1; t += DT) {
+      const o = b.update(DT, { vx: 0 });
+      expect(miss.update(DT, { x: 0, y: 0, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 1 })
+        .some((e) => e.fx === 'impact_star')).toBe(false);
+    }
+  });
+
+  it('bursts and pops BLOCKED! when the game says so, at the ball if given, text unmirrored', () => {
+    const fx = new MoveFxEmitter();
+    fx.success('block', 100, 200, true, 2, [80, 90]);
+    const burst = fx.effects.find((e) => e.fx === 'swat_burst')!;
+    expect([burst.x, burst.y]).toEqual([80, 90]);
+    expect(fx.effects.find((e) => e.fx === 'text_block')!.flip).toBe(false);
+    for (let i = 0; i < 120; i++) fx.update(DT, { x: 100, y: 200, anim: 'idle', frame: 0, flip: true, speed: 0, scale: 2 });
+    expect(fx.effects.length).toBe(0);                                      // both finish
   });
 });
 

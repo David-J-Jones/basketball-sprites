@@ -13,7 +13,11 @@ import meta from './moveFx.json';
 import raw from '../playerSprites/spriteData.json';
 import type { AnimName, SpriteData } from '../playerSprites/types';
 
-export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines';
+export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines'
+  | 'impact_star' | 'swat_burst' | 'text_steal' | 'text_block';
+
+/** Plays that get a success effect: a flash where it happened and a pop-up above the player. */
+export type SuccessPlay = 'steal' | 'block';
 export type MoveFxInfo = {
   label: string;
   /** frame size in art px (= sprite frame px) */
@@ -61,6 +65,8 @@ export type MoveFxInput = {
   speed: number;
   /** the sprite's scale (screen px per frame px) */
   scale: number;
+  /** optional: the ball's screen position this frame, so a steal flash lands right on it */
+  ball?: [number, number];
 };
 
 export type MoveFxOptions = {
@@ -72,7 +78,7 @@ export type MoveFxOptions = {
   speedLinesOff: number;
   /** turn each kind on or off */
   enabled: Record<MoveFxId, boolean>;
-  /** at most this many effects per player at once (oldest go first) */
+  /** at most this many effects per player at once (oldest go first; a success flash and its pop-up are 2) */
   maxEffects: number;
 };
 
@@ -80,8 +86,11 @@ export const DEFAULT_MOVE_FX_OPTIONS: MoveFxOptions = {
   stepDustSpeed: 9,
   speedLinesOn: 17,
   speedLinesOff: 14,
-  enabled: { dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true },
-  maxEffects: 8,
+  enabled: {
+    dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true,
+    impact_star: true, swat_burst: true, text_steal: true, text_block: true,
+  },
+  maxEffects: 10,
 };
 
 /** Frames where a foot pushes off in every 12-frame run / dribble-run cycle (keys 3 and 7). */
@@ -176,6 +185,20 @@ export class MoveFxEmitter {
     return inst;
   }
 
+  /**
+   * A steal or block that worked: a flash at the ball (`at`, screen px; by
+   * default where the hand would be) and a pop-up above the player.
+   * steal_success fires this by itself on its `poke` frame; call it for a
+   * block when the sim says the shot was blocked (block's `activeStart`).
+   */
+  success(play: SuccessPlay, x: number, y: number, flip: boolean, scale: number, at?: [number, number]): void {
+    const dir = flip ? -1 : 1;
+    const [hx, hy] = at ?? (play === 'steal' ? [x + dir * 16 * scale, y - 24 * scale] : [x + dir * 6 * scale, y - 54 * scale]);
+    this.spawn(play === 'steal' ? 'impact_star' : 'swat_burst', hx, hy, flip, scale);
+    // the text never mirrors, so it stays readable whichever way he faces
+    this.spawn(play === 'steal' ? 'text_steal' : 'text_block', x, y - (play === 'steal' ? 50 : 62) * scale, false, scale);
+  }
+
   update(dt: number, s: MoveFxInput): readonly FxInstance[] {
     // age what's there
     for (const e of this.live) {
@@ -200,6 +223,9 @@ export class MoveFxEmitter {
       }
       if (burst !== null && f === burst) this.spawn('cut_burst', foot(-1), s.y, s.flip, s.scale);
       if (land !== null && f === land) this.spawn('land_puff', s.x, s.y, s.flip, s.scale);
+      if (s.anim === 'steal_success' && f === ANIMS.steal_success?.events.poke) {
+        this.success('steal', s.x, s.y, s.flip, s.scale, s.ball);
+      }
     }
     this.lastAnim = s.anim;
     this.lastFrame = s.frame;

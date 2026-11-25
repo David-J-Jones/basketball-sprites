@@ -301,8 +301,10 @@ animator.play(insideOutFor(animator.hand));
 | `cut_burst` | Exploding out of a move: the `cutStart` / `burst` frame of every crossover, behind-the-back, between-the-legs, inside-out and hesitation |
 | `land_puff` | The last frame of a jump (shots, layups, dunks, blocks, rebounds) |
 | `speed_lines` | Rides behind a sprinter above `speedLinesOn` (17 ft/s), fading out below `speedLinesOff` (14) |
+| `impact_star` + `text_steal` | **A steal that worked:** a white-hot poke flash with a gold star burst at the ball, and a "STEAL!" pop-up over his head. Fires by itself on `steal_success`'s `poke` frame (a plain `steal` is a miss, so nothing) |
+| `swat_burst` + `text_block` | **A block:** a shockwave ring, heavy rays and debris at the ball, and a "BLOCKED!" pop-up. `block` plays the same whether it connects, so call `fx.success('block', x, y, flip, scale, ballAt)` when the sim says it did |
 
-Dust stays where it was kicked up; speed lines follow the player. Everything is mirrored for a player facing left.
+Dust stays where it was kicked up; speed lines follow the player. Everything is mirrored for a player facing left, except the pop-up text, which always reads left to right. Pass `ball` in the input (its screen position) and the steal flash lands right on it.
 
 ```tsx
 import { MoveFx, MoveFxEmitter, GhostTrail, PlayerGhosts } from './moveFx';
@@ -320,7 +322,8 @@ const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
 ```
 
 - **Afterimages:** `GhostTrail` keeps up to `count` (3) past poses while the player is above `minSpeed` (16 ft/s), `spacing` (0.05 s) apart, fading from `opacity` (0.35). Each ghost is a full sprite, so save it for the ball handler on a break or a park-mode cosmetic.
-- **Cost:** the five strips together are under 10 KB and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
+- **Cost:** the nine strips together are about 40 KB on disk and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
+- **Success effects:** `fx.success('steal' | 'block', x, y, flip, scale, at?)`. `at` is the ball's screen position (it defaults to where the hand would be). Turn either part off with `enabled: { text_block: false }` etc.
 - **By hand:** `fx.spawn('dust_skid', x, y, flip, scale)` for anything else (a charge, a dive for a loose ball). `fx.clear()` on a dead ball.
 - **Art:** `tools/generate_move_fx.py` draws them (one `fx_<name>` function per effect) and rewrites `moveFx/` and `previews/move_fx.png` / `previews/move_fx/*.gif`.
 

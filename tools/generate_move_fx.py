@@ -18,8 +18,12 @@ import json
 import math
 import os
 import random
+import sys
 
 from PIL import Image, ImageDraw
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from generate_logos import text_pixels, text_width  # noqa: E402  (the league's 3 x 5 pixel font)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "integration", "react-native", "moveFx")
@@ -151,6 +155,104 @@ def fx_speed_lines(c, f, n):
             c.put(x_end - i, row, STREAK, a * (1 - i / ln) ** 0.8)
 
 
+# ---------------------------------------------------------------- success effects
+FLASH = (255, 255, 255)
+GOLD = (255, 214, 64)
+HOT = (255, 140, 40)
+INK = (28, 22, 32)
+
+
+def burst(c, cx, cy, t, rays, r0, r1, width, cols, seed):
+    """Rays shooting out from a point and thinning as they go."""
+    rng = random.Random(seed)
+    for k in range(rays):
+        ang = 2 * math.pi * k / rays + rng.uniform(-0.15, 0.15)
+        ln = r1 * (0.7 + rng.random() * 0.3)
+        start, end = r0 + (ln - r0) * max(0, t - 0.25), r0 + (ln - r0) * ease_out(min(1, t * 1.6))
+        steps = int(end - start) + 1
+        for i in range(steps):
+            d = start + i
+            w = width * (1 - i / max(1, steps)) * (1 - t * 0.5)
+            col = cols[0] if d < r0 + (ln - r0) * 0.45 else cols[1]
+            for j in range(-int(w), int(w) + 1):
+                x = cx + math.cos(ang) * d - math.sin(ang) * j * 0.6
+                y = cy + math.sin(ang) * d + math.cos(ang) * j * 0.6
+                c.put(x, y, col, 255 * (1 - t ** 2))
+
+
+def sparks(c, cx, cy, t, n, dist, cols, seed):
+    rng = random.Random(seed)
+    for k in range(n):
+        ang = rng.uniform(0, 2 * math.pi)
+        d = dist * (0.5 + rng.random() * 0.5) * ease_out(t)
+        x, y = cx + math.cos(ang) * d, cy + math.sin(ang) * d + 6 * t * t       # fall a little
+        if t < 0.9:
+            c.put(x, y, cols[k % len(cols)], 255 * (1 - t))
+            if t < 0.5:
+                c.put(x + 1, y, cols[k % len(cols)], 200 * (1 - t))
+
+
+def fx_impact_star(c, f, n):
+    """Steal: a white-hot poke flash at the hand, a gold star burst, sparks."""
+    t = f / (n - 1)
+    cx, cy = c.w / 2, c.h / 2
+    if f <= 1:                                                 # the flash itself
+        r = 3.5 if f == 0 else 5
+        for y in range(c.h):
+            for x in range(c.w):
+                if math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= r:
+                    c.put(x, y, FLASH if f == 0 else GOLD)
+    burst(c, cx, cy, t, 8, 3, c.w / 2 - 1, 1.6, (FLASH, GOLD), 4)
+    sparks(c, cx, cy, t, 10, c.w / 2 - 1, (GOLD, FLASH, HOT), 9)
+
+
+def fx_swat_burst(c, f, n):
+    """Block: a shockwave ring, heavy rays and debris where the hand meets the ball."""
+    t = f / (n - 1)
+    cx, cy = c.w / 2, c.h / 2
+    if f == 0:
+        for y in range(c.h):
+            for x in range(c.w):
+                if math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= 6:
+                    c.put(x, y, FLASH)
+    rr = 4 + (c.w / 2 - 3) * ease_out(t)                       # shockwave ring
+    for y in range(c.h):
+        for x in range(c.w):
+            d = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
+            if abs(d - rr) < 1.0 + (1 - t):
+                c.put(x, y, FLASH if t < 0.4 else GOLD, 255 * (1 - t ** 1.5))
+    burst(c, cx, cy, t, 10, 5, c.w / 2 - 1, 1.8, (FLASH, HOT), 2)
+    sparks(c, cx, cy, t, 14, c.w / 2, (HOT, GOLD, FLASH), 13)
+
+
+def pop_text(c, f, n, text, fill, shade):
+    """Pixel lettering that pops in big, settles, floats up and blinks out."""
+    scale = [1, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2][min(f, 11)]
+    rise = int(f * 0.6)
+    if f >= n - 3 and f % 2:                                   # blink out
+        return
+    a = 255 if f < n - 2 else 150
+    w = text_width(text) * scale
+    x0, y0 = int(c.w / 2 - w / 2), int(c.h - 4 - 5 * scale - rise)
+    glyph = {(x0 + x * scale + i, y0 + y * scale + j) for (x, y) in text_pixels(text, 0, 0)
+             for i in range(scale) for j in range(scale)}
+    for (x, y) in glyph:                                       # drop shadow + outline
+        c.put(x + 1, y + 2, INK, a)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1)):
+            if (x + dx, y + dy) not in glyph:
+                c.put(x + dx, y + dy, INK, a)
+    for (x, y) in glyph:
+        c.put(x, y, shade if (y - y0) >= scale * 3 else fill, a)     # two-tone letters
+
+
+def fx_text_steal(c, f, n):
+    pop_text(c, f, n, "STEAL!", GOLD, HOT)
+
+
+def fx_text_block(c, f, n):
+    pop_text(c, f, n, "BLOCKED!", (255, 120, 80), (220, 40, 40))
+
+
 EFFECTS = {
     # id: (label, w, h, frames, fps, loop, anchor, fn)
     "dust_step": ("Step dust", 20, 11, 5, 18, False, (15, 10), fx_dust_step),
@@ -158,6 +260,10 @@ EFFECTS = {
     "cut_burst": ("Cut burst", 30, 15, 6, 18, False, (24, 14), fx_cut_burst),
     "land_puff": ("Landing puff", 28, 11, 6, 16, False, (14, 10), fx_land_puff),
     "speed_lines": ("Speed lines", 26, 30, 6, 14, True, (25, 15), fx_speed_lines),
+    "impact_star": ("Steal flash", 32, 32, 7, 20, False, (16, 16), fx_impact_star),
+    "swat_burst": ("Block burst", 36, 36, 8, 20, False, (18, 18), fx_swat_burst),
+    "text_steal": ("STEAL! pop-up", 76, 28, 12, 12, False, (38, 27), fx_text_steal),
+    "text_block": ("BLOCKED! pop-up", 104, 28, 12, 12, False, (52, 27), fx_text_block),
 }
 
 
