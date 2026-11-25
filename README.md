@@ -340,6 +340,11 @@ const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
   ```
 
   Options: `life` (0.3 s), `width` (5 sprite px at the ball), `opacity`, `smooth`. The palette would also make a nice store cosmetic, like the ball trails.
+- **Shot callouts:** `fx.callout('open' | 'contested' | 'smothered', x, y, scale)` pops **WIDE OPEN!** (green), **CONTESTED!** (orange) or **SMOTHERED!** (red) over the shooter, the same bouncy pop-up as STEAL!. Call it at the jumper's `release` with the sim's shot-quality verdict:
+
+  ```ts
+  if (frame === anims[shot].events.release) fx.callout(sim.contest > 0.7 ? 'smothered' : sim.contest > 0.3 ? 'contested' : 'open', x, y, scale);
+  ```
 - **Success effects:** `fx.success('steal' | 'block', x, y, flip, scale, at?)`. `at` is the ball's screen position (it defaults to where the hand would be). Turn either part off with `enabled: { text_block: false }` etc.
 - **By hand:** `fx.spawn('dust_skid', x, y, flip, scale)` for anything else (a charge, a dive for a loose ball). `fx.clear()` on a dead ball.
 - **Showcase:** `python3 tools/preview_movement.py` redraws `previews/movement_showcase.gif` from the built atlas: a run, a sprint, a dribble drive into a killer crossover, and a plant / turn / stop.

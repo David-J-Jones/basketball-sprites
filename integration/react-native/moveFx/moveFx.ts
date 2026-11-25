@@ -14,7 +14,10 @@ import raw from '../playerSprites/spriteData.json';
 import type { AnimName, SpriteData } from '../playerSprites/types';
 
 export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines' | 'cross_swoosh' | 'dunk_splash'
-  | 'impact_star' | 'swat_burst' | 'text_steal' | 'text_block';
+  | 'impact_star' | 'swat_burst' | 'text_steal' | 'text_block' | 'text_contested' | 'text_open' | 'text_smothered';
+
+/** Shot-quality callouts that pop over the shooter (see MoveFxEmitter.callout). */
+export type ShotCallout = 'open' | 'contested' | 'smothered';
 
 /** Plays that get a success effect: a flash where it happened and a pop-up above the player. */
 export type SuccessPlay = 'steal' | 'block';
@@ -91,6 +94,7 @@ export const DEFAULT_MOVE_FX_OPTIONS: MoveFxOptions = {
   enabled: {
     dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true, cross_swoosh: true, dunk_splash: true,
     impact_star: true, swat_burst: true, text_steal: true, text_block: true,
+    text_contested: true, text_open: true, text_smothered: true,
   },
   maxEffects: 10,
 };
@@ -212,6 +216,16 @@ export class MoveFxEmitter {
     this.spawn(play === 'steal' ? 'impact_star' : 'swat_burst', hx, hy, flip, scale);
     // the text never mirrors, so it stays readable whichever way he faces
     this.spawn(play === 'steal' ? 'text_steal' : 'text_block', x, y - (play === 'steal' ? 50 : 62) * scale, false, scale);
+  }
+
+  /**
+   * A shot-quality callout over the shooter's head: 'open' (WIDE OPEN!),
+   * 'contested' (CONTESTED!) or 'smothered' (SMOTHERED!). Call it when the
+   * shot goes up (the jumper's `release` event) with the sim's verdict; the
+   * text never mirrors.
+   */
+  callout(kind: ShotCallout, x: number, y: number, scale: number): FxInstance | null {
+    return this.spawn(`text_${kind}` as MoveFxId, x, y - 62 * scale, false, scale);
   }
 
   update(dt: number, s: MoveFxInput): readonly FxInstance[] {

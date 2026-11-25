@@ -10,6 +10,6 @@ export {
   landFrame, paletteAt, SWISH_PALETTES, teamSwish,
 } from './moveFx';
 export type {
-  BallSwishOptions, FxInstance, Ghost, GhostTrailOptions, MoveFxId, MoveFxInfo, MoveFxInput, MoveFxOptions, SuccessPlay,
+  BallSwishOptions, FxInstance, ShotCallout, Ghost, GhostTrailOptions, MoveFxId, MoveFxInfo, MoveFxInput, MoveFxOptions, SuccessPlay,
   SwishSegment,
 } from './moveFx';
