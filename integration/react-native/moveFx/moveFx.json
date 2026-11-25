@@ -74,6 +74,18 @@
     16
    ]
   },
+  "dunk_splash": {
+   "label": "Dunk splash",
+   "width": 46,
+   "height": 44,
+   "frames": 9,
+   "fps": 18,
+   "loop": false,
+   "anchor": [
+    23,
+    20
+   ]
+  },
   "impact_star": {
    "label": "Steal flash",
    "width": 32,

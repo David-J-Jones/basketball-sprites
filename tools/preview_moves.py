@@ -64,6 +64,7 @@ class Actor:
         self.look, self.colors, self.script = look, colors, script
         self.z_fn, self.z = z_fn, 0.0         # jump height the sim adds on top of the baked-in hop
         self.palette = PALETTES["electric"]
+        self.rim = None                        # world (x, y) of the rim, for the dunk splash
         self.swish = []                        # [world x, world y, age] (BallSwish in moveFx.ts)
         self.ball_hist = []
         self.x, self.y, self.facing = x, y, facing
@@ -116,6 +117,9 @@ class Actor:
         if ball:
             bw = (self.x - FW / 2 + ball[0], -FH + ball[1] + depth * 4 * S - self.z)
         for f in frames:
+            if anim.startswith("dunk_") and f == ev.get("dunk"):
+                sx, sy = self.rim if self.rim else (bw or (self.x, -58 * S))
+                fx.append(["dunk_splash", sx, sy, 0.0, flip])            # centred on the rim
             if f in cross_frames(anim) and bw:
                 fx.append(["cross_swoosh", bw[0], bw[1] + FX["cross_swoosh"]["anchor"][1] * S - 6, 0.0, flip])
         for p in self.swish:
@@ -359,6 +363,7 @@ def drive_showcase(out):
     cross_at = next(a for (a, b, anim, *_r) in plan if anim == "crossover_wide_up")
     hesi_at = next(a for (a, b, anim, *_r) in plan if anim == "hesitation")
     off = Actor(pm.with_shorts(pm.look3, shorts), cols, handler, y=10, lines=True, z_fn=jump)
+    off.rim = (rim[0], -rim[1])
 
     def on_ball(t):
         if hesi_at + 0.1 <= t < hesi_at + 0.35:

@@ -306,6 +306,7 @@ animator.play(insideOutFor(animator.hand));
 | `land_puff` | The last frame of a jump (shots, layups, dunks, blocks, rebounds) |
 | `speed_lines` | Rides behind a sprinter above `speedLinesOn` (17 ft/s), fading out below `speedLinesOff` (14) |
 | `cross_swoosh` | **The cross:** colored air lines (magenta, cyan, gold with a white leading edge) whipping around the ball on each `cross` event: three on the double cross, the fake on the inside-out. Placed on the ball when you pass `ball` |
+| `dunk_splash` | **A dunk:** a white flash at the rim, then a spiky comic splat in yellow with an orange core, and yellow drops flying out and falling. Fires by itself on the `dunk` frame of every dunk. Pass `rim` (its screen position) to burst right on it; otherwise it goes at the ball or the dunking hand. Draw `<MoveFx>` before the player so the splash sits behind him |
 | `impact_star` + `text_steal` | **A steal that worked:** a white-hot poke flash with a gold star burst at the ball, and a "STEAL!" pop-up over his head. Fires by itself on `steal_success`'s `poke` frame (a plain `steal` is a miss, so nothing) |
 | `swat_burst` + `text_block` | **A block:** a shockwave ring, heavy rays and debris at the ball, and a "BLOCKED!" pop-up. `block` plays the same whether it connects, so call `fx.success('block', x, y, flip, scale, ballAt)` when the sim says it did |
 
@@ -327,7 +328,7 @@ const trail = ghosts.update(dt, { x, y, anim, frame, flip, speed });
 ```
 
 - **Afterimages:** `GhostTrail` keeps up to `count` (3) past poses while the player is above `minSpeed` (16 ft/s), `spacing` (0.05 s) apart, fading from `opacity` (0.35). Each ghost is a full sprite, so save it for the ball handler on a break or a park-mode cosmetic.
-- **Cost:** the ten strips together are about 40 KB on disk; the swish is plain Views, no images and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
+- **Cost:** the eleven strips together are about 40 KB on disk; the swish is plain Views, no images and are required lazily. An emitter holds at most `maxEffects` (8) effects per player.
 - **Ball swish:** `BallSwish` streaks the ball's path through every dribble move (each crossover, behind the back, between the legs, the inside-out). It's smoothed between sprite frames so it arcs, and it's thick and white-hot at the ball, then thins and fades through a color palette toward the tail. Presets in `SWISH_PALETTES`: `electric` (the default: white, cyan, violet, pink), `fire`, `rainbow`, `ice`, `classic` (plain white); or `teamSwish(jersey, trim)` for the team's colors. Draw `<BallSwishTrail>` after the player and before the ball:
 
   ```tsx

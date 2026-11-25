@@ -13,7 +13,7 @@ import meta from './moveFx.json';
 import raw from '../playerSprites/spriteData.json';
 import type { AnimName, SpriteData } from '../playerSprites/types';
 
-export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines' | 'cross_swoosh'
+export type MoveFxId = 'dust_step' | 'dust_skid' | 'cut_burst' | 'land_puff' | 'speed_lines' | 'cross_swoosh' | 'dunk_splash'
   | 'impact_star' | 'swat_burst' | 'text_steal' | 'text_block';
 
 /** Plays that get a success effect: a flash where it happened and a pop-up above the player. */
@@ -67,6 +67,8 @@ export type MoveFxInput = {
   scale: number;
   /** optional: the ball's screen position this frame, so a steal flash lands right on it */
   ball?: [number, number];
+  /** optional: the rim's screen position, so a dunk splash bursts right on it */
+  rim?: [number, number];
 };
 
 export type MoveFxOptions = {
@@ -87,7 +89,7 @@ export const DEFAULT_MOVE_FX_OPTIONS: MoveFxOptions = {
   speedLinesOn: 17,
   speedLinesOff: 14,
   enabled: {
-    dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true, cross_swoosh: true,
+    dust_step: true, dust_skid: true, cut_burst: true, land_puff: true, speed_lines: true, cross_swoosh: true, dunk_splash: true,
     impact_star: true, swat_burst: true, text_steal: true, text_block: true,
   },
   maxEffects: 10,
@@ -239,6 +241,11 @@ export class MoveFxEmitter {
       if (crossFrames(s.anim).includes(f)) {
         const [bx, by] = s.ball ?? [s.x + dir * 10 * s.scale, s.y - 6 * s.scale];
         this.spawn('cross_swoosh', bx, by, s.flip, s.scale);
+      }
+      if (s.anim.startsWith('dunk_') && f === ANIMS[s.anim]?.events.dunk) {
+        // the splash: on the rim if we know where it is, else at the dunking hand
+        const [rx, ry] = s.rim ?? s.ball ?? [s.x + dir * 8 * s.scale, s.y - 58 * s.scale];
+        this.spawn('dunk_splash', rx, ry, s.flip, s.scale);
       }
       if (s.anim === 'steal_success' && f === ANIMS.steal_success?.events.poke) {
         this.success('steal', s.x, s.y, s.flip, s.scale, s.ball);

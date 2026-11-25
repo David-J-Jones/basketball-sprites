@@ -22,7 +22,7 @@ function drive(seconds: number, vx: number, hasBall = false, fx = new MoveFxEmit
 describe('move fx data', () => {
   it('has every effect with a size, frames, fps and an anchor inside the frame', () => {
     expect(MOVE_FX_IDS).toEqual([
-      'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'cross_swoosh', 'impact_star', 'swat_burst', 'text_steal',
+      'dust_step', 'dust_skid', 'cut_burst', 'land_puff', 'speed_lines', 'cross_swoosh', 'dunk_splash', 'impact_star', 'swat_burst', 'text_steal',
       'text_block',
     ]);
     for (const id of MOVE_FX_IDS) {
@@ -151,6 +151,41 @@ describe('crossover swish', () => {
     expect(segs[0].color).not.toBe('#ffffff');                               // colored toward the tail
     for (let i = 0; i < 20; i++) segs = sw.update(DT, { anim: 'dribble_run', ball: [30, 10], scale: 2 });
     expect(segs).toEqual([]);                                                // a plain dribble leaves no streak
+  });
+});
+
+describe('dunk splash', () => {
+  it('bursts once on the dunk frame of every dunk, on the rim when given', () => {
+    for (const dunk of ['dunk_basic', 'dunk_athletic', 'dunk_hang', 'dunk_windmill', 'dunk_tomahawk', 'dunk_reverse',
+      'dunk_two_hand', 'dunk_cradle'] as AnimName[]) {
+      const fx = new MoveFxEmitter();
+      const a = new PlayerAnimator('right');
+      a.update(DT, { vx: 0 });
+      a.play(dunk);
+      const keys = new Set<number>();
+      for (let t = 0; t < 1.2; t += DT) {
+        const o = a.update(DT, { vx: 0 });
+        for (const e of fx.update(DT, { x: 0, y: 0, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 2,
+          rim: [40, -120] })) {
+          if (e.fx === 'dunk_splash') {
+            keys.add(e.key);
+            expect([e.x, e.y]).toEqual([40, -120]);
+          }
+        }
+      }
+      expect(keys.size).toBe(1);
+    }
+  });
+
+  it('never splashes on a layup', () => {
+    const fx = new MoveFxEmitter();
+    const a = new PlayerAnimator('right');
+    a.play('layup');
+    for (let t = 0; t < 1; t += DT) {
+      const o = a.update(DT, { vx: 0 });
+      expect(fx.update(DT, { x: 0, y: 0, anim: o.anim, frame: o.frame, flip: o.flip, speed: 0, scale: 2 })
+        .some((e) => e.fx === 'dunk_splash')).toBe(false);
+    }
   });
 });
 

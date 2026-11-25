@@ -273,6 +273,59 @@ def fx_cross_swoosh(c, f, n):
                 c.put(x, y + 1, col, 200 * fade * (1 - t ** 2))
 
 
+def fx_dunk_splash(c, f, n):
+    """Dunk: a white flash at the rim, then a spiky comic splat in yellow with an
+    orange core, and drops of yellow flying out and falling."""
+    t = f / (n - 1)
+    cx, cy = c.w / 2, c.h / 2 - 2
+    rng = random.Random(21)
+    spikes = [(2 * math.pi * k / 14 + rng.uniform(-0.12, 0.12), rng.uniform(0.75, 1.0)) for k in range(14)]
+
+    def splat_r(ang, size):
+        # radius of the spiky outline at an angle: points out on the spikes, in between them
+        best = 0.45
+        for a, ln in spikes:
+            d = abs((ang - a + math.pi) % (2 * math.pi) - math.pi)
+            best = max(best, ln * max(0.0, 1 - d / 0.3))
+        return size * (0.5 + 0.5 * best)
+
+    if f == 0:
+        for y in range(c.h):
+            for x in range(c.w):
+                if math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= 6:
+                    c.put(x, y, FLASH)
+        return
+    grow = ease_out(min(1.0, t * 2.2))
+    size = 4 + (c.w / 2 - 6) * grow
+    fade = 255 * (1 - max(0.0, (t - 0.55) / 0.45) ** 1.5)
+    hole = size * max(0.0, (t - 0.45) * 1.6)                  # the middle clears out as it spreads
+    for y in range(c.h):
+        for x in range(c.w):
+            dx, dy = x + 0.5 - cx, y + 0.5 - cy
+            d = math.hypot(dx, dy)
+            r = splat_r(math.atan2(dy, dx), size)
+            if d <= r and d >= hole:
+                if d > r - 1.2:
+                    col = (200, 120, 10)                     # dark rim of the splat
+                elif d < r * 0.45:
+                    col = FLASH if t < 0.3 else HOT
+                elif d < r * 0.7:
+                    col = HOT if t < 0.5 else GOLD
+                else:
+                    col = GOLD
+                c.put(x, y, col, fade)
+    # droplets: thrown out along the spikes, then falling
+    for k, (a, ln) in enumerate(spikes):
+        dist = size * (1.0 + 0.1 * (k % 3)) + 9 * t * ln
+        x = cx + math.cos(a) * dist
+        y = cy + math.sin(a) * dist + 14 * t * t
+        r = (2.2 if k % 2 else 1.6) * (1 - t * 0.6)
+        for yy in range(int(y - 2), int(y + 3)):
+            for xx in range(int(x - 2), int(x + 3)):
+                if math.hypot(xx + 0.5 - x, yy + 0.5 - y) <= r:
+                    c.put(xx, yy, GOLD if (xx + yy) % 3 else FLASH, 255 * (1 - t ** 2))
+
+
 EFFECTS = {
     # id: (label, w, h, frames, fps, loop, anchor, fn)
     "dust_step": ("Step dust", 20, 11, 5, 18, False, (15, 10), fx_dust_step),
@@ -281,6 +334,7 @@ EFFECTS = {
     "land_puff": ("Landing puff", 28, 11, 6, 16, False, (14, 10), fx_land_puff),
     "speed_lines": ("Speed lines", 26, 30, 6, 14, True, (25, 15), fx_speed_lines),
     "cross_swoosh": ("Cross whoosh", 44, 18, 6, 20, False, (22, 16), fx_cross_swoosh),
+    "dunk_splash": ("Dunk splash", 46, 44, 9, 18, False, (23, 20), fx_dunk_splash),
     "impact_star": ("Steal flash", 32, 32, 7, 20, False, (16, 16), fx_impact_star),
     "swat_burst": ("Block burst", 36, 36, 8, 20, False, (18, 18), fx_swat_burst),
     "text_steal": ("STEAL! pop-up", 76, 28, 12, 12, False, (38, 27), fx_text_steal),
